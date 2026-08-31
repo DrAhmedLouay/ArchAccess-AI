@@ -1281,21 +1281,40 @@ body {
 .gov-select-group {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 6px;
 }
 
 .gov-select-group label {
-    font-size: 0.76rem;
+    font-size: 0.78rem;
     font-weight: 600;
     color: var(--text-secondary);
+    line-height: 1.3;
+}
+
+.gov-select-group .form-select {
+    font-size: 0.8rem;
+    padding: 7px 10px;
+    background-color: var(--bg-card);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    line-height: 1.4;
+    cursor: pointer;
+}
+
+.gov-select-group .form-select option {
+    background-color: #0f172a;
+    color: #f8fafc;
+    padding: 6px 10px;
+    font-size: 0.8rem;
 }
 
 .orientation-control-box {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    background: rgba(0, 0, 0, 0.25);
-    padding: 8px;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.35);
+    padding: 10px;
     border-radius: var(--radius-sm);
     border: 1px solid var(--border-color);
 }
@@ -1304,8 +1323,10 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 8px;
     font-size: 0.76rem;
     font-weight: 600;
+    line-height: 1.3;
 }
 
 .compass-badge {
@@ -1313,26 +1334,31 @@ body {
     color: #38bdf8;
     border: 1px solid rgba(56, 189, 248, 0.3);
     font-weight: 700;
+    white-space: nowrap;
+    padding: 2px 6px;
+    border-radius: 4px;
 }
 
 .orient-quick-buttons {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 4px;
-    margin-top: 4px;
+    margin-top: 2px;
 }
 
 .btn-orient-quick {
     background-color: var(--bg-card);
     border: 1px solid var(--border-color);
     color: var(--text-secondary);
-    padding: 4px 6px;
+    padding: 5px 4px;
     border-radius: var(--radius-sm);
     font-family: inherit;
     font-size: 0.72rem;
     font-weight: 600;
+    text-align: center;
     cursor: pointer;
     transition: all 0.2s;
+    white-space: nowrap;
 }
 
 .btn-orient-quick:hover {
@@ -1351,27 +1377,31 @@ body {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 6px;
-    background: rgba(0, 0, 0, 0.3);
-    padding: 6px 8px;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 8px;
     border-radius: var(--radius-sm);
+    border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .clim-item {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 3px;
+    text-align: center;
 }
 
 .clim-lbl {
     font-size: 0.68rem;
     color: var(--text-secondary);
+    white-space: nowrap;
 }
 
 .clim-val {
-    font-size: 0.75rem;
+    font-size: 0.73rem;
     font-weight: 700;
     color: #f8fafc;
     font-family: var(--font-mono);
+    line-height: 1.2;
 }
 
 /* Bioclimatic Analytics Card in Right Sidebar */

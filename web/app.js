@@ -930,6 +930,23 @@ const I18N = {
         iraqClimateTitle: "تسقيط الموقع في العراق والمناخ (Iraq GIS):",
         govLabel: "المحافظة / الإقليم المناخي:",
         northOrientLabel: "توجيه الشمال للقطعة (North Orientation):",
+        govOptions: {
+            baghdad: "بغداد (العاصمة) • صحراوي حار وجاف",
+            basra: "البصرة (الجنوب) • حار ورطب ساحلي",
+            erbil: "أربيل (كردستان) • شبه جاف وجبلي",
+            mosul: "الموصل (نينوى) • شبه جاف ومتوسطي",
+            najaf: "النجف الأشرف • صحراوي شديد الحرارة",
+            karbala: "كربلاء المقدسة • صحراوي حار وجاف",
+            anbar: "الأنبار (الرمادي) • صحراوي قاري متباين",
+            sulaymaniyah: "السليمانية • جبلي معتدل صيفاً وبارد شتاءً"
+        },
+        orientNorth: "شمال 0°",
+        orientEast: "شرق 90°",
+        orientSouth: "جنوب 180°",
+        orientWest: "غرب 270°",
+        climSummerLbl: "إشعاع الصيف:",
+        climWinterLbl: "كسب الشتاء:",
+        climWindLbl: "الرياح السائدة:",
         bioSectionTitle: "🇮🇶 التحليل البيئي والخصوصية الاجتماعية العراقية",
 
         legendOutdoorTitle: "الفضاءات والعناصر الخارجية (Outdoor Spaces & Site):",
@@ -1138,6 +1155,23 @@ const I18N = {
         iraqClimateTitle: "Iraq GIS & Bioclimatic Location:",
         govLabel: "Governorate / Climate Zone:",
         northOrientLabel: "North Orientation Angle:",
+        govOptions: {
+            baghdad: "Baghdad (Capital) • Hot Arid Desert",
+            basra: "Basra (South) • Hot Humid Coastal",
+            erbil: "Erbil (Kurdistan) • Semi-Arid Highland",
+            mosul: "Mosul (Nineveh) • Semi-Arid Mediterranean",
+            najaf: "Najaf • Severe Arid Desert",
+            karbala: "Karbala • Hot Arid Desert",
+            anbar: "Anbar (Ramadi) • Continental Desert",
+            sulaymaniyah: "Sulaymaniyah • Highland Temperate"
+        },
+        orientNorth: "North 0°",
+        orientEast: "East 90°",
+        orientSouth: "South 180°",
+        orientWest: "West 270°",
+        climSummerLbl: "Summer Sun:",
+        climWinterLbl: "Winter Gain:",
+        climWindLbl: "Prevailing Wind:",
         bioSectionTitle: "🇮🇶 Bioclimatic & Iraqi Cultural Privacy",
 
         legendOutdoorTitle: "Outdoor Spaces & Site Elements:",
@@ -1247,13 +1281,37 @@ function updateUIForLang() {
     const applyBtnSpan = document.querySelector('#applyDimensionsBtn span');
     if (applyBtnSpan) applyBtnSpan.textContent = t.applyDimBtn;
 
-    // Iraq GIS Card
+    // Iraq GIS Card Localization
     const climTitle = document.querySelector('.climate-title');
     if (climTitle) climTitle.textContent = t.iraqClimateTitle;
     const govLbl = document.querySelector('label[for="iraqGovernorateSelect"]');
     if (govLbl) govLbl.textContent = t.govLabel;
     const orientLbl = document.querySelector('label[for="northAngleSlider"]');
     if (orientLbl) orientLbl.textContent = t.northOrientLabel;
+
+    const govSelect = document.getElementById('iraqGovernorateSelect');
+    if (govSelect && t.govOptions) {
+        Array.from(govSelect.options).forEach(opt => {
+            if (t.govOptions[opt.value]) {
+                opt.text = t.govOptions[opt.value];
+            }
+        });
+    }
+
+    const orientBtns = document.querySelectorAll('.btn-orient-quick');
+    if (orientBtns.length >= 4) {
+        orientBtns[0].textContent = t.orientNorth;
+        orientBtns[1].textContent = t.orientEast;
+        orientBtns[2].textContent = t.orientSouth;
+        orientBtns[3].textContent = t.orientWest;
+    }
+
+    const climLabels = document.querySelectorAll('.clim-lbl');
+    if (climLabels.length >= 3) {
+        climLabels[0].textContent = t.climSummerLbl;
+        climLabels[1].textContent = t.climWinterLbl;
+        climLabels[2].textContent = t.climWindLbl;
+    }
 
     const clearBtn = document.getElementById('clearPlotBtn');
     if (clearBtn) clearBtn.textContent = t.clearPlotBtn;
