@@ -1552,10 +1552,11 @@ function synthesizeLayout(boundary, variant, typology) {
     // Strict Minimum Space Constraints:
     // Kitchen (>= 3.0m x 4.0m, >= 12m²), Bedroom (>= 3.0m x 4.0m, >= 12m²)
     // Living Room (width >= 4.0m), Guest Room (width >= 4.0m), Front Row Depth >= 4.0m
-    // Disabled Bedroom (width >= 4.50m strictly)
+    // Disabled Bedroom constraints (width >= 4.50m strictly, length <= 6.00m strictly)
     const min3mPx = Math.round(3.00 * pxPerMeter); // 69px (3.00m)
     const min4mPx = Math.round(4.00 * pxPerMeter); // 92px (4.00m)
     const min4_5mPx = Math.round(4.50 * pxPerMeter); // 104px (4.50m minimum width for disabled bedroom)
+    const max6mPx = Math.round(6.00 * pxPerMeter); // 138px (6.00m maximum length for disabled bedroom)
     const min1_5mPx = Math.round(1.50 * pxPerMeter); // 35px (1.50m corridor/distributor min width)
     const minBathWPx = Math.round(1.50 * pxPerMeter); // 35px (1.50m)
 
@@ -1600,8 +1601,13 @@ function synthesizeLayout(boundary, variant, typology) {
         if (y2 - y_corr_bot < min4mPx) y2 = y_corr_bot + min4mPx;
         if (y4 - y2 < min4mPx) y2 = y4 - min4mPx;
 
-        // West Wing ADA Bathroom height (>= 3.0m depth)
-        const y3 = snap(y4 - Math.max(min3mPx, bh * 0.28));
+        // West Wing ADA Bathroom height and Disabled Bedroom length (4.0m <= L <= 6.0m strictly)
+        let targetDisBedH = Math.min(max6mPx, Math.max(min4mPx, Math.round((y4 - y_corr_bot - min3mPx) * 0.52)));
+        let y3 = snap(y_corr_bot + targetDisBedH);
+        if (y3 - y_corr_bot > max6mPx) y3 = y_corr_bot + max6mPx;
+        if (y3 - y_corr_bot < min4mPx) y3 = y_corr_bot + min4mPx;
+        if (y4 - y3 < min3mPx) y3 = y4 - min3mPx;
+        if (y3 - y_corr_bot > max6mPx) y3 = y_corr_bot + max6mPx;
 
         roomTemplates = [
             // Reception Zone: Guest Room (>= 4.0m) & General Bathroom both facing Front Exterior Facade
@@ -1676,8 +1682,12 @@ function synthesizeLayout(boundary, variant, typology) {
         const y_corr_h = Math.max(min1_5mPx, Math.round(1.60 * pxPerMeter));
         const y_corr_bot = y1 + y_corr_h;
 
-        const y3 = snap(bldgMaxY - Math.max(min3mPx, bh * 0.28));
-        const y_corr_top2 = snap(y3 - Math.max(min1_5mPx, bh * 0.12));
+        // Rear Zone: Disabled Suite (Width >= 4.50m strictly, Length <= 6.0m strictly)
+        let targetDisBedH2 = Math.min(max6mPx, Math.max(min4mPx, Math.round(bh * 0.30)));
+        let y3 = snap(y4 - targetDisBedH2);
+        if (y4 - y3 > max6mPx) y3 = y4 - max6mPx;
+        if (y4 - y3 < min4mPx) y3 = y4 - min4mPx;
+        const y_corr_top2 = snap(y3 - Math.max(min1_5mPx, Math.round(1.50 * pxPerMeter)));
 
         roomTemplates = [
             // Front Zone: Guest (>= 4.0m) & General Bath both facing Front Exterior Facade
@@ -1758,7 +1768,13 @@ function synthesizeLayout(boundary, variant, typology) {
         if (y2 - y_corr_bot < min4mPx) y2 = y_corr_bot + min4mPx;
         if (y4 - y2 < min4mPx) y2 = y4 - min4mPx;
 
-        const y3 = snap(bldgMaxY - Math.max(min3mPx, bh * 0.28));
+        // East Wing ADA Bathroom height and Disabled Bedroom length (4.0m <= L <= 6.0m strictly)
+        let targetDisBedH3 = Math.min(max6mPx, Math.max(min4mPx, Math.round((y4 - y_corr_bot - min3mPx) * 0.52)));
+        let y3 = snap(y_corr_bot + targetDisBedH3);
+        if (y3 - y_corr_bot > max6mPx) y3 = y_corr_bot + max6mPx;
+        if (y3 - y_corr_bot < min4mPx) y3 = y_corr_bot + min4mPx;
+        if (y4 - y3 < min3mPx) y3 = y4 - min3mPx;
+        if (y3 - y_corr_bot > max6mPx) y3 = y_corr_bot + max6mPx;
 
         roomTemplates = [
             // Front Zone: Large Family Salon on Left + General Bath + Guest Reception on Right
@@ -2123,17 +2139,18 @@ function calculateDynamicAGCR(rooms, doors, ramp, accessibleParking, circulation
         });
     }
 
-    // 6. Accessible Bedroom Clearance (Area >= 12.0m² & Width >= 4.50m strictly)
+    // 6. Accessible Bedroom Clearance (Area >= 12.0m², Width >= 4.50m strictly, Length <= 6.00m strictly)
     const disBed = rooms.find(r => r.key === 'disabled_bedroom');
     if (disBed) {
         totalCheckpoints++;
         const bedWidthM = disBed.bounds.w / 23.0;
-        const isCompliant = disBed.area_m2 >= 12.0 && bedWidthM >= 4.45;
+        const bedLengthM = disBed.bounds.h / 23.0;
+        const isCompliant = disBed.area_m2 >= 12.0 && bedWidthM >= 4.45 && bedLengthM <= 6.05;
         if (isCompliant) compliantCheckpoints++;
         checkpointDetails.push({
-            name: 'غرفة نوم ذوي الإعاقة (عرض ≥ 4.50م)',
-            required: 'عرض ≥ 4.50م ومساحة ≥ 12.0م²',
-            actual: `عرض ${bedWidthM.toFixed(2)}م ومساحة ${disBed.area_m2.toFixed(1)}م²`,
+            name: 'غرفة نوم ذوي الإعاقة (عرض ≥ 4.50م، طول ≤ 6.00م)',
+            required: 'عرض ≥ 4.50م، طول ≤ 6.00م، ومساحة ≥ 12.0م²',
+            actual: `عرض ${bedWidthM.toFixed(2)}م × طول ${bedLengthM.toFixed(2)}م (مساحة ${disBed.area_m2.toFixed(1)}م²)`,
             compliant: isCompliant
         });
     }
@@ -5028,7 +5045,10 @@ function updateAnalyticsHUD(layout) {
         let diaMetric = `≥ ${r.minDia} ${unitLen}`;
         if (r.key === 'disabled_bedroom') {
             const wM = (r.bounds.w / 23.0).toFixed(2);
-            diaMetric = state.lang === 'ar' ? `عرض ${wM}م (≥ 4.50م)` : `Width ${wM}m (≥ 4.50m)`;
+            const lM = (r.bounds.h / 23.0).toFixed(2);
+            diaMetric = state.lang === 'ar' 
+                ? `${wM}×${lM}م (عرض ≥ 4.5م، طول ≤ 6م)` 
+                : `${wM}x${lM}m (W≥4.5m, L≤6.0m)`;
         } else if (r.key === 'disabled_bathroom') {
             diaMetric = state.lang === 'ar' ? `دوران Ø 1.60م (3×3م)` : `Turn Ø 1.60m (3x3m)`;
         }
