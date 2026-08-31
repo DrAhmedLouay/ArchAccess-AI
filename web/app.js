@@ -1542,26 +1542,27 @@ function synthesizeLayout(boundary, variant, typology) {
             { key: 'guest_room', x: x0, y: y0, w: x_bath_front - x0, h: y1 - y0 },
             { key: 'bathroom', x: x_bath_front, y: y0, w: x2 - x_bath_front, h: y1 - y0 },
             { key: 'living_room', x: x2, y: y0, w: x5 - x2, h: y1 - y0 },
-            // Central Distribution Spine (Width >= 1.50m)
-            { key: 'corridors', x: x2, y: y1, w: x3 - x2, h: y4 - y1 },
+            // Central Distribution Spine (Width >= 1.50m) connecting directly to Guest Room at x_bath_front
+            { key: 'corridors', x: x_bath_front, y: y1, w: x3 - x_bath_front, h: y4 - y1 },
             // East Wing: Dedicated Kitchen (>= 3.0m x 4.0m), Standard Bedroom (>= 3.0m x 4.0m), East Shaft
             { key: 'kitchen', x: x3, y: y1, w: x4 - x3, h: y2 - y1 },
             { key: 'bedroom', x: x3, y: y2, w: x4 - x3, h: y4 - y2 },
             { key: 'court_garden', x: x4, y: y1, w: x5 - x4, h: y4 - y1 },
             // West Wing: Disabled Master Suite, En-suite ADA Bath (>= 3.0m x 3.0m), West Light Shaft
-            { key: 'disabled_bedroom', x: x0, y: y1, w: x2 - x0, h: y3 - y1 },
+            { key: 'disabled_bedroom', x: x0, y: y1, w: x_bath_front - x0, h: y3 - y1 },
             { key: 'court_garden', x: x0, y: y3, w: x1 - x0, h: y4 - y3 },
-            { key: 'disabled_bathroom', x: x1, y: y3, w: x2 - x1, h: y4 - y3 }
+            { key: 'disabled_bathroom', x: x1, y: y3, w: x_bath_front - x1, h: y4 - y3 }
         ];
 
         doors = [
             { id: "d_main", name: "مدخل المعيشة المهيأ من المنحدر", x: x2 + cornerOffsetPx, y: y0, w: doorClearW, orientation: "horizontal", widthM: 1.00, dir: 1, hingeAtEnd: false },
             { id: "d_guest_ext", name: "مدخل الضيوف المستقل", x: x0 + cornerOffsetPx, y: y0, w: doorClearW, orientation: "horizontal", widthM: 1.00, dir: 1, hingeAtEnd: false },
+            { id: "d_guest_int", name: "باب غرفة الضيوف من الموزع المركزي", x: x_bath_front - singleDoorW - cornerOffsetPx, y: y1, w: singleDoorW, orientation: "horizontal", widthM: 1.00, dir: -1, hingeAtEnd: true },
             { id: "d_bath", name: "باب حمام الضيوف (مفردة)", x: x_bath_front, y: y0 + cornerOffsetPx, w: singleDoorW, orientation: "vertical", widthM: 1.00, dir: 1, hingeAtEnd: false },
             { id: "d_living", name: "فتحة المعيشة للموزع", x: x2 + cornerOffsetPx, y: y1, w: 26, orientation: "horizontal", widthM: 1.15, dir: -1, hingeAtEnd: false },
             { id: "d_kitchen", name: "مدخل المطبخ المستقل", x: x3, y: y1 + cornerOffsetPx, w: doorClearW, orientation: "vertical", widthM: 1.00, dir: 1, hingeAtEnd: false },
             { id: "d_bed", name: "باب غرفة النوم المستقل", x: x3, y: y2 + cornerOffsetPx, w: doorClearW, orientation: "vertical", widthM: 1.00, dir: 1, hingeAtEnd: false },
-            { id: "d_dis_bed", name: "باب جناح ذوي الاحتياجات", x: x2, y: y1 + cornerOffsetPx, w: doorClearW, orientation: "vertical", widthM: 1.00, dir: -1, hingeAtEnd: false },
+            { id: "d_dis_bed", name: "باب جناح ذوي الاحتياجات", x: x_bath_front, y: y1 + cornerOffsetPx, w: doorClearW, orientation: "vertical", widthM: 1.00, dir: -1, hingeAtEnd: false },
             { id: "d_dis_bath", name: "باب الحمام المهيأ (En-Suite)", x: x1 + cornerOffsetPx, y: y3, w: doorClearW, orientation: "horizontal", widthM: 1.00, dir: 1, hingeAtEnd: false }
         ];
 
@@ -1610,10 +1611,11 @@ function synthesizeLayout(boundary, variant, typology) {
             { key: 'bathroom', x: x_bath_front, y: y0, w: x2 - x_bath_front, h: y1 - y0 },
             { key: 'living_room', x: x2, y: y0, w: x5 - x2, h: y1 - y0 },
             // Middle Core Zone: Kitchen on West (>= 3.0m x 4.0m), Central Courtyard (#00ff01), Standard Bed on East (>= 3.0m x 4.0m)
-            { key: 'kitchen', x: x0, y: y1, w: x2 - x0, h: y_corr_top - y1 },
+            { key: 'kitchen', x: x0, y: y1, w: x_bath_front - x0, h: y_corr_top - y1 },
             { key: 'court_garden', x: x2, y: y1, w: x3 - x2, h: y_corr_top - y1 },
             { key: 'bedroom', x: x3, y: y1, w: x5 - x3, h: y_corr_top - y1 },
-            // Cross Access Hallway (Clearance >= 1.50m)
+            // Central Distribution Spine connecting front reception directly to cross access gallery
+            { key: 'corridors', x: x_bath_front, y: y1, w: x2 - x_bath_front, h: y3 - y1 },
             { key: 'corridors', x: x0, y: y_corr_top, w: x5 - x0, h: y3 - y_corr_top },
             // Rear Zone: Disabled Suite, En-Suite ADA Bath (>= 3.0m x 3.0m), Rear Shaft
             { key: 'disabled_bedroom', x: x0, y: y3, w: x2 - x0, h: y4 - y3 },
@@ -1624,8 +1626,9 @@ function synthesizeLayout(boundary, variant, typology) {
         doors = [
             { id: "d_main", name: "مدخل المعيشة المهيأ من المنحدر", x: x2 + cornerOffsetPx, y: y0, w: doorClearW, orientation: "horizontal", widthM: 1.00, dir: 1, hingeAtEnd: false },
             { id: "d_guest_ext", name: "مدخل الضيوف المستقل", x: x0 + cornerOffsetPx, y: y0, w: doorClearW, orientation: "horizontal", widthM: 1.00, dir: 1, hingeAtEnd: false },
+            { id: "d_guest_int", name: "باب غرفة الضيوف من الموزع المركزي", x: x_bath_front - singleDoorW - cornerOffsetPx, y: y1, w: singleDoorW, orientation: "horizontal", widthM: 1.00, dir: -1, hingeAtEnd: true },
             { id: "d_bath", name: "باب حمام الضيوف (مفردة)", x: x_bath_front, y: y0 + cornerOffsetPx, w: singleDoorW, orientation: "vertical", widthM: 1.00, dir: 1, hingeAtEnd: false },
-            { id: "d_living", name: "باب المعيشة للموزع", x: x3 + cornerOffsetPx, y: y1, w: 26, orientation: "horizontal", widthM: 1.15, dir: 1, hingeAtEnd: false },
+            { id: "d_living", name: "باب المعيشة للموزع", x: x2 + cornerOffsetPx, y: y1, w: 26, orientation: "horizontal", widthM: 1.15, dir: -1, hingeAtEnd: false },
             { id: "d_kitchen", name: "مدخل المطبخ المستقل", x: x0 + cornerOffsetPx, y: y_corr_top, w: doorClearW, orientation: "horizontal", widthM: 1.00, dir: -1, hingeAtEnd: false },
             { id: "d_bed", name: "باب غرفة النوم القياسية", x: x5 - doorClearW - cornerOffsetPx, y: y_corr_top, w: doorClearW, orientation: "horizontal", widthM: 1.00, dir: -1, hingeAtEnd: false },
             { id: "d_dis_bed", name: "باب جناح ذوي الاحتياجات", x: x2 - doorClearW - cornerOffsetPx, y: y3, w: doorClearW, orientation: "horizontal", widthM: 1.00, dir: 1, hingeAtEnd: false },
@@ -1681,8 +1684,8 @@ function synthesizeLayout(boundary, variant, typology) {
             { key: 'living_room', x: x0, y: y0, w: x2 - x0, h: y1 - y0 },
             { key: 'bathroom', x: x2, y: y0, w: x_bath_front3 - x2, h: y1 - y0 },
             { key: 'guest_room', x: x_bath_front3, y: y0, w: x5 - x_bath_front3, h: y1 - y0 },
-            // Central Corridor Spine (Width >= 1.50m)
-            { key: 'corridors', x: x2, y: y1, w: x3 - x2, h: y4 - y1 },
+            // Central Corridor Spine (Width >= 1.50m) reaching Guest Room directly at x_bath_front3
+            { key: 'corridors', x: x2, y: y1, w: Math.max(x3 - x2, x_bath_front3 - x2), h: y4 - y1 },
             // West Wing: West Shaft, Kitchen (>= 3.0m x 4.0m), Standard Bedroom (>= 3.0m x 4.0m)
             { key: 'court_garden', x: x0, y: y1, w: x1 - x0, h: y4 - y1 },
             { key: 'kitchen', x: x1, y: y1, w: x2 - x1, h: y2 - y1 },
@@ -1696,6 +1699,7 @@ function synthesizeLayout(boundary, variant, typology) {
         doors = [
             { id: "d_main", name: "مدخل المعيشة المهيأ من المنحدر", x: x0 + cornerOffsetPx, y: y0, w: doorClearW, orientation: "horizontal", widthM: 1.00, dir: 1, hingeAtEnd: false },
             { id: "d_guest_ext", name: "مدخل الضيوف المستقل", x: x5 - doorClearW - cornerOffsetPx, y: y0, w: doorClearW, orientation: "horizontal", widthM: 1.00, dir: 1, hingeAtEnd: true },
+            { id: "d_guest_int", name: "باب غرفة الضيوف من الموزع المركزي", x: x_bath_front3 + cornerOffsetPx, y: y1, w: doorClearW, orientation: "horizontal", widthM: 1.00, dir: 1, hingeAtEnd: false },
             { id: "d_bath", name: "باب حمام الضيوف (مفردة)", x: x_bath_front3, y: y0 + cornerOffsetPx, w: singleDoorW, orientation: "vertical", widthM: 1.00, dir: -1, hingeAtEnd: false },
             { id: "d_living", name: "فتحة المعيشة للموزع", x: x2, y: y1 - cornerOffsetPx - 26, w: 26, orientation: "vertical", widthM: 1.05, dir: 1, hingeAtEnd: true },
             { id: "d_kitchen", name: "مدخل المطبخ المستقل", x: x2, y: y1 + cornerOffsetPx, w: doorClearW, orientation: "vertical", widthM: 1.00, dir: -1, hingeAtEnd: false },
