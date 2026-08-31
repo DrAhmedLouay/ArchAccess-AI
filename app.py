@@ -104,8 +104,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 3. HELPER TO BUNDLE WEB APPLICATION
-@st.cache_data
+# 3. HELPER TO BUNDLE WEB APPLICATION (FRESH DIRECT LOAD - NO STALE CACHE)
 def get_bundled_html():
     base_dir = os.path.dirname(os.path.abspath(__file__))
     web_dir = os.path.join(base_dir, "web")
@@ -140,4 +139,4 @@ def get_bundled_html():
 
 # 4. RENDER FULL INTERACTIVE PLATFORM
 html_app = get_bundled_html()
-components.html(html_app, height=1000, scrolling=True)
+components.html(html_app, height=1020, scrolling=True)
