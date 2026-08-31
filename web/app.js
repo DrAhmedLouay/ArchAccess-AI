@@ -1624,9 +1624,9 @@ function synthesizeLayout(boundary, variant, typology) {
             { key: 'guest_room', x: x0, y: y0, w: x_bath_front - x0, h: y1 - y0 },
             { key: 'bathroom', x: x_bath_front, y: y0, w: x_living_start - x_bath_front, h: y1 - y0 },
             { key: 'living_room', x: x_living_start, y: y0, w: x5 - x_living_start, h: y1 - y0 },
-            // Central Distribution Gallery (Horizontal)
-            { key: 'corridors', x: x0 + 40, y: y1, w: x5 - (x0 + 40) - 40, h: y_corr_h },
-            // Central Vertical Spine
+            // Continuous Central Distribution Gallery (Horizontal full span)
+            { key: 'corridors', x: x0, y: y1, w: x5 - x0, h: y_corr_h },
+            // Continuous Central Vertical Spine (Connecting to Horizontal Gallery)
             { key: 'corridors', x: x_ada_end, y: y_corr_bot, w: x_corr_end - x_ada_end, h: y4 - y_corr_bot },
             // West Wing: Disabled Master Bedroom (Width >= 4.50m strictly, Depth <= 6.0m strictly)
             { key: 'disabled_bedroom', x: x0, y: y_corr_bot, w: x_dis_end - x0, h: y4 - y_corr_bot },
@@ -1647,7 +1647,7 @@ function synthesizeLayout(boundary, variant, typology) {
             { id: "d_living", name: "فتحة المعيشة للموزع المركزي", x: x_living_start + cornerOffsetPx, y: y1, w: 26, orientation: "horizontal", widthM: 1.15, dir: -1, hingeAtEnd: false },
             { id: "d_kitchen", name: "مدخل المطبخ المستقل", x: x_corr_end, y: y_corr_bot + cornerOffsetPx, w: doorClearW, orientation: "vertical", widthM: 1.00, dir: 1, hingeAtEnd: false },
             { id: "d_bed", name: "باب غرفة النوم المستقل", x: x_corr_end, y: y2 + cornerOffsetPx, w: doorClearW, orientation: "vertical", widthM: 1.00, dir: 1, hingeAtEnd: false },
-            { id: "d_dis_bed", name: "باب جناح ذوي الاحتياجات", x: x_dis_end, y: y_corr_bot + cornerOffsetPx, w: doorClearW, orientation: "vertical", widthM: 1.00, dir: -1, hingeAtEnd: false },
+            { id: "d_dis_bed", name: "باب جناح ذوي الاحتياجات من الموزع", x: x0 + cornerOffsetPx, y: y_corr_bot, w: doorClearW, orientation: "horizontal", widthM: 1.00, dir: 1, hingeAtEnd: false },
             { id: "d_dis_bath", name: "باب الحمام المهيأ (En-Suite)", x: x_dis_end, y: y_corr_bot + 42, w: doorClearW, orientation: "vertical", widthM: 1.00, dir: 1, hingeAtEnd: false }
         ];
 
@@ -1704,8 +1704,8 @@ function synthesizeLayout(boundary, variant, typology) {
             { key: 'guest_room', x: x0, y: y0, w: x_bath_front - x0, h: y1 - y0 },
             { key: 'bathroom', x: x_bath_front, y: y0, w: x_living_start - x_bath_front, h: y1 - y0 },
             { key: 'living_room', x: x_living_start, y: y0, w: x5 - x_living_start, h: y1 - y0 },
-            // Mandatory Central Distribution Spine & Access Gallery connecting directly to Guest Room
-            { key: 'corridors', x: x0 + 40, y: y1, w: x5 - (x0 + 40) - 40, h: y_corr_h },
+            // Continuous Central Distribution Gallery (Horizontal full span)
+            { key: 'corridors', x: x0, y: y1, w: x5 - x0, h: y_corr_h },
             { key: 'corridors', x: x0, y: y_corr_top2, w: x5 - x0, h: y3 - y_corr_top2 },
             // Middle Core Zone: Kitchen on West, Central Courtyard (#00ff01), Standard Bed on East
             { key: 'kitchen', x: x0, y: y_corr_bot, w: x2 - x0, h: y_corr_top2 - y_corr_bot },
@@ -1725,7 +1725,7 @@ function synthesizeLayout(boundary, variant, typology) {
             { id: "d_living", name: "باب المعيشة للموزع المركزي", x: x_living_start + cornerOffsetPx, y: y1, w: 26, orientation: "horizontal", widthM: 1.15, dir: -1, hingeAtEnd: false },
             { id: "d_kitchen", name: "مدخل المطبخ المستقل", x: x0 + cornerOffsetPx, y: y_corr_top2, w: doorClearW, orientation: "horizontal", widthM: 1.00, dir: -1, hingeAtEnd: false },
             { id: "d_bed", name: "باب غرفة النوم القياسية", x: x5 - doorClearW - cornerOffsetPx, y: y_corr_top2, w: doorClearW, orientation: "horizontal", widthM: 1.00, dir: -1, hingeAtEnd: false },
-            { id: "d_dis_bed", name: "باب جناح ذوي الاحتياجات", x: x_dis_end2 - doorClearW - cornerOffsetPx, y: y3, w: doorClearW, orientation: "horizontal", widthM: 1.00, dir: 1, hingeAtEnd: false },
+            { id: "d_dis_bed", name: "باب جناح ذوي الاحتياجات من الموزع", x: x_dis_end2 - doorClearW - cornerOffsetPx, y: y3, w: doorClearW, orientation: "horizontal", widthM: 1.00, dir: 1, hingeAtEnd: false },
             { id: "d_dis_bath", name: "باب الحمام المهيأ (En-Suite)", x: x_dis_end2 + cornerOffsetPx, y: y3, w: doorClearW, orientation: "horizontal", widthM: 1.00, dir: 1, hingeAtEnd: false }
         ];
 
@@ -1785,8 +1785,9 @@ function synthesizeLayout(boundary, variant, typology) {
             { key: 'living_room', x: x0, y: y0, w: x2 - x0, h: y1 - y0 },
             { key: 'bathroom', x: x2, y: y0, w: x_guest_start3 - x2, h: y1 - y0 },
             { key: 'guest_room', x: x_guest_start3, y: y0, w: x5 - x_guest_start3, h: y1 - y0 },
-            // Mandatory Central Distribution Spine & Access Gallery connecting directly to Guest Room
-            { key: 'corridors', x: x0 + 40, y: y1, w: x5 - (x0 + 40) - 40, h: y_corr_h },
+            // Continuous Central Distribution Gallery (Horizontal full span)
+            { key: 'corridors', x: x0, y: y1, w: x5 - x0, h: y_corr_h },
+            // Continuous Central Vertical Spine (Connecting to Horizontal Gallery)
             { key: 'corridors', x: x3, y: y_corr_bot, w: x_dis_start3 - x3, h: y4 - y_corr_bot },
             // West Wing: West Shaft, Kitchen (>= 3.0m x 4.0m), Standard Bedroom (>= 3.0m x 4.0m)
             { key: 'court_garden', x: x0, y: y_corr_bot, w: x1 - x0, h: y4 - y_corr_bot },
@@ -1806,7 +1807,7 @@ function synthesizeLayout(boundary, variant, typology) {
             { id: "d_living", name: "فتحة المعيشة للموزع المركزي", x: x2 - 26 - cornerOffsetPx, y: y1, w: 26, orientation: "horizontal", widthM: 1.05, dir: -1, hingeAtEnd: false },
             { id: "d_kitchen", name: "مدخل المطبخ المستقل", x: x3, y: y_corr_bot + cornerOffsetPx, w: doorClearW, orientation: "vertical", widthM: 1.00, dir: -1, hingeAtEnd: false },
             { id: "d_bed", name: "باب غرفة النوم المستقل", x: x3, y: y2 + cornerOffsetPx, w: doorClearW, orientation: "vertical", widthM: 1.00, dir: -1, hingeAtEnd: false },
-            { id: "d_dis_bed", name: "باب جناح ذوي الاحتياجات", x: x_dis_start3, y: y_corr_bot + cornerOffsetPx, w: doorClearW, orientation: "vertical", widthM: 1.00, dir: 1, hingeAtEnd: false },
+            { id: "d_dis_bed", name: "باب جناح ذوي الاحتياجات من الموزع", x: x_dis_start3, y: y_corr_bot + cornerOffsetPx, w: doorClearW, orientation: "vertical", widthM: 1.00, dir: 1, hingeAtEnd: false },
             { id: "d_dis_bath", name: "باب الحمام المهيأ (En-Suite)", x: x_dis_start3, y: y_corr_bot + 42, w: doorClearW, orientation: "vertical", widthM: 1.00, dir: -1, hingeAtEnd: false }
         ];
 
@@ -2172,61 +2173,183 @@ function calculateDynamicAGCR(rooms, doors, ramp, accessibleParking, circulation
  * Generates Clean Non-Intersecting Wall Segments with Cut Door Openings
  */
 function generateCleanWallSegments(rooms, doors, windows = []) {
-    const rawSegments = [];
+    if (!rooms || rooms.length === 0) return [];
 
-    const addRawSegment = (x1, y1, x2, y2) => {
-        if (x1 > x2 || (x1 === x2 && y1 > y2)) {
-            [x1, x2] = [x2, x1];
-            [y1, y2] = [y2, y1];
-        }
-        const exists = rawSegments.some(s => 
-            Math.abs(s.x1 - x1) < 1 && Math.abs(s.y1 - y1) < 1 &&
-            Math.abs(s.x2 - x2) < 1 && Math.abs(s.y2 - y2) < 1
-        );
-        if (!exists && (Math.abs(x2 - x1) > 1 || Math.abs(y2 - y1) > 1)) {
-            rawSegments.push({ x1, y1, x2, y2 });
-        }
-    };
-
-    // Extract outer and partition edges
+    // 1. Collect all distinct X and Y grid coordinates from all room boundaries
+    const xSet = new Set();
+    const ySet = new Set();
     rooms.forEach(r => {
         const { x, y, w, h } = r.bounds;
-        addRawSegment(x, y, x + w, y);
-        addRawSegment(x + w, y, x + w, y + h);
-        addRawSegment(x, y + h, x + w, y + h);
-        addRawSegment(x, y, x, y + h);
+        xSet.add(x);
+        xSet.add(x + w);
+        ySet.add(y);
+        ySet.add(y + h);
     });
 
-    // Cut wall lines at door openings and window openings
-    let cutSegments = [...rawSegments];
+    const xs = Array.from(xSet).sort((a, b) => a - b);
+    const ys = Array.from(ySet).sort((a, b) => a - b);
+
+    const validSubSegments = [];
+
+    // 2. Evaluate Horizontal Sub-segments
+    for (let j = 0; j < ys.length; j++) {
+        const y = ys[j];
+        for (let i = 0; i < xs.length - 1; i++) {
+            const x1 = xs[i];
+            const x2 = xs[i + 1];
+            if (x2 - x1 < 1) continue;
+            const midX = (x1 + x2) / 2;
+
+            // Suppress any wall segment that lies strictly inside the interior of any room
+            const isInside = rooms.some(r => {
+                const b = r.bounds;
+                return b.x < midX && midX < b.x + b.w && b.y < y && y < b.y + b.h;
+            });
+            if (isInside) continue;
+
+            // Find rooms adjacent to top and bottom of this segment
+            const topRooms = rooms.filter(r => {
+                const b = r.bounds;
+                return Math.abs(b.y + b.h - y) < 1 && b.x <= midX && midX <= b.x + b.w;
+            });
+            const botRooms = rooms.filter(r => {
+                const b = r.bounds;
+                return Math.abs(b.y - y) < 1 && b.x <= midX && midX <= b.x + b.w;
+            });
+
+            // If it is a shared boundary between two 'corridors' spaces -> REMOVE (Unify Corridors into a continuous space!)
+            if (topRooms.length > 0 && botRooms.length > 0 &&
+                topRooms.every(r => r.key === 'corridors') &&
+                botRooms.every(r => r.key === 'corridors')) {
+                continue;
+            }
+
+            // Valid wall edge if bounded by at least one room
+            if (topRooms.length > 0 || botRooms.length > 0) {
+                validSubSegments.push({ x1, y1: y, x2, y2: y, orientation: 'horizontal' });
+            }
+        }
+    }
+
+    // 3. Evaluate Vertical Sub-segments
+    for (let i = 0; i < xs.length; i++) {
+        const x = xs[i];
+        for (let j = 0; j < ys.length - 1; j++) {
+            const y1 = ys[j];
+            const y2 = ys[j + 1];
+            if (y2 - y1 < 1) continue;
+            const midY = (y1 + y2) / 2;
+
+            // Suppress any wall segment that lies strictly inside the interior of any room
+            const isInside = rooms.some(r => {
+                const b = r.bounds;
+                return b.x < x && x < b.x + b.w && b.y < midY && midY < b.y + b.h;
+            });
+            if (isInside) continue;
+
+            // Find rooms adjacent to left and right of this segment
+            const leftRooms = rooms.filter(r => {
+                const b = r.bounds;
+                return Math.abs(b.x + b.w - x) < 1 && b.y <= midY && midY <= b.y + b.h;
+            });
+            const rightRooms = rooms.filter(r => {
+                const b = r.bounds;
+                return Math.abs(b.x - x) < 1 && b.y <= midY && midY <= b.y + b.h;
+            });
+
+            // If it is a shared boundary between two 'corridors' spaces -> REMOVE (Unify Corridors into a continuous space!)
+            if (leftRooms.length > 0 && rightRooms.length > 0 &&
+                leftRooms.every(r => r.key === 'corridors') &&
+                rightRooms.every(r => r.key === 'corridors')) {
+                continue;
+            }
+
+            // Valid wall edge if bounded by at least one room
+            if (leftRooms.length > 0 || rightRooms.length > 0) {
+                validSubSegments.push({ x1: x, y1, x2: x, y2, orientation: 'vertical' });
+            }
+        }
+    }
+
+    // 4. Merge collinear contiguous sub-segments
+    const mergedSegments = [];
+    const horizMap = new Map();
+    const vertMap = new Map();
+
+    validSubSegments.forEach(s => {
+        if (s.orientation === 'horizontal') {
+            if (!horizMap.has(s.y1)) horizMap.set(s.y1, []);
+            horizMap.get(s.y1).push([Math.min(s.x1, s.x2), Math.max(s.x1, s.x2)]);
+        } else {
+            if (!vertMap.has(s.x1)) vertMap.set(s.x1, []);
+            vertMap.get(s.x1).push([Math.min(s.y1, s.y2), Math.max(s.y1, s.y2)]);
+        }
+    });
+
+    horizMap.forEach((intervals, y) => {
+        intervals.sort((a, b) => a[0] - b[0]);
+        let currS = intervals[0][0];
+        let currE = intervals[0][1];
+        for (let k = 1; k < intervals.length; k++) {
+            const [s, e] = intervals[k];
+            if (s <= currE + 1) {
+                currE = Math.max(currE, e);
+            } else {
+                mergedSegments.push({ x1: currS, y1: y, x2: currE, y2: y, orientation: 'horizontal' });
+                currS = s;
+                currE = e;
+            }
+        }
+        mergedSegments.push({ x1: currS, y1: y, x2: currE, y2: y, orientation: 'horizontal' });
+    });
+
+    vertMap.forEach((intervals, x) => {
+        intervals.sort((a, b) => a[0] - b[0]);
+        let currS = intervals[0][0];
+        let currE = intervals[0][1];
+        for (let k = 1; k < intervals.length; k++) {
+            const [s, e] = intervals[k];
+            if (s <= currE + 1) {
+                currE = Math.max(currE, e);
+            } else {
+                mergedSegments.push({ x1: x, y1: currS, x2: x, y2: currE, orientation: 'vertical' });
+                currS = s;
+                currE = e;
+            }
+        }
+        mergedSegments.push({ x1: x, y1: currS, x2: x, y2: currE, orientation: 'vertical' });
+    });
+
+    // 5. Cut out door and window openings cleanly
+    let cutSegments = [...mergedSegments];
 
     const cutOutInterval = (openingX, openingY, openingLen, orientation) => {
         const newSegments = [];
         cutSegments.forEach(seg => {
-            if (orientation === 'horizontal') {
-                if (Math.abs(seg.y1 - openingY) < 2 && Math.abs(seg.y2 - openingY) < 2) {
+            if (orientation === 'horizontal' && seg.orientation === 'horizontal') {
+                if (Math.abs(seg.y1 - openingY) < 2) {
                     const dStart = openingX;
                     const dEnd = openingX + openingLen;
                     if (dStart >= seg.x1 - 1 && dEnd <= seg.x2 + 1) {
                         if (dStart > seg.x1 + 1) {
-                            newSegments.push({ x1: seg.x1, y1: seg.y1, x2: dStart, y2: seg.y2 });
+                            newSegments.push({ x1: seg.x1, y1: seg.y1, x2: dStart, y2: seg.y2, orientation: 'horizontal' });
                         }
                         if (dEnd < seg.x2 - 1) {
-                            newSegments.push({ x1: dEnd, y1: seg.y1, x2: seg.x2, y2: seg.y2 });
+                            newSegments.push({ x1: dEnd, y1: seg.y1, x2: seg.x2, y2: seg.y2, orientation: 'horizontal' });
                         }
                         return;
                     }
                 }
-            } else {
-                if (Math.abs(seg.x1 - openingX) < 2 && Math.abs(seg.x2 - openingX) < 2) {
+            } else if (orientation === 'vertical' && seg.orientation === 'vertical') {
+                if (Math.abs(seg.x1 - openingX) < 2) {
                     const dStart = openingY;
                     const dEnd = openingY + openingLen;
                     if (dStart >= seg.y1 - 1 && dEnd <= seg.y2 + 1) {
                         if (dStart > seg.y1 + 1) {
-                            newSegments.push({ x1: seg.x1, y1: seg.y1, x2: seg.x2, y2: dStart });
+                            newSegments.push({ x1: seg.x1, y1: seg.y1, x2: seg.x2, y2: dStart, orientation: 'vertical' });
                         }
                         if (dEnd < seg.y2 - 1) {
-                            newSegments.push({ x1: seg.x1, y1: dEnd, x2: seg.x2, y2: seg.y2 });
+                            newSegments.push({ x1: seg.x1, y1: dEnd, x2: seg.x2, y2: seg.y2, orientation: 'vertical' });
                         }
                         return;
                     }
