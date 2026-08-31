@@ -2865,16 +2865,17 @@ function drawDetailedEntranceGate(entranceGate) {
     ctx.moveTo(arrowMidX + 10, arrowY); ctx.lineTo(arrowMidX + 7, arrowY + 1.5);
     ctx.stroke();
 
-    // 7. Gate Width Tag & Label
+    // 7. Gate Width Tag & Label (Placed neatly inside the gate panel with white halo)
     if (state.showTags) {
-        ctx.fillStyle = '#b45309';
-        ctx.font = 'bold 8.5px Cairo, sans-serif';
+        const gateLabel = isAr ? '🚪 بوابة 3.80م' : '🚪 Gate 3.80m';
+        ctx.font = 'bold 7.5px Cairo, sans-serif';
         ctx.textAlign = 'center';
-        ctx.textBaseline = 'bottom';
-        ctx.fillText(
-            isAr ? '🚪 بوابة كراج منزلقة 3.80م (سماكة 25 سم) + باب مشاة' : '🚪 3.80m Sliding Gate (25cm Wall Profile) + Wicket Door',
-            gb.x + gb.w / 2, gb.y - 4
-        );
+        ctx.textBaseline = 'middle';
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+        ctx.lineWidth = 2.0;
+        ctx.strokeText(gateLabel, gb.x + gb.w / 2, gb.y + gb.h / 2);
+        ctx.fillStyle = '#78350f';
+        ctx.fillText(gateLabel, gb.x + gb.w / 2, gb.y + gb.h / 2);
     }
 
     ctx.restore();
@@ -3221,12 +3222,14 @@ function drawAccessibleParkingAndVehicularPath(ctx, parking, gate, ramp) {
     ctx.font = 'bold 8px JetBrains Mono, Cairo';
 
     // Center Dimension Badge on Car Roof (2.00m x 5.00m)
+    ctx.font = 'bold 7.5px JetBrains Mono, Cairo';
+    ctx.strokeStyle = 'rgba(15, 23, 42, 0.85)';
+    ctx.lineWidth = 2.0;
+    ctx.strokeText('2.00m × 5.00m', cb.x + cb.w / 2, cb.y + cb.h / 2);
     ctx.fillStyle = '#f8fafc';
-    ctx.font = 'bold 8px JetBrains Mono, Cairo';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('2.00m', cb.x + cb.w / 2, cb.y + cb.h / 2 - 5);
-    ctx.fillText('× 5.00m', cb.x + cb.w / 2, cb.y + cb.h / 2 + 5);
+    ctx.fillText('2.00m × 5.00m', cb.x + cb.w / 2, cb.y + cb.h / 2);
 
     // 4.C. Exact 30cm Clearance Dimension Markers (Front to Gate & Rear to Living Room)
     ctx.strokeStyle = '#38bdf8';
@@ -3636,11 +3639,6 @@ function drawArchitecturalDetails(rooms, doors, windows) {
             ctx.fill();
             ctx.stroke();
             ctx.setLineDash([]);
-            ctx.font = 'bold 6.5px Cairo, sans-serif';
-            ctx.fillStyle = '#0284c7';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('Ø 1.50m', tcX, tcY + 8);
             ctx.restore();
         }
 
@@ -4374,10 +4372,13 @@ function renderOrthogonalMode() {
             ctx.fillText('+0.30m', topLanding.x + topLanding.w / 2, topLanding.y + topLanding.h / 2 + 3);
             ctx.fillText('±0.00m', bottomLanding.x + bottomLanding.w / 2, bottomLanding.y + bottomLanding.h / 2 + 3);
 
+            ctx.font = state.lang === 'ar' ? 'bold 7.5px Cairo' : 'bold 7.5px Inter, sans-serif';
+            const rampText = state.lang === 'ar' ? '♿ منحدر 1:12' : '♿ ADA Ramp 1:12';
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.lineWidth = 2.0;
+            ctx.strokeText(rampText, bounds.x + bounds.w / 2, bounds.y + bounds.h / 2);
             ctx.fillStyle = '#ffffff';
-            ctx.font = state.lang === 'ar' ? 'bold 8.5px Cairo' : 'bold 8px Inter, sans-serif';
-            const rampText = state.lang === 'ar' ? '♿ منحدر 1:12 (عرض 1.0m • طول 3.60m • ارتفاع 30cm)' : '♿ ADA Ramp 1:12 (1.0m W • 3.60m L • 30cm Rise)';
-            ctx.fillText(rampText, bounds.x + bounds.w / 2, bounds.y - 5);
+            ctx.fillText(rampText, bounds.x + bounds.w / 2, bounds.y + bounds.h / 2);
         }
     }
 
