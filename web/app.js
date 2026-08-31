@@ -3451,7 +3451,7 @@ function drawArchitecturalDetails(rooms, doors, windows) {
     rooms.forEach(r => {
         const { x, y, w, h } = r.bounds;
 
-        // 1. KITCHEN (#FFB8D8): L-counter, Double Sink, Cooktop, Refrigerator
+        // 1. KITCHEN (#FFB8D8): L-counter, Double Sink, Cooktop, Refrigerator (Zero Door Obstruction)
         if (r.key === 'kitchen') {
             // Subtle 60x60cm floor tile grid
             ctx.strokeStyle = 'rgba(0, 0, 0, 0.05)';
@@ -3464,20 +3464,21 @@ function drawArchitecturalDetails(rooms, doors, windows) {
             }
 
             const counterD = 14; // 60cm depth
-            // L-Shaped Countertop along top and left walls
+            // L-Shaped Countertop along TOP wall and RIGHT wall
+            // Leaves the entire LEFT wall (where the entrance door is) 100% open and clear!
             ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
             ctx.strokeStyle = '#475569';
             ctx.lineWidth = 1;
-            // Top run
-            ctx.fillRect(x + 3, y + 3, w - 6, counterD);
-            ctx.strokeRect(x + 3, y + 3, w - 6, counterD);
-            // Left run
-            ctx.fillRect(x + 3, y + 3, counterD, h - 6);
-            ctx.strokeRect(x + 3, y + 3, counterD, h - 6);
+            // Top run (starts 28px away from left wall to give full clear door corridor)
+            ctx.fillRect(x + 28, y + 3, w - 31, counterD);
+            ctx.strokeRect(x + 28, y + 3, w - 31, counterD);
+            // Right run
+            ctx.fillRect(x + w - counterD - 3, y + 3, counterD, h - 6);
+            ctx.strokeRect(x + w - counterD - 3, y + 3, counterD, h - 6);
 
-            // Double Sink on Top Counter
-            const sinkX = x + counterD + 10;
-            const sinkY = y + 4;
+            // Double Sink on Top Counter (away from left door)
+            const sinkX = x + 34;
+            const sinkY = y + 5;
             const sinkW = 20;
             const sinkH = 10;
             ctx.fillStyle = '#e2e8f0';
@@ -3494,9 +3495,9 @@ function drawArchitecturalDetails(rooms, doors, windows) {
             ctx.arc(sinkX + 9.5, sinkY + 2, 1.5, 0, Math.PI * 2);
             ctx.fill();
 
-            // 4-Burner Cooktop Stove on Left Counter
-            const stoveX = x + 4;
-            const stoveY = y + counterD + 12;
+            // 4-Burner Cooktop Stove on Right Counter (completely clear of door!)
+            const stoveX = x + w - counterD - 1;
+            const stoveY = y + counterD + 10;
             const stoveW = 10;
             const stoveH = 16;
             ctx.fillStyle = '#334155';
@@ -3516,9 +3517,9 @@ function drawArchitecturalDetails(rooms, doors, windows) {
                 ctx.beginPath(); ctx.arc(b.bx, b.by, bRadius, 0, Math.PI * 2); ctx.stroke();
             });
 
-            // Refrigerator (Right corner)
-            const refX = x + w - counterD - 4;
-            const refY = y + 3;
+            // Refrigerator (Bottom-Right corner)
+            const refX = x + w - counterD - 3;
+            const refY = y + h - counterD - 6;
             ctx.fillStyle = '#f1f5f9';
             ctx.strokeStyle = '#334155';
             ctx.lineWidth = 1;
@@ -3533,9 +3534,7 @@ function drawArchitecturalDetails(rooms, doors, windows) {
         }
 
         // 2. BATHROOMS (#ff3464 Accessible ADA Bathroom & #6300fe General/Guest Bathroom)
-        else if (r.key === 'disabled_bathroom' || r.key === 'bathroom') {
-            const isADA = (r.key === 'disabled_bathroom');
-
+        else if (r.key === 'disabled_bathroom') {
             // Subtle porcelain tile grid (30cm x 30cm CAD scale)
             ctx.strokeStyle = 'rgba(0, 0, 0, 0.06)';
             ctx.lineWidth = 0.5;
@@ -3547,288 +3546,260 @@ function drawArchitecturalDetails(rooms, doors, windows) {
                 ctx.beginPath(); ctx.moveTo(x + 2, gy); ctx.lineTo(x + w - 2, gy); ctx.stroke();
             }
 
-            if (isADA) {
-                // =============================================================
-                // ACCESSIBLE ADA BATHROOM (حمام مهيأ لذوي الإعاقة والكراسي المتحركة)
-                // =============================================================
+            // =============================================================
+            // ACCESSIBLE ADA BATHROOM (Door is at Top-Left: y = y, x+4 to x+27)
+            // =============================================================
 
-                // -------------------------------------------------------------
-                // A. Accessible Toilet Suite with ADA Grab Bars & Transfer Zone
-                // -------------------------------------------------------------
-                const wcW = 14;
-                const wcH = 20;
-                const wcX = x + w - wcW - 6;
-                const wcY = y + 4;
+            // -------------------------------------------------------------
+            // A. Accessible Toilet Suite: Top-Right Wall (Away from door)
+            // -------------------------------------------------------------
+            const wcW = 14;
+            const wcH = 20;
+            const wcX = x + w - wcW - 6;
+            const wcY = y + 4;
 
-                // Wheelchair Lateral Transfer Zone (1.50m x 1.40m)
-                ctx.save();
-                ctx.strokeStyle = 'rgba(2, 132, 199, 0.35)';
-                ctx.fillStyle = 'rgba(2, 132, 199, 0.04)';
-                ctx.lineWidth = 0.75;
-                ctx.setLineDash([3, 2]);
-                const transW = Math.min(32, w * 0.45);
-                const transH = Math.min(32, h * 0.45);
-                ctx.fillRect(wcX - transW, wcY, transW, transH);
-                ctx.strokeRect(wcX - transW, wcY, transW, transH);
-                ctx.setLineDash([]);
-                ctx.restore();
+            // Wheelchair Lateral Transfer Zone (1.50m x 1.40m)
+            ctx.save();
+            ctx.strokeStyle = 'rgba(2, 132, 199, 0.35)';
+            ctx.fillStyle = 'rgba(2, 132, 199, 0.04)';
+            ctx.lineWidth = 0.75;
+            ctx.setLineDash([3, 2]);
+            const transW = Math.min(32, w * 0.45);
+            const transH = Math.min(32, h * 0.45);
+            ctx.fillRect(wcX - transW, wcY, transW, transH);
+            ctx.strokeRect(wcX - transW, wcY, transW, transH);
+            ctx.setLineDash([]);
+            ctx.restore();
 
-                // Wall-Hung Concealed Tank & Actuator Plate
-                ctx.fillStyle = '#f8fafc';
-                ctx.strokeStyle = '#334155';
-                ctx.lineWidth = 1;
-                ctx.fillRect(wcX, wcY, wcW, 5);
-                ctx.strokeRect(wcX, wcY, wcW, 5);
+            // Wall-Hung Concealed Tank & Actuator Plate
+            ctx.fillStyle = '#f8fafc';
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 1;
+            ctx.fillRect(wcX, wcY, wcW, 5);
+            ctx.strokeRect(wcX, wcY, wcW, 5);
 
-                // Chrome Flush Actuator Plate
-                ctx.fillStyle = '#0284c7';
-                ctx.fillRect(wcX + 4, wcY + 1.5, 6, 2);
+            // Chrome Flush Actuator Plate
+            ctx.fillStyle = '#0284c7';
+            ctx.fillRect(wcX + 4, wcY + 1.5, 6, 2);
 
-                // Elongated Accessible Ceramic Bowl
-                ctx.fillStyle = '#ffffff';
-                ctx.beginPath();
-                ctx.ellipse(wcX + wcW / 2, wcY + 12, 5.5, 7.5, 0, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
+            // Elongated Accessible Ceramic Bowl
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.ellipse(wcX + wcW / 2, wcY + 12, 5.5, 7.5, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
 
-                // Inner Bowl & Seat Contour
-                ctx.strokeStyle = '#94a3b8';
-                ctx.lineWidth = 0.6;
-                ctx.beginPath();
-                ctx.ellipse(wcX + wcW / 2, wcY + 13, 3.5, 5.0, 0, 0, Math.PI * 2);
-                ctx.stroke();
+            // Inner Bowl & Seat Contour
+            ctx.strokeStyle = '#94a3b8';
+            ctx.lineWidth = 0.6;
+            ctx.beginPath();
+            ctx.ellipse(wcX + wcW / 2, wcY + 13, 3.5, 5.0, 0, 0, Math.PI * 2);
+            ctx.stroke();
 
-                // Rear Wall Grab Bar (36" = 90cm)
-                ctx.strokeStyle = '#0284c7';
-                ctx.lineWidth = 2.0;
-                ctx.beginPath();
-                ctx.moveTo(wcX - 4, wcY + 1);
-                ctx.lineTo(wcX + wcW + 4, wcY + 1);
-                ctx.stroke();
-                // Flanges
-                ctx.fillStyle = '#0284c7';
-                ctx.fillRect(wcX - 5, wcY, 2, 2);
-                ctx.fillRect(wcX + wcW + 3, wcY, 2, 2);
+            // Rear Wall Grab Bar (36" = 90cm)
+            ctx.strokeStyle = '#0284c7';
+            ctx.lineWidth = 2.0;
+            ctx.beginPath();
+            ctx.moveTo(wcX - 4, wcY + 1);
+            ctx.lineTo(wcX + wcW + 4, wcY + 1);
+            ctx.stroke();
+            // Flanges
+            ctx.fillStyle = '#0284c7';
+            ctx.fillRect(wcX - 5, wcY, 2, 2);
+            ctx.fillRect(wcX + wcW + 3, wcY, 2, 2);
 
-                // Side Wall Grab Bar (42" = 106cm)
-                ctx.beginPath();
-                ctx.moveTo(x + w - 2, wcY + 2);
-                ctx.lineTo(x + w - 2, wcY + wcH + 6);
-                ctx.stroke();
-                ctx.fillRect(x + w - 3, wcY + 1, 2, 2);
-                ctx.fillRect(x + w - 3, wcY + wcH + 5, 2, 2);
+            // Side Wall Grab Bar (42" = 106cm)
+            ctx.beginPath();
+            ctx.moveTo(x + w - 2, wcY + 2);
+            ctx.lineTo(x + w - 2, wcY + wcH + 6);
+            ctx.stroke();
+            ctx.fillRect(x + w - 3, wcY + 1, 2, 2);
+            ctx.fillRect(x + w - 3, wcY + wcH + 5, 2, 2);
 
-                // Folding Drop-Down Safety Arm Bar (ذراع حماية قابل للطي على جهة النقل)
-                ctx.strokeStyle = '#0284c7';
-                ctx.lineWidth = 2.0;
-                ctx.beginPath();
-                ctx.moveTo(wcX - 2, wcY + 2);
-                ctx.lineTo(wcX - 2, wcY + 16);
-                ctx.stroke();
-                // Pivot Mounting Bracket
-                ctx.fillStyle = '#0f172a';
-                ctx.fillRect(wcX - 3.5, wcY + 1, 3, 3);
-                ctx.fillStyle = '#38bdf8';
-                ctx.beginPath();
-                ctx.arc(wcX - 2, wcY + 16, 1.5, 0, Math.PI * 2);
-                ctx.fill();
+            // Folding Drop-Down Safety Arm Bar
+            ctx.strokeStyle = '#0284c7';
+            ctx.lineWidth = 2.0;
+            ctx.beginPath();
+            ctx.moveTo(wcX - 2, wcY + 2);
+            ctx.lineTo(wcX - 2, wcY + 16);
+            ctx.stroke();
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(wcX - 3.5, wcY + 1, 3, 3);
+            ctx.fillStyle = '#38bdf8';
+            ctx.beginPath();
+            ctx.arc(wcX - 2, wcY + 16, 1.5, 0, Math.PI * 2);
+            ctx.fill();
 
-                // -------------------------------------------------------------
-                // B. Curbless Roll-in Accessible Shower Zone (1.50m x 1.20m)
-                // -------------------------------------------------------------
-                const shW = Math.max(28, Math.round(w * 0.42));
-                const shH = Math.max(26, Math.round(h * 0.40));
-                const shX = x + 4;
-                const shY = y + h - shH - 4;
+            // -------------------------------------------------------------
+            // B. Curbless Roll-in Accessible Shower Zone (Bottom-Right)
+            // -------------------------------------------------------------
+            const shW = Math.max(28, Math.round(w * 0.42));
+            const shH = Math.max(26, Math.round(h * 0.40));
+            const shX = x + w - shW - 4;
+            const shY = y + h - shH - 4;
 
-                // Roll-in Shower Floor Demarcation (Zero Threshold)
-                ctx.fillStyle = 'rgba(2, 132, 199, 0.08)';
-                ctx.fillRect(shX, shY, shW, shH);
-                ctx.strokeStyle = '#0284c7';
-                ctx.lineWidth = 1.0;
-                ctx.setLineDash([3, 2]);
-                ctx.strokeRect(shX, shY, shW, shH);
-                ctx.setLineDash([]);
+            ctx.fillStyle = 'rgba(2, 132, 199, 0.08)';
+            ctx.fillRect(shX, shY, shW, shH);
+            ctx.strokeStyle = '#0284c7';
+            ctx.lineWidth = 1.0;
+            ctx.setLineDash([3, 2]);
+            ctx.strokeRect(shX, shY, shW, shH);
+            ctx.setLineDash([]);
 
-                // Linear Stainless Steel Floor Drain (مجرى تصريف خطي حديث)
-                const drainW = Math.min(18, shW - 8);
-                const drainH = 3;
-                const drainX = shX + (shW - drainW) / 2;
-                const drainY = shY + shH - 5;
-                ctx.fillStyle = '#475569';
-                ctx.fillRect(drainX, drainY, drainW, drainH);
-                ctx.strokeStyle = '#0284c7';
-                ctx.lineWidth = 0.6;
-                ctx.strokeRect(drainX, drainY, drainW, drainH);
-                // Drain slots
-                for (let sx = drainX + 2; sx < drainX + drainW - 2; sx += 3) {
-                    ctx.fillStyle = '#0f172a';
-                    ctx.fillRect(sx, drainY + 1, 1.5, 1);
-                }
+            // Linear Stainless Steel Floor Drain
+            const drainW = Math.min(18, shW - 8);
+            const drainH = 3;
+            const drainX = shX + (shW - drainW) / 2;
+            const drainY = shY + shH - 5;
+            ctx.fillStyle = '#475569';
+            ctx.fillRect(drainX, drainY, drainW, drainH);
+            ctx.strokeStyle = '#0284c7';
+            ctx.lineWidth = 0.6;
+            ctx.strokeRect(drainX, drainY, drainW, drainH);
 
-                // Folding Wall-Mounted Teak Shower Bench (مقعد استحمام جداري)
-                const benchW = 10;
-                const benchH = 18;
-                const benchX = shX + 1;
-                const benchY = shY + 4;
-                ctx.fillStyle = '#b45309'; // Teak wood
-                ctx.strokeStyle = '#78350f';
-                ctx.lineWidth = 0.8;
-                ctx.fillRect(benchX, benchY, benchW, benchH);
-                ctx.strokeRect(benchX, benchY, benchW, benchH);
-                // Wooden slats
-                for (let sl = benchY + 3; sl < benchY + benchH - 2; sl += 4) {
-                    ctx.beginPath(); ctx.moveTo(benchX, sl); ctx.lineTo(benchX + benchW, sl); ctx.stroke();
-                }
+            // Folding Teak Shower Bench
+            const benchW = 10;
+            const benchH = 18;
+            const benchX = shX + shW - benchW - 1;
+            const benchY = shY + 4;
+            ctx.fillStyle = '#b45309';
+            ctx.strokeStyle = '#78350f';
+            ctx.lineWidth = 0.8;
+            ctx.fillRect(benchX, benchY, benchW, benchH);
+            ctx.strokeRect(benchX, benchY, benchW, benchH);
 
-                // L-Shaped Shower Grab Bars
-                ctx.strokeStyle = '#0284c7';
-                ctx.lineWidth = 2.0;
-                ctx.beginPath();
-                ctx.moveTo(shX + 1, shY + 2);
-                ctx.lineTo(shX + shW - 2, shY + 2);
-                ctx.lineTo(shX + shW - 2, shY + shH - 6);
-                ctx.stroke();
+            // Shower Grab Bar
+            ctx.strokeStyle = '#0284c7';
+            ctx.lineWidth = 2.0;
+            ctx.beginPath();
+            ctx.moveTo(shX + 2, shY + 2);
+            ctx.lineTo(shX + shW - 2, shY + 2);
+            ctx.stroke();
 
-                // Adjustable Handheld Shower Set & Rail
-                const railX = shX + shW - 4;
-                const railY = shY + 6;
-                ctx.fillStyle = '#0284c7';
-                ctx.fillRect(railX, railY, 2, 12);
-                ctx.beginPath(); ctx.arc(railX + 1, railY + 6, 2.5, 0, Math.PI * 2); ctx.fill();
+            // -------------------------------------------------------------
+            // C. Wheelchair Accessible Vanity Washbasin (Left Wall BELOW door swing)
+            // -------------------------------------------------------------
+            const sinkW = 18;
+            const sinkH = 13;
+            const sinkX = x + 4;
+            const sinkY = y + 36; // 1.40m below top wall, completely clear of top door!
 
-                // -------------------------------------------------------------
-                // C. Wheelchair Accessible Vanity & Roll-in Lavatory
-                // -------------------------------------------------------------
-                const sinkW = 18;
-                const sinkH = 13;
-                const sinkX = x + 4;
-                const sinkY = y + 4;
+            // Knee Clearance Recess
+            ctx.strokeStyle = 'rgba(2, 132, 199, 0.4)';
+            ctx.lineWidth = 0.75;
+            ctx.setLineDash([2, 2]);
+            ctx.strokeRect(sinkX - 1, sinkY - 1, sinkW + 2, sinkH + 6);
+            ctx.setLineDash([]);
 
-                // Knee Clearance Recess (dashed outline)
-                ctx.strokeStyle = 'rgba(2, 132, 199, 0.4)';
-                ctx.lineWidth = 0.75;
-                ctx.setLineDash([2, 2]);
-                ctx.strokeRect(sinkX - 2, sinkY - 1, sinkW + 4, sinkH + 6);
-                ctx.setLineDash([]);
+            // Ergonomic Basin Counter
+            ctx.fillStyle = '#f8fafc';
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 1;
+            ctx.fillRect(sinkX, sinkY, sinkW, sinkH);
+            ctx.strokeRect(sinkX, sinkY, sinkW, sinkH);
 
-                // Ergonomic Basin Counter
-                ctx.fillStyle = '#f8fafc';
-                ctx.strokeStyle = '#334155';
-                ctx.lineWidth = 1;
-                ctx.fillRect(sinkX, sinkY, sinkW, sinkH);
-                ctx.strokeRect(sinkX, sinkY, sinkW, sinkH);
+            // Front Concave Curve
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.ellipse(sinkX + sinkW / 2, sinkY + sinkH / 2 + 1, 6.5, 4.5, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
 
-                // Front Wheelchair Concave Ergonomic Curve
-                ctx.fillStyle = '#ffffff';
-                ctx.beginPath();
-                ctx.ellipse(sinkX + sinkW / 2, sinkY + sinkH / 2 + 1, 6.5, 4.5, 0, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
+            // Faucet
+            ctx.fillStyle = '#0284c7';
+            ctx.beginPath(); ctx.arc(sinkX + sinkW / 2, sinkY + 2.5, 1.5, 0, Math.PI * 2); ctx.fill();
 
-                // Single-Lever Medical Mixer Faucet
-                ctx.fillStyle = '#0284c7';
-                ctx.beginPath(); ctx.arc(sinkX + sinkW / 2, sinkY + 2.5, 1.5, 0, Math.PI * 2); ctx.fill();
-                ctx.strokeStyle = '#0284c7';
-                ctx.lineWidth = 1.2;
-                ctx.beginPath();
-                ctx.moveTo(sinkX + sinkW / 2, sinkY + 2.5);
-                ctx.lineTo(sinkX + sinkW / 2, sinkY + 5.5);
-                ctx.stroke();
+            // -------------------------------------------------------------
+            // D. Central Wheelchair Clear Turning Circle (Ø 1.50m)
+            // -------------------------------------------------------------
+            const tcRadius = 17.25;
+            const tcX = x + w / 2;
+            const tcY = y + h / 2;
 
-                // -------------------------------------------------------------
-                // D. Central Wheelchair Clear Turning Circle (Ø 1.50m = 35px)
-                // -------------------------------------------------------------
-                const tcRadius = 17.25; // Ø 1.50m (34.5px)
-                const tcX = x + w / 2 + 3;
-                const tcY = y + h / 2;
+            ctx.save();
+            ctx.strokeStyle = 'rgba(2, 132, 199, 0.65)';
+            ctx.fillStyle = 'rgba(2, 132, 199, 0.05)';
+            ctx.lineWidth = 1.2;
+            ctx.setLineDash([4, 3]);
+            ctx.beginPath();
+            ctx.arc(tcX, tcY, tcRadius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.font = 'bold 6.5px Cairo, sans-serif';
+            ctx.fillStyle = '#0284c7';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('Ø 1.50m', tcX, tcY + 8);
+            ctx.restore();
+        }
 
-                ctx.save();
-                ctx.strokeStyle = 'rgba(2, 132, 199, 0.65)';
-                ctx.fillStyle = 'rgba(2, 132, 199, 0.05)';
-                ctx.lineWidth = 1.2;
-                ctx.setLineDash([4, 3]);
-                ctx.beginPath();
-                ctx.arc(tcX, tcY, tcRadius, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
-                ctx.setLineDash([]);
-
-                // Turning Arrow & Symbol
-                ctx.strokeStyle = 'rgba(2, 132, 199, 0.8)';
-                ctx.lineWidth = 1.0;
-                ctx.beginPath();
-                ctx.arc(tcX, tcY, 6, -Math.PI / 2, Math.PI);
-                ctx.stroke();
-                // Arrowhead
-                ctx.fillStyle = '#0284c7';
-                ctx.beginPath();
-                ctx.moveTo(tcX - 6, tcY);
-                ctx.lineTo(tcX - 9, tcY - 3);
-                ctx.lineTo(tcX - 3, tcY - 3);
-                ctx.closePath();
-                ctx.fill();
-
-                ctx.font = 'bold 6.5px Cairo, sans-serif';
-                ctx.fillStyle = '#0284c7';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText('Ø 1.50m', tcX, tcY + 8);
-                ctx.restore();
-
-            } else {
-                // =============================================================
-                // GENERAL / GUEST BATHROOM (حمام الضيوف / العام)
-                // =============================================================
-                // Wall-Hung Toilet Tank & Bowl
-                const wcX = x + w - 16;
-                const wcY = y + 4;
-                ctx.fillStyle = '#ffffff';
-                ctx.strokeStyle = '#334155';
-                ctx.lineWidth = 1;
-                ctx.fillRect(wcX, wcY, 12, 5);
-                ctx.strokeRect(wcX, wcY, 12, 5);
-                ctx.beginPath();
-                ctx.ellipse(wcX + 6, wcY + 11, 4.5, 6, 0, 0, Math.PI * 2);
-                ctx.fill(); ctx.stroke();
-
-                // Grab bar
-                ctx.strokeStyle = '#0284c7';
-                ctx.lineWidth = 1.8;
-                ctx.beginPath();
-                ctx.moveTo(wcX - 3, wcY + 2); ctx.lineTo(wcX - 3, wcY + 18);
-                ctx.stroke();
-
-                // Vanity Washbasin
-                const sinkX = x + 4;
-                const sinkY = y + 4;
-                ctx.fillStyle = '#ffffff';
-                ctx.strokeStyle = '#334155';
-                ctx.lineWidth = 1;
-                ctx.fillRect(sinkX, sinkY, 12, 9);
-                ctx.strokeRect(sinkX, sinkY, 12, 9);
-                ctx.beginPath();
-                ctx.ellipse(sinkX + 6, sinkY + 4.5, 4, 3, 0, 0, Math.PI * 2);
-                ctx.stroke();
-                ctx.fillStyle = '#0284c7';
-                ctx.beginPath(); ctx.arc(sinkX + 6, sinkY + 1.5, 1, 0, Math.PI * 2); ctx.fill();
-
-                // Shower Zone
-                const shX = x + 4;
-                const shY = y + h - 22;
-                const shSize = 18;
-                ctx.strokeStyle = '#0284c7';
-                ctx.lineWidth = 0.8;
-                ctx.setLineDash([2, 2]);
-                ctx.strokeRect(shX, shY, shSize, shSize);
-                ctx.setLineDash([]);
-
-                ctx.strokeStyle = '#64748b';
-                ctx.lineWidth = 0.8;
-                ctx.beginPath();
-                ctx.arc(shX + shSize / 2, shY + shSize / 2, 2.5, 0, Math.PI * 2);
-                ctx.stroke();
+        else if (r.key === 'bathroom') {
+            // Subtle porcelain tile grid
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.06)';
+            ctx.lineWidth = 0.5;
+            const tileStep = 10;
+            for (let gx = x + tileStep; gx < x + w - 2; gx += tileStep) {
+                ctx.beginPath(); ctx.moveTo(gx, y + 2); ctx.lineTo(gx, y + h - 2); ctx.stroke();
             }
+            for (let gy = y + tileStep; gy < y + h - 2; gy += tileStep) {
+                ctx.beginPath(); ctx.moveTo(x + 2, gy); ctx.lineTo(x + w - 2, gy); ctx.stroke();
+            }
+
+            // =============================================================
+            // GENERAL / GUEST BATHROOM (Zero Door Collision)
+            // Door is on the Left wall near top (y + 4 to y + 27).
+            // Place all fixtures on the RIGHT wall and BOTTOM wall!
+            // =============================================================
+
+            // Wall-Hung Toilet Tank & Bowl on Top-Right Wall (away from left door!)
+            const wcX = x + w - 15;
+            const wcY = y + 4;
+            ctx.fillStyle = '#ffffff';
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 1;
+            ctx.fillRect(wcX, wcY, 11, 5);
+            ctx.strokeRect(wcX, wcY, 11, 5);
+            ctx.beginPath();
+            ctx.ellipse(wcX + 5.5, wcY + 11, 4.5, 6, 0, 0, Math.PI * 2);
+            ctx.fill(); ctx.stroke();
+
+            // Grab bar
+            ctx.strokeStyle = '#0284c7';
+            ctx.lineWidth = 1.8;
+            ctx.beginPath();
+            ctx.moveTo(wcX - 3, wcY + 2); ctx.lineTo(wcX - 3, wcY + 18);
+            ctx.stroke();
+
+            // Vanity Washbasin on the RIGHT wall below toilet (COMPLETELY CLEAR OF LEFT DOOR!)
+            const sinkX = x + w - 15;
+            const sinkY = y + 28;
+            ctx.fillStyle = '#ffffff';
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 1;
+            ctx.fillRect(sinkX, sinkY, 11, 10);
+            ctx.strokeRect(sinkX, sinkY, 11, 10);
+            ctx.beginPath();
+            ctx.ellipse(sinkX + 5.5, sinkY + 5, 4, 3.5, 0, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.fillStyle = '#0284c7';
+            ctx.beginPath(); ctx.arc(sinkX + 5.5, sinkY + 2, 1, 0, Math.PI * 2); ctx.fill();
+
+            // Shower Zone at Bottom
+            const shSize = Math.min(22, w - 8);
+            const shX = x + (w - shSize) / 2;
+            const shY = y + h - shSize - 4;
+            ctx.strokeStyle = '#0284c7';
+            ctx.lineWidth = 0.8;
+            ctx.setLineDash([2, 2]);
+            ctx.strokeRect(shX, shY, shSize, shSize);
+            ctx.setLineDash([]);
+
+            ctx.strokeStyle = '#64748b';
+            ctx.lineWidth = 0.8;
+            ctx.beginPath();
+            ctx.arc(shX + shSize / 2, shY + shSize / 2, 2.5, 0, Math.PI * 2);
+            ctx.stroke();
         }
 
         // 3. BEDROOMS (#e801f7 Disabled Suite & #fefe0a Standard Bedroom): Queen Bed, Pillows, Nightstands, Wardrobe
