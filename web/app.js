@@ -714,7 +714,25 @@ function setupEventListeners() {
 
     if (generateBtn) {
         generateBtn.addEventListener('click', () => {
-            generateFloorplan();
+            // 1. Advance stochastic seed to synthesize a fresh variation on each click
+            state.stochasticSeed = Math.floor(Math.random() * 90000) + 10000;
+            const currentSeedVal = document.getElementById('currentSeedVal');
+            if (currentSeedVal) currentSeedVal.textContent = `#${state.stochasticSeed}`;
+
+            // 2. Active visual feedback
+            generateBtn.classList.add('generating');
+            const spanEl = generateBtn.querySelector('span');
+            const origText = spanEl ? spanEl.textContent : '';
+            if (spanEl) spanEl.textContent = state.lang === 'ar' ? '⚡ جاري التوليد التوافقي...' : '⚡ Synthesizing Plan...';
+
+            setTimeout(() => {
+                generateFloorplan();
+                generateBtn.classList.remove('generating');
+                if (spanEl) {
+                    const t = I18N[state.lang] || I18N.ar;
+                    spanEl.textContent = t.generateBtn;
+                }
+            }, 100);
         });
     }
 
