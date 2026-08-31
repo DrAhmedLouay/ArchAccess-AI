@@ -4793,18 +4793,36 @@ function drawLabels() {
     const isAr = state.lang === 'ar';
     const pxPerMeter = 23.0;
 
-    rooms.forEach(r => {
+    // 1. Identify primary corridor segment to prevent duplicate overlapping spine labels
+    let primaryCorridorIdx = -1;
+    let maxCorrArea = -1;
+    rooms.forEach((r, idx) => {
+        if (r.key === 'corridors') {
+            const area = r.bounds.w * r.bounds.h;
+            if (area > maxCorrArea) {
+                maxCorrArea = area;
+                primaryCorridorIdx = idx;
+            }
+        }
+    });
+
+    rooms.forEach((r, idx) => {
+        // Skip secondary corridor fragments to guarantee zero duplicate spine labels
+        if (r.key === 'corridors' && idx !== primaryCorridorIdx) {
+            return;
+        }
+
         const { x, y, w, h } = r.bounds;
         let cx = Math.round(x + w / 2);
         let cy = Math.round(y + h / 2);
 
         let labelName = isAr ? r.name_ar : r.name_en;
         if (r.key === 'court_garden') {
-            labelName = isAr ? 'منور تهوية وإنارة' : 'Light & Vent Shaft';
+            labelName = isAr ? 'منور تهوية' : 'Vent Shaft';
         } else if (r.key === 'corridors') {
             labelName = isAr ? 'الموزع المركزي' : 'Central Spine';
         } else if (r.key === 'disabled_bathroom') {
-            labelName = isAr ? 'حمام مهيأ (ADA)' : 'ADA Bath';
+            labelName = isAr ? 'حمام مهيأ' : 'ADA Bath';
         } else if (r.key === 'bathroom') {
             labelName = isAr ? 'حمام الضيوف' : 'Guest Bath';
         } else if (r.key === 'disabled_bedroom') {
@@ -4822,14 +4840,22 @@ function drawLabels() {
         const dimW = (w / pxPerMeter).toFixed(2);
         const dimH = (h / pxPerMeter).toFixed(2);
         const areaText = isAr ? `${r.area_m2} م²` : `${r.area_m2} m²`;
-        const metricsBadge = isAr ? `${dimW}م × ${dimH}م (${areaText})` : `${dimW}m × ${dimH}m (${areaText})`;
+
+        // Check if space is narrow horizontally (< 55px = ~2.4m)
+        const isNarrowSpace = (w < 55);
+        const isVerticalStrip = (h > w * 1.8 && w < 48);
+
+        // Compact metrics badge for narrow spaces (Guest bath, shafts, corridors)
+        const metricsBadge = isNarrowSpace
+            ? (isAr ? `${dimW}×${dimH}م` : `${dimW}x${dimH}m`)
+            : (isAr ? `${dimW}م × ${dimH}م (${areaText})` : `${dimW}m × ${dimH}m (${areaText})`);
 
         // Optimal room-specific centroid calculation to guarantee zero overlap with furniture & doors
         if (r.key === 'kitchen') {
             cx = Math.round(x + (w - 18) / 2);
             cy = Math.round(y + h * 0.58);
         } else if (r.key === 'bathroom') {
-            cx = Math.round(x + (w - 20) / 2);
+            cx = Math.round(x + (w - 18) / 2);
             cy = Math.round(y + h * 0.46);
         } else if (r.key === 'disabled_bathroom') {
             cx = Math.round(x + (w - 16) / 2);
@@ -4851,9 +4877,6 @@ function drawLabels() {
             cy = Math.round(y + h / 2);
         }
 
-        // Check if space is narrow vertically (e.g. side light shaft)
-        const isVerticalStrip = (h > w * 2.2 && w < 48);
-
         ctx.save();
 
         if (isVerticalStrip) {
@@ -4862,38 +4885,46 @@ function drawLabels() {
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
 
-            ctx.font = isAr ? 'bold 8.5px Cairo, sans-serif' : 'bold 8px Inter, sans-serif';
+            ctx.font = isAr ? 'bold 7.5px Cairo, sans-serif' : 'bold 7px Inter, sans-serif';
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
-            ctx.lineWidth = 2.5;
-            ctx.strokeText(labelName, 0, -4.5);
+            ctx.lineWidth = 2.2;
+            ctx.strokeText(labelName, 0, -4);
             ctx.fillStyle = '#0f172a';
-            ctx.fillText(labelName, 0, -4.5);
+            ctx.fillText(labelName, 0, -4);
 
-            ctx.font = 'bold 7px JetBrains Mono, Cairo';
+            ctx.font = 'bold 6.5px JetBrains Mono, Cairo';
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
             ctx.lineWidth = 2.0;
-            ctx.strokeText(metricsBadge, 0, 4.5);
+            ctx.strokeText(metricsBadge, 0, 4);
             ctx.fillStyle = '#0284c7';
-            ctx.fillText(metricsBadge, 0, 4.5);
+            ctx.fillText(metricsBadge, 0, 4);
         } else {
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
 
+            const titleFont = isNarrowSpace
+                ? (isAr ? 'bold 7.5px Cairo, sans-serif' : 'bold 7.5px Inter, sans-serif')
+                : (isAr ? 'bold 8.5px Cairo, sans-serif' : 'bold 8.5px Inter, sans-serif');
+
+            const metricsFont = isNarrowSpace
+                ? 'bold 6.5px JetBrains Mono, Cairo'
+                : 'bold 7.2px JetBrains Mono, Cairo';
+
             // Line 1: Space Title (Dark Slate with crisp White Halo)
-            ctx.font = isAr ? 'bold 9.5px Cairo, sans-serif' : 'bold 9px Inter, sans-serif';
+            ctx.font = titleFont;
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
-            ctx.lineWidth = 2.8;
-            ctx.strokeText(labelName, cx, cy - 5.5);
+            ctx.lineWidth = 2.5;
+            ctx.strokeText(labelName, cx, cy - 4.5);
             ctx.fillStyle = '#0f172a';
-            ctx.fillText(labelName, cx, cy - 5.5);
+            ctx.fillText(labelName, cx, cy - 4.5);
 
             // Line 2: Architectural Dimensions & Area (Blue Badge with White Halo)
-            ctx.font = 'bold 7.8px JetBrains Mono, Cairo';
+            ctx.font = metricsFont;
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
-            ctx.lineWidth = 2.2;
-            ctx.strokeText(metricsBadge, cx, cy + 5.5);
+            ctx.lineWidth = 2.0;
+            ctx.strokeText(metricsBadge, cx, cy + 4.5);
             ctx.fillStyle = '#0284c7';
-            ctx.fillText(metricsBadge, cx, cy + 5.5);
+            ctx.fillText(metricsBadge, cx, cy + 4.5);
         }
 
         ctx.restore();
