@@ -20,7 +20,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 2. CUSTOM STREAMLIT STYLING
+# 2. CUSTOM STREAMLIT STYLING (Zero Margins for Maximum CAD Canvas Area)
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap');
@@ -33,22 +33,51 @@ st.markdown("""
         background-color: #0b1120;
         color: #f8fafc;
     }
+
+    /* ELIMINATE STREAMLIT DEFAULT PADDING & MARGINS */
+    .block-container {
+        padding-top: 0.25rem !important;
+        padding-bottom: 0.25rem !important;
+        padding-left: 0.25rem !important;
+        padding-right: 0.25rem !important;
+        max-width: 100% !important;
+    }
+
+    .main .block-container {
+        padding-top: 0.25rem !important;
+        padding-bottom: 0.25rem !important;
+        padding-left: 0.25rem !important;
+        padding-right: 0.25rem !important;
+        max-width: 100% !important;
+    }
+
+    [data-testid="stAppViewContainer"] > .main {
+        padding: 0 !important;
+    }
+
+    /* Streamlit Components IFrame Full Width */
+    iframe {
+        width: 100% !important;
+        min-width: 100% !important;
+        border: none !important;
+        display: block !important;
+    }
     
     /* Header Bar */
     .arch-header {
         background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
         border: 1px solid rgba(56, 189, 248, 0.25);
-        border-radius: 12px;
-        padding: 16px 24px;
-        margin-bottom: 18px;
+        border-radius: 8px;
+        padding: 10px 18px;
+        margin-bottom: 8px;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
     }
     
     .arch-title {
-        font-size: 1.5rem;
+        font-size: 1.3rem;
         font-weight: 800;
         background: linear-gradient(90deg, #38bdf8, #818cf8);
         -webkit-background-clip: text;
@@ -57,17 +86,17 @@ st.markdown("""
     }
     
     .arch-subtitle {
-        font-size: 0.85rem;
+        font-size: 0.8rem;
         color: #94a3b8;
-        margin-top: 4px;
+        margin-top: 2px;
     }
     
     .author-badge {
         background: rgba(56, 189, 248, 0.1);
         border: 1px solid rgba(56, 189, 248, 0.4);
-        padding: 6px 14px;
-        border-radius: 20px;
-        font-size: 0.8rem;
+        padding: 4px 12px;
+        border-radius: 16px;
+        font-size: 0.75rem;
         color: #38bdf8;
         font-weight: 600;
     }
@@ -76,19 +105,19 @@ st.markdown("""
     .metric-card {
         background: rgba(15, 23, 42, 0.85);
         border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 10px;
-        padding: 12px 16px;
+        border-radius: 8px;
+        padding: 10px 12px;
         text-align: center;
     }
     
     .metric-val {
-        font-size: 1.4rem;
+        font-size: 1.25rem;
         font-weight: 800;
         color: #38bdf8;
     }
     
     .metric-lbl {
-        font-size: 0.75rem;
+        font-size: 0.72rem;
         color: #94a3b8;
     }
     
