@@ -138,23 +138,87 @@ body {
     gap: 8px;
 }
 
-/* Workspace Grid - Maximized Floorplan Canvas Area */
+/* Workspace Grid - Ultra-Wide Floorplan Canvas Viewport */
 .workspace-grid {
     display: grid;
-    grid-template-columns: 280px 1fr 290px;
+    grid-template-columns: 245px 1fr 255px;
     flex: 1;
     overflow: hidden;
+    position: relative;
+    transition: grid-template-columns 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.workspace-grid.left-collapsed {
+    grid-template-columns: 0px 1fr 255px;
+}
+
+.workspace-grid.right-collapsed {
+    grid-template-columns: 245px 1fr 0px;
+}
+
+.workspace-grid.both-collapsed {
+    grid-template-columns: 0px 1fr 0px;
 }
 
 /* Sidebar Panels */
 .sidebar-panel {
     background-color: var(--bg-card);
     border-inline: 1px solid var(--border-color);
-    padding: 12px;
+    padding: 10px;
     overflow-y: auto;
+    overflow-x: hidden;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
+    min-width: 0;
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+.workspace-grid.left-collapsed .sidebar-panel:first-of-type,
+.workspace-grid.right-collapsed .sidebar-panel.analytics-panel,
+.workspace-grid.both-collapsed .sidebar-panel {
+    display: none !important;
+}
+
+/* Floating Sidebar Toggle Buttons */
+.panel-toggle-btn {
+    position: absolute;
+    top: 54px;
+    z-index: 100;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    color: var(--accent-cyan);
+    width: 24px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border-radius: 0 4px 4px 0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+    transition: all 0.2s ease;
+    font-size: 11px;
+    font-weight: bold;
+}
+.panel-toggle-btn:hover {
+    background: var(--accent-blue);
+    color: #ffffff;
+}
+.left-toggle-btn {
+    left: 245px;
+}
+.workspace-grid.left-collapsed .left-toggle-btn,
+.workspace-grid.both-collapsed .left-toggle-btn {
+    left: 0;
+}
+
+.right-toggle-btn {
+    right: 255px;
+    border-radius: 4px 0 0 4px;
+}
+.workspace-grid.right-collapsed .right-toggle-btn,
+.workspace-grid.both-collapsed .right-toggle-btn {
+    right: 0;
 }
 
 .panel-section {

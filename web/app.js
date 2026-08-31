@@ -821,6 +821,48 @@ function setupEventListeners() {
             renderCanvas();
         });
     }
+
+    // Sidebar Collapsible Toggles & Max Canvas Viewport
+    const toggleLeftBtn = document.getElementById('toggleLeftSidebarBtn');
+    const toggleRightBtn = document.getElementById('toggleRightSidebarBtn');
+    const toggleMaxCanvasBtn = document.getElementById('toggleMaxCanvasBtn');
+    const workspaceGrid = document.querySelector('.workspace-grid');
+
+    if (toggleLeftBtn && workspaceGrid) {
+        toggleLeftBtn.addEventListener('click', () => {
+            workspaceGrid.classList.toggle('left-collapsed');
+            const isColl = workspaceGrid.classList.contains('left-collapsed');
+            toggleLeftBtn.textContent = isColl ? '▶' : '◀';
+            setTimeout(() => { resizeCanvas(); renderCanvas(); }, 240);
+        });
+    }
+
+    if (toggleRightBtn && workspaceGrid) {
+        toggleRightBtn.addEventListener('click', () => {
+            workspaceGrid.classList.toggle('right-collapsed');
+            const isColl = workspaceGrid.classList.contains('right-collapsed');
+            toggleRightBtn.textContent = isColl ? '◀' : '▶';
+            setTimeout(() => { resizeCanvas(); renderCanvas(); }, 240);
+        });
+    }
+
+    if (toggleMaxCanvasBtn && workspaceGrid) {
+        toggleMaxCanvasBtn.addEventListener('click', () => {
+            const isBoth = workspaceGrid.classList.contains('both-collapsed');
+            if (isBoth) {
+                workspaceGrid.classList.remove('both-collapsed', 'left-collapsed', 'right-collapsed');
+                if (toggleLeftBtn) toggleLeftBtn.textContent = '◀';
+                if (toggleRightBtn) toggleRightBtn.textContent = '▶';
+                toggleMaxCanvasBtn.classList.remove('active');
+            } else {
+                workspaceGrid.classList.add('both-collapsed');
+                if (toggleLeftBtn) toggleLeftBtn.textContent = '▶';
+                if (toggleRightBtn) toggleRightBtn.textContent = '◀';
+                toggleMaxCanvasBtn.classList.add('active');
+            }
+            setTimeout(() => { resizeCanvas(); renderCanvas(); }, 240);
+        });
+    }
 }
 
 const I18N = {
@@ -983,6 +1025,7 @@ const I18N = {
         tabBio: "التحليل البيئي ومسار الشمس (Bioclimatic & Sun)",
         tabHeatmap: "خريطة تدقيق كود ADA (1.50m Turning Circles)",
         tabRaw: "المخرج الخام للشبكة التوليدية (Raw AI cGAN)",
+        tabMaxCanvas: "توسيع الشاشة",
         toggleTagsText: "🏷️ تسميات الفضاءات (Tags)",
         toggleSunOverlayText: "☀️ مسار الشمس والرياح",
         scaleInfo: "المقياس: 1m = 23px • تغطية البناء 65% - 75%",
@@ -1086,6 +1129,7 @@ const I18N = {
         tabBio: "Bioclimatic & Sun Path Analysis",
         tabHeatmap: "ADA Mobility Heatmap (1.50m Turning Circles)",
         tabRaw: "Generative cGAN Raw Output",
+        tabMaxCanvas: "Max Canvas",
         toggleTagsText: "🏷️ Space Tags",
         toggleSunOverlayText: "☀️ Sun Path & Winds",
         scaleInfo: "Scale: 1m = 23px • Building Coverage 65% - 75%",
@@ -1274,6 +1318,8 @@ function updateUIForLang() {
     if (tabAdaText) tabAdaText.textContent = t.tabHeatmap;
     const tabRawText = document.getElementById('tabRawText');
     if (tabRawText) tabRawText.textContent = t.tabRaw;
+    const tabMaxCanvasText = document.getElementById('tabMaxCanvasText');
+    if (tabMaxCanvasText) tabMaxCanvasText.textContent = t.tabMaxCanvas;
 
     const chkTexts = document.querySelectorAll('.checkbox-text');
     if (chkTexts[0]) chkTexts[0].textContent = t.toggleTagsText;
