@@ -2943,13 +2943,6 @@ function drawBoundary() {
         ctx.moveTo(p1_out_x, p1_out_y);
         ctx.lineTo(p2_out_x, p2_out_y);
         ctx.stroke();
-
-        if (isStreet && i === 0 && state.showTags) {
-            ctx.fillStyle = '#0000fe';
-            ctx.font = 'bold 9.5px Cairo, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('🛣️ حد الشارع الرئيسي (Street Boundary)', midX, p1_out_y - 12);
-        }
     }
 
     // Site / Car Entrance Gate with 25cm Wall Profile and Rich Details
@@ -3227,39 +3220,7 @@ function drawAccessibleParkingAndVehicularPath(ctx, parking, gate, ramp) {
     ctx.lineWidth = 1.2;
     ctx.font = 'bold 8px JetBrains Mono, Cairo';
 
-    // Width Dimension Line on Top of Car Body (2.00m)
-    const carDimY = cb.y - 4;
-    ctx.beginPath();
-    ctx.moveTo(cb.x, cb.y); ctx.lineTo(cb.x, carDimY - 2);
-    ctx.moveTo(cb.x + cb.w, cb.y); ctx.lineTo(cb.x + cb.w, carDimY - 2);
-    ctx.moveTo(cb.x, carDimY); ctx.lineTo(cb.x + cb.w, carDimY);
-    ctx.moveTo(cb.x - 2, carDimY + 2); ctx.lineTo(cb.x + 2, carDimY - 2);
-    ctx.moveTo(cb.x + cb.w - 2, carDimY + 2); ctx.lineTo(cb.x + cb.w + 2, carDimY - 2);
-    ctx.stroke();
-
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'bottom';
-    ctx.fillText('W: 2.00m', cb.x + cb.w / 2, carDimY - 1);
-
-    // Length Dimension Line on Right Side of Car Body (5.00m)
-    const carDimX = cb.x + cb.w + 3;
-    ctx.beginPath();
-    ctx.moveTo(cb.x + cb.w, cb.y); ctx.lineTo(carDimX + 2, cb.y);
-    ctx.moveTo(cb.x + cb.w, cb.y + cb.h); ctx.lineTo(carDimX + 2, cb.y + cb.h);
-    ctx.moveTo(carDimX, cb.y); ctx.lineTo(carDimX, cb.y + cb.h);
-    ctx.moveTo(carDimX - 2, cb.y + 2); ctx.lineTo(carDimX + 2, cb.y - 2);
-    ctx.moveTo(carDimX - 2, cb.y + cb.h + 2); ctx.lineTo(carDimX + 2, cb.y + cb.h - 2);
-    ctx.stroke();
-
-    ctx.save();
-    ctx.translate(carDimX + 7, cb.y + cb.h / 2);
-    ctx.rotate(Math.PI / 2);
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('L: 5.00m', 0, 0);
-    ctx.restore();
-
-    // Center Dimension Badge on Car Roof
+    // Center Dimension Badge on Car Roof (2.00m x 5.00m)
     ctx.fillStyle = '#f8fafc';
     ctx.font = 'bold 8px JetBrains Mono, Cairo';
     ctx.textAlign = 'center';
@@ -3359,16 +3320,13 @@ function drawAccessibleParkingAndVehicularPath(ctx, parking, gate, ramp) {
         ctx.fill();
     }
 
-    // 7. Labels & Dimensions
+    // 7. Transfer Aisle Label (Single Clean Non-Overlapping Tag)
     if (state.showTags) {
-        ctx.font = 'bold 8.5px Cairo, sans-serif';
-        ctx.fillStyle = '#f8fafc';
-        ctx.textAlign = 'center';
-        ctx.fillText(isAr ? '🚗 مركبة 2.00m × 5.00m (موقف 2.80m)' : '🚗 Vehicle 2.00m x 5.00m (2.80m Bay)', carBounds.x + carBounds.w / 2, carBounds.y + carBounds.h + 12);
-        
         ctx.font = 'bold 8px Cairo, sans-serif';
         ctx.fillStyle = '#38bdf8';
-        ctx.fillText(isAr ? '♿ مسار نقل السائق المهيأ (1.80m)' : '♿ ADA Transfer Aisle (1.80m)', aisleBounds.x + aisleBounds.w / 2, aisleBounds.y - 6);
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(isAr ? '♿ مسار نقل السائق 1.80م' : '♿ ADA Transfer Aisle 1.80m', aisleBounds.x + aisleBounds.w / 2, aisleBounds.y + 16);
     }
 
     ctx.restore();
@@ -4135,8 +4093,8 @@ function drawPerimeterDimensions(plotBounds, rooms) {
     ctx.lineWidth = 0.9;
     ctx.font = 'bold 8px JetBrains Mono';
 
-    // 1. Top Total Facade Dimension Line
-    const dimY = minY - 14;
+    // 1. Top Total Facade Dimension Line (Width)
+    const dimY = minY - 20;
     ctx.beginPath();
     ctx.moveTo(minX, minY - 2); ctx.lineTo(minX, dimY - 4);
     ctx.moveTo(minX + plotW, minY - 2); ctx.lineTo(minX + plotW, dimY - 4);
@@ -4147,12 +4105,18 @@ function drawPerimeterDimensions(plotBounds, rooms) {
     ctx.stroke();
 
     const widthM = (plotW / pxPerMeter).toFixed(2);
+    ctx.font = 'bold 8.5px JetBrains Mono, Cairo';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'bottom';
-    ctx.fillText(`${widthM}m (${isAr ? 'عرض القطعة' : 'Plot Width'})`, minX + plotW / 2, dimY - 2);
+    const widthText = `${widthM}m (${isAr ? 'عرض القطعة المطلة على الشارع' : 'Street Frontage Width'})`;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+    ctx.lineWidth = 2.5;
+    ctx.strokeText(widthText, minX + plotW / 2, dimY - 3);
+    ctx.fillStyle = '#0f172a';
+    ctx.fillText(widthText, minX + plotW / 2, dimY - 3);
 
-    // 2. Right Total Depth Dimension Line
-    const dimX = minX + plotW + 14;
+    // 2. Right Total Depth Dimension Line (Depth)
+    const dimX = minX + plotW + 20;
     ctx.beginPath();
     ctx.moveTo(minX + plotW + 2, minY); ctx.lineTo(dimX + 4, minY);
     ctx.moveTo(minX + plotW + 2, minY + plotH); ctx.lineTo(dimX + 4, minY + plotH);
@@ -4167,14 +4131,19 @@ function drawPerimeterDimensions(plotBounds, rooms) {
     ctx.rotate(Math.PI / 2);
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`${depthM}m (${isAr ? 'عمق القطعة' : 'Plot Depth'})`, 0, 0);
+    const depthText = `${depthM}m (${isAr ? 'عمق القطعة' : 'Plot Depth'})`;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+    ctx.lineWidth = 2.5;
+    ctx.strokeText(depthText, 0, 0);
+    ctx.fillStyle = '#0f172a';
+    ctx.fillText(depthText, 0, 0);
     ctx.restore();
 
     // 3. Side Branch Street Setback (for Corner Plots: strictly >= 1.20m)
     if (state.plotTypology === 'corner_plot' && state.currentLayout && state.currentLayout.garageBounds && state.currentLayout.garageBounds.cornerW) {
         const cornerW = state.currentLayout.garageBounds.cornerW;
         const setbackM = (cornerW / pxPerMeter).toFixed(2);
-        const setY = minY + plotH * 0.65;
+        const setY = minY + plotH * 0.70;
         ctx.strokeStyle = '#0284c7';
         ctx.fillStyle = '#0284c7';
         ctx.lineWidth = 1.0;
@@ -4187,7 +4156,12 @@ function drawPerimeterDimensions(plotBounds, rooms) {
         ctx.font = 'bold 7.5px JetBrains Mono, Cairo';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'bottom';
-        ctx.fillText(`${setbackM}m (${isAr ? 'ارتداد الفرع ≥ 1.2م' : 'Branch Setback ≥ 1.2m'})`, minX + cornerW / 2, setY - 2);
+        const setText = `${setbackM}m (${isAr ? 'ارتداد الفرع ≥ 1.2م' : 'Branch Setback ≥ 1.2m'})`;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+        ctx.lineWidth = 2.0;
+        ctx.strokeText(setText, minX + cornerW / 2, setY - 2);
+        ctx.fillStyle = '#0284c7';
+        ctx.fillText(setText, minX + cornerW / 2, setY - 2);
     }
 
     ctx.restore();
@@ -4716,15 +4690,6 @@ function drawDoors(doorsList) {
             ctx.stroke();
             ctx.setLineDash([]);
 
-            // 4. Compact Door Width Tag
-            if (state.showTags) {
-                ctx.fillStyle = '#4f46e5';
-                ctx.font = 'bold 8px JetBrains Mono';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(`${widthM}m`, x + w / 2, y + d * 8);
-            }
-
         } else {
             // Vertical Wall Door Opening (from y to y+w on wall x)
             const hy = hingeAtEnd ? (y + w) : y;
@@ -4766,15 +4731,6 @@ function drawDoors(doorsList) {
             }
             ctx.stroke();
             ctx.setLineDash([]);
-
-            // 4. Compact Door Width Tag
-            if (state.showTags) {
-                ctx.fillStyle = '#4f46e5';
-                ctx.font = 'bold 8px JetBrains Mono';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(`${widthM}m`, x + d * 8, y + w / 2);
-            }
         }
     });
 }
@@ -4869,26 +4825,29 @@ function drawLabels() {
 
         // Optimal room-specific centroid calculation to guarantee zero overlap with furniture & doors
         if (r.key === 'kitchen') {
-            cx = Math.round(x + (w - 14) / 2);
-            cy = Math.round(y + h * 0.56);
+            cx = Math.round(x + (w - 18) / 2);
+            cy = Math.round(y + h * 0.58);
         } else if (r.key === 'bathroom') {
-            cx = Math.round(x + (w - 16) / 2 + 2);
+            cx = Math.round(x + (w - 20) / 2);
             cy = Math.round(y + h * 0.46);
         } else if (r.key === 'disabled_bathroom') {
-            cx = Math.round(x + w / 2);
-            cy = Math.round(y + h / 2 - 2);
+            cx = Math.round(x + (w - 16) / 2);
+            cy = Math.round(y + h * 0.46);
         } else if (r.key === 'disabled_bedroom' || r.key === 'bedroom') {
             cx = Math.round(x + w / 2);
-            cy = Math.round(y + h * 0.68);
+            cy = Math.round(y + h * 0.65);
         } else if (r.key === 'guest_room') {
             cx = Math.round(x + w / 2);
-            cy = Math.round(y + 14); // in the grand entry threshold
+            cy = Math.round(y + h * 0.45);
         } else if (r.key === 'living_room') {
-            cx = Math.round(x + (w > 100 ? w * 0.62 : w / 2));
-            cy = Math.round(y + h * 0.38);
+            cx = Math.round(x + (w > 120 ? w * 0.55 : w / 2));
+            cy = Math.round(y + h * 0.45);
         } else if (r.key === 'corridors') {
-            // Horizontal central gallery
-            cy = Math.round(y + 14);
+            cx = Math.round(x + w / 2);
+            cy = Math.round(y + h / 2);
+        } else if (r.key === 'court_garden') {
+            cx = Math.round(x + w / 2);
+            cy = Math.round(y + h / 2);
         }
 
         // Check if space is narrow vertically (e.g. side light shaft)
