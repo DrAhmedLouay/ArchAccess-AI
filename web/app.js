@@ -219,7 +219,7 @@ const state = {
     // Iraq GIS & Bioclimatic State
     iraqGov: 'baghdad',
     northAngle: 0,        // 0 deg = North is Top
-    showSunOverlay: true,
+    showSunOverlay: false,
     bioTime: 12.0,        // 06:00 to 18:00
     bioSeason: 'summer',  // 'summer' or 'winter'
     bioIsPlaying: false,
