@@ -2872,32 +2872,69 @@ function drawBoundary() {
 
     const typology = state.plotTypology;
 
-    for (let i = 0; i < pts.length; i++) {
+    ctx.save();
+
+    // 1. Calculate Outward Normal Offset for Boundary Lines to prevent covering 25cm structural perimeter walls
+    const xs = pts.map(p => p.x);
+    const ys = pts.map(p => p.y);
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const minY = Math.min(...ys);
+    const maxY = Math.max(...ys);
+    const cx = (minX + maxX) / 2;
+    const cy = (minY + maxY) / 2;
+
+    const wallHalfThickPx = 2.875; // 25cm wall profile half-thickness
+    const boundaryOffsetPx = wallHalfThickPx + 1.2; // 4.075px outward offset from center line
+
+    const numPts = pts.length;
+    for (let i = 0; i < numPts; i++) {
         const p1 = pts[i];
-        const p2 = pts[(i + 1) % pts.length];
+        const p2 = pts[(i + 1) % numPts];
 
         let isStreet = false;
         if (typology === 'corner_plot') {
-            isStreet = (i === 0 || i === pts.length - 1);
+            isStreet = (i === 0 || i === numPts - 1);
         } else {
             isStreet = (i === 0);
         }
 
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
+        const L = Math.hypot(dx, dy) || 1;
+        let nx = -dy / L;
+        let ny = dx / L;
+
+        // Ensure normal points away from centroid towards outside
+        const midX = (p1.x + p2.x) / 2;
+        const midY = (p1.y + p2.y) / 2;
+        if (nx * (midX - cx) + ny * (midY - cy) < 0) {
+            nx = -nx;
+            ny = -ny;
+        }
+
+        const p1_out_x = p1.x + nx * boundaryOffsetPx;
+        const p1_out_y = p1.y + ny * boundaryOffsetPx;
+        const p2_out_x = p2.x + nx * boundaryOffsetPx;
+        const p2_out_y = p2.y + ny * boundaryOffsetPx;
+
+        // Draw Crisp CAD Property Line on the Exterior
         ctx.strokeStyle = isStreet ? '#0000fe' : '#fc0005';
-        ctx.lineWidth = 5.75; // 25cm uniform wall thickness
+        ctx.lineWidth = 2.5; // Crisp CAD property boundary line
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
         ctx.setLineDash([]);
+
         ctx.beginPath();
-        ctx.moveTo(p1.x, p1.y);
-        ctx.lineTo(p2.x, p2.y);
+        ctx.moveTo(p1_out_x, p1_out_y);
+        ctx.lineTo(p2_out_x, p2_out_y);
         ctx.stroke();
 
         if (isStreet && i === 0 && state.showTags) {
-            const midX = (p1.x + p2.x) / 2;
-            const midY = (p1.y + p2.y) / 2;
             ctx.fillStyle = '#0000fe';
             ctx.font = 'bold 9.5px Cairo, sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText('🛣️ حد الشارع الرئيسي (Street Boundary)', midX, midY - 20);
+            ctx.fillText('🛣️ حد الشارع الرئيسي (Street Boundary)', midX, p1_out_y - 12);
         }
     }
 
@@ -2908,13 +2945,6 @@ function drawBoundary() {
     }
 
     // Dimension Lines
-    const xs = pts.map(p => p.x);
-    const ys = pts.map(p => p.y);
-    const minX = Math.min(...xs);
-    const maxX = Math.max(...xs);
-    const minY = Math.min(...ys);
-    const maxY = Math.max(...ys);
-
     const widthMeters = state.currentPreset === 'dimensions' 
         ? state.plotWidthM.toFixed(2) 
         : ((maxX - minX) / 23.0).toFixed(2);
@@ -2937,12 +2967,12 @@ function drawBoundary() {
     ctx.moveTo(maxX - 3, dimY + 3); ctx.lineTo(maxX + 3, dimY - 3);
     ctx.stroke();
 
-    const midX = (minX + maxX) / 2;
+    const midPlotX = (minX + maxX) / 2;
     ctx.fillStyle = '#38bdf8';
     ctx.font = 'bold 12px JetBrains Mono, Cairo';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`W: ${widthMeters}m`, midX, dimY - 10);
+    ctx.fillText(`W: ${widthMeters}m`, midPlotX, dimY - 10);
 
     // Right Length Dimension
     const dimX = maxX + 18;
@@ -2954,18 +2984,18 @@ function drawBoundary() {
     ctx.moveTo(dimX - 3, maxY + 3); ctx.lineTo(dimX + 3, maxY - 3);
     ctx.stroke();
 
-    const midY = (minY + maxY) / 2;
+    const midPlotY = (minY + maxY) / 2;
     ctx.fillStyle = '#f87171';
     ctx.font = 'bold 12px JetBrains Mono, Cairo';
     ctx.save();
-    ctx.translate(dimX + 12, midY);
+    ctx.translate(dimX + 12, midPlotY);
     ctx.rotate(Math.PI / 2);
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(`L: ${lengthMeters}m`, 0, 0);
     ctx.restore();
 
-    // Vertices
+    // Vertices Markers
     pts.forEach((p) => {
         ctx.fillStyle = '#1f6feb';
         ctx.beginPath();
@@ -2975,6 +3005,8 @@ function drawBoundary() {
         ctx.lineWidth = 1.5;
         ctx.stroke();
     });
+
+    ctx.restore();
 }
 
 /**
