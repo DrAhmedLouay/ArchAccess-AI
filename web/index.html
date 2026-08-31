@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArchAccess AI | منصة التصميم الشامل وأتمتة المساقط السكنية (BIM + Pix2Pix)</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <!-- jsPDF Library for Architectural Sheet PDF Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Top Navigation Header -->
+        <header class="top-nav">
+            <div class="brand-section">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                        <polyline points="2 17 12 22 22 17" />
+                        <polyline points="2 12 12 17 22 12" />
+                    </svg>
+                </div>
+                <div class="brand-text">
+                    <h1>ArchAccess <span>AI</span></h1>
+                    <p class="subtitle">التصميم التوليدي الشامل لكودات الوصول (ADA) وتكامل BIM</p>
+                </div>
+            </div>
+
+            <div class="header-badges">
+                <span class="badge badge-tech">Pix2Pix cGAN &bull; λ=200</span>
+                <span class="badge badge-ada">ADA Section 304 Compliant</span>
+                <span class="badge badge-speed">&lt; 0.2s Inference</span>
+            </div>
+
+            <div class="header-actions">
+                <button id="langToggleBtn" class="btn btn-secondary btn-sm">English</button>
+                <button id="themeToggleBtn" class="btn btn-secondary btn-sm" title="تبديل النمط">🌙</button>
+            </div>
+        </header>
+
+        <!-- Main Workspace Grid -->
+        <main class="workspace-grid">
+            <!-- Left Sidebar: Controls & Parameters -->
+            <aside class="sidebar-panel">
+                <div class="panel-section">
+                    <h3 class="section-title">
+                        <span class="step-num">1</span>
+                        <span>شكل قطعة الأرض (Plot Boundary)</span>
+                    </h3>
+                    <p class="section-desc">اختر نموذجاً أو ارسم قطعة أرض ذات زوايا وانكسارات حادة (Unseen Boundary):</p>
+                    
+                    <div class="presets-grid">
+                        <button class="preset-btn" data-preset="irregular">
+                            <span class="preset-name">أرض منكسرة (Unseen)</span>
+                            <span class="preset-tag">شبه منحرف بشطفات</span>
+                        </button>
+                        <button class="preset-btn active" data-preset="dimensions">
+                            <span class="preset-name">أبعاد بالمتر (L × W)</span>
+                            <span class="preset-tag">طول وعرض مخصص</span>
+                        </button>
+                        <button class="preset-btn" data-preset="regular">
+                            <span class="preset-name">أرض مستطيلة</span>
+                            <span class="preset-tag">16m × 16m</span>
+                        </button>
+                        <button class="preset-btn" data-preset="custom">
+                            <span class="preset-name">رسم حر مخصص</span>
+                            <span class="preset-tag">انقر لرسم مضلع</span>
+                        </button>
+                    </div>
+
+                    <!-- Plot Typology Selector (Back-to-Back vs Corner Plot) -->
+                    <div class="typology-control-box">
+                        <label class="typology-title">نوع موقع القطعة (Plot Typology):</label>
+                        <div class="typology-options">
+                            <label class="typology-option active" id="typeBackToBack">
+                                <input type="radio" name="plotTypology" value="back_to_back" checked>
+                                <div class="option-content">
+                                    <span class="opt-main">واجهة واحدة (Back-to-Back)</span>
+                                    <span class="opt-desc">1 شارع (#0000fe) + 3 جيران (#fc0005)</span>
+                                </div>
+                            </label>
+                            <label class="typology-option" id="typeCorner">
+                                <input type="radio" name="plotTypology" value="corner_plot">
+                                <div class="option-content">
+                                    <span class="opt-main">قطعة ركنية (Corner Plot)</span>
+                                    <span class="opt-desc">2 شارع (#0000fe) + 2 جيران (#fc0005)</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Custom Dimensions Card (Meters & Decimals) -->
+                    <div class="custom-dimensions-card" id="dimensionsCard">
+                        <div class="dim-header">
+                            <span class="dim-title">أبعاد القطعة ونسبة التغطية:</span>
+                            <span id="calculatedPlotArea" class="plot-area-badge">232.0 م²</span>
+                        </div>
+                        <div class="dim-inputs-grid">
+                            <div class="dim-field">
+                                <label for="plotLengthInput">الطول / العمق (متر):</label>
+                                <div class="input-with-unit">
+                                    <input type="number" id="plotLengthInput" min="5" max="50" step="0.25" value="16.00">
+                                    <span class="unit-badge">م</span>
+                                </div>
+                            </div>
+                            <div class="dim-field">
+                                <label for="plotWidthInput">العرض / الواجهة (متر):</label>
+                                <div class="input-with-unit">
+                                    <input type="number" id="plotWidthInput" min="5" max="50" step="0.25" value="14.50">
+                                    <span class="unit-badge">م</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="coverage-limit-row">
+                            <span class="limit-label">نسبة التغطية البنائية المطلوبة (Coverage Ratio):</span>
+                            <span class="limit-badge">65% - 75% (المتبقي 25% - 35% ارتدادات وحدائق وممرات)</span>
+                        </div>
+
+                        <button id="applyDimensionsBtn" class="btn btn-secondary btn-sm btn-block">
+                            <span>📐 تطبيق الأبعاد وتوليد المسقط (تغطية 65% - 75%)</span>
+                        </button>
+                    </div>
+
+                    <!-- Iraq Geographic Location & Bioclimatic Orientation Card -->
+                    <div class="iraq-climate-card" id="iraqClimateCard">
+                        <div class="climate-header">
+                            <span class="climate-icon">🇮🇶</span>
+                            <span class="climate-title">تسقيط الموقع في العراق والمناخ (Iraq GIS):</span>
+                        </div>
+                        <div class="gov-select-group">
+                            <label for="iraqGovernorateSelect">المحافظة / الإقليم المناخي:</label>
+                            <select id="iraqGovernorateSelect" class="form-select">
+                                <option value="baghdad" selected>بغداد (العاصمة) - مناخ صحراوي حار وجاف</option>
+                                <option value="basra">البصرة - مناخ حار رطب ورطوبة ساحلية</option>
+                                <option value="erbil">أربيل (كردستان) - مناخ شبه جاف وجبلي</option>
+                                <option value="mosul">الموصل (نينوى) - مناخ شبه جاف متوسطي</option>
+                                <option value="najaf">النجف الأشرف - مناخ صحراوي شديد الجفاف</option>
+                                <option value="karbala">كربلاء المقدسة - مناخ صحراوي حار وجاف</option>
+                                <option value="anbar">الأنبار (الرمادي) - مناخ صحراوي قاري متباين</option>
+                                <option value="sulaymaniyah">السليمانية - مناخ جبلي معتدل صيفاً بارد شتاءً</option>
+                            </select>
+                        </div>
+
+                        <!-- North Orientation Compass Control -->
+                        <div class="orientation-control-box">
+                            <div class="orient-header">
+                                <label for="northAngleSlider">توجيه الشمال للقطعة (North Orientation):</label>
+                                <span id="northAngleVal" class="slider-badge compass-badge">0° (الشمال للأعلى)</span>
+                            </div>
+                            <div class="range-container">
+                                <input type="range" id="northAngleSlider" min="0" max="355" value="0" step="5">
+                            </div>
+                            <div class="orient-quick-buttons">
+                                <button type="button" class="btn-orient-quick active" data-angle="0">شمال 0°</button>
+                                <button type="button" class="btn-orient-quick" data-angle="90">شرق 90°</button>
+                                <button type="button" class="btn-orient-quick" data-angle="180">جنوب 180°</button>
+                                <button type="button" class="btn-orient-quick" data-angle="270">غرب 270°</button>
+                            </div>
+                        </div>
+
+                        <!-- Live Climate Badge Summary -->
+                        <div class="climate-summary-box">
+                            <div class="clim-item">
+                                <span class="clim-lbl">إشعاع الصيف:</span>
+                                <span id="summerSunAngleVal" class="clim-val">80.1° (حادة)</span>
+                            </div>
+                            <div class="clim-item">
+                                <span class="clim-lbl">كسب الشتاء:</span>
+                                <span id="winterSunAngleVal" class="clim-val">33.2° (مائلة)</span>
+                            </div>
+                            <div class="clim-item">
+                                <span class="clim-lbl">الرياح السائدة:</span>
+                                <span id="prevailingWindVal" class="clim-val">شمالية غربية (الشمالي)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="drawing-tools">
+                        <button id="clearPlotBtn" class="btn btn-outline btn-sm">مسح اللوحة</button>
+                        <button id="resetPlotBtn" class="btn btn-outline btn-sm">إعادة ضبط النموذج</button>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <h3 class="section-title">
+                        <span class="step-num">2</span>
+                        <span>محددات الذكاء الاصطناعي والتوليد</span>
+                    </h3>
+
+                    <div class="control-group">
+                        <label id="variantSelectLabel">النمط التوزيعي التوليدي (Layout Variant):</label>
+                        <select id="variantSelect" class="form-select">
+                            <option value="1">النمط 1: موزع مركزي طولي + جناح مهيأ غربي (#e801f7) + مطبخ مستقل</option>
+                            <option value="2">النمط 2: فناء وسطي ومنور مركزي (#00ff01) + جناح مهيأ خلفي</option>
+                            <option value="3">النمط 3: جناح مهيأ شرقي موسع (#e801f7) + استقبال رحب</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <div class="slider-header">
+                            <label id="lambdaSliderLabel" for="lambdaSlider">وزن التشفير المكاني (Spatial Weight λ=200):</label>
+                            <span id="lambdaVal" class="slider-badge">200</span>
+                        </div>
+                        <div class="range-container">
+                            <input type="range" id="lambdaSlider" min="50" max="300" value="200" step="10">
+                        </div>
+                    </div>
+
+                    <div class="control-group">
+                        <div class="slider-header">
+                            <label id="tempSliderLabel" for="tempSlider">درجة التوليد والابتكار (Creativity / Temp):</label>
+                            <span id="tempVal" class="slider-badge">0.50</span>
+                        </div>
+                        <div class="range-container">
+                            <input type="range" id="tempSlider" min="1" max="10" value="5" step="1">
+                        </div>
+                    </div>
+
+                    <div class="control-group">
+                        <div class="slider-header">
+                            <label id="epsilonSliderLabel" for="epsilonSlider">دقة خوارزمية التعامد (Orthogonalization Epsilon):</label>
+                            <span id="epsilonVal" class="slider-badge">0.015</span>
+                        </div>
+                        <div class="range-container">
+                            <input type="range" id="epsilonSlider" min="5" max="30" value="15" step="1">
+                        </div>
+                    </div>
+
+                    <!-- Probabilistic Spatial Distribution & Stochastic Sampling Box -->
+                    <div class="probabilistic-generator-card" id="probabilisticCard">
+                        <div class="prob-header">
+                            <span class="prob-icon">🎲</span>
+                            <span class="prob-title" id="probTitle">التوليد الاحتمالي للتوزيع الفضائي (Stochastic Synthesis):</span>
+                        </div>
+                        <p class="prob-desc" id="probDesc">توليد احتمالي لتنويعات التوزيع الفضائي ونسب الغرف مع الحفاظ الصارم على قيود الكود:</p>
+                        
+                        <div class="prob-actions-row">
+                            <button id="stochasticRollBtn" type="button" class="btn btn-stochastic btn-block">
+                                <span>🎲 توليد توزيع احتمالي جديد (Stochastic Roll)</span>
+                            </button>
+                        </div>
+
+                        <div class="seed-control-bar">
+                            <span class="seed-lbl" id="seedLabel">بذرة الاحتمالية (Random Seed):</span>
+                            <div class="seed-badge-group">
+                                <span id="currentSeedVal" class="seed-badge">#48291</span>
+                                <button id="nextSeedBtn" type="button" class="btn-seed-step" title="بذرة عشوائية جديدة">🔄</button>
+                            </div>
+                        </div>
+
+                        <div class="prob-metrics-grid">
+                            <div class="prob-metric-item">
+                                <span class="p-lbl" id="entropyLabel">الإنتروبيا المكانية:</span>
+                                <span id="spatialEntropyVal" class="p-val">2.84 bits</span>
+                            </div>
+                            <div class="prob-metric-item">
+                                <span class="p-lbl" id="diversityLabel">مؤشر التنوع:</span>
+                                <span id="layoutDiversityVal" class="p-val">94.2%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button id="generateBtn" class="btn btn-primary btn-block generate-btn">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                        </svg>
+                        <span id="generateBtnText">توليد المسقط التوافقي فورياً</span>
+                    </button>
+                </div>
+
+                <div class="panel-section">
+                    <h3 class="section-title">
+                        <span class="step-num">3</span>
+                        <span>التصدير وحفظ المخططات (Export & Save)</span>
+                    </h3>
+                    <div class="export-actions">
+                        <button id="exportImageBtn" class="btn btn-export btn-highlight">
+                            <span class="icon">🖼️</span>
+                            <span class="text">حفظ كصورة (Export Image / PNG)</span>
+                        </button>
+                        <button id="exportPdfBtn" class="btn btn-export btn-highlight">
+                            <span class="icon">📄</span>
+                            <span class="text">تصدير لوحة PDF (Architectural Sheet)</span>
+                        </button>
+                        <button id="exportDxfBtn" class="btn btn-export">
+                            <span class="icon">📐</span>
+                            <span class="text">تصدير AutoCAD / DXF</span>
+                        </button>
+                        <button id="exportBimJsonBtn" class="btn btn-export">
+                            <span class="icon">🏢</span>
+                            <span class="text">تصدير BIM (Revit Native JSON)</span>
+                        </button>
+                        <button id="exportReportBtn" class="btn btn-export">
+                            <span class="icon">📋</span>
+                            <span class="text">تقرير تدقيق الامتثال (ADA Audit)</span>
+                        </button>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Center Canvas Viewport -->
+            <section class="canvas-viewport">
+                <!-- Mode Switcher Toolbar -->
+                <div class="viewport-toolbar">
+                    <div class="view-mode-tabs">
+                        <button class="view-tab active" data-mode="orthogonal">
+                            <span class="dot dot-ortho"></span>
+                            <span id="tabOrthoText">المخطط المتبلور والمتعامد (90° Orthogonal)</span>
+                        </button>
+                        <button class="view-tab" data-mode="probabilistic">
+                            <span class="dot dot-prob"></span>
+                            <span id="tabProbText">الكثافة الاحتمالية للتوزيع (Probabilistic Density)</span>
+                        </button>
+                        <button class="view-tab" data-mode="bioclimatic">
+                            <span class="dot dot-bio"></span>
+                            <span id="tabBioText">التحليل البيئي ومسار الشمس (Bioclimatic & Sun)</span>
+                        </button>
+                        <button class="view-tab" data-mode="heatmap">
+                            <span class="dot dot-heatmap"></span>
+                            <span id="tabAdaText">خريطة تدقيق كود ADA (1.50m Turning Circles)</span>
+                        </button>
+                        <button class="view-tab" data-mode="raw_ai">
+                            <span class="dot dot-raw"></span>
+                            <span id="tabRawText">المخرج الخام للشبكة التوليدية (Raw AI cGAN)</span>
+                        </button>
+                    </div>
+
+                    <div class="viewport-options">
+                        <label class="tags-checkbox-label" title="إظهار أو إخفاء تسميات الفضاءات وأرقام المساحات">
+                            <input type="checkbox" id="toggleTagsCheckbox" checked>
+                            <span class="checkbox-text">🏷️ تسميات الفضاءات (Tags)</span>
+                        </label>
+                        <label class="tags-checkbox-label" title="إظهار أو إخفاء مسار الشمس والرياح السائدة">
+                            <input type="checkbox" id="toggleSunOverlayCheckbox" checked>
+                            <span class="checkbox-text">☀️ مسار الشمس والرياح</span>
+                        </label>
+
+                        <div class="canvas-scale-info">
+                            <span>المقياس: 1m = 23px &bull; تغطية البناء 65% - 75%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Drawing Canvas Container -->
+                <div class="canvas-card">
+                    <div class="canvas-wrapper">
+                        <!-- Floating Zoom & Pan Controls Toolbar -->
+                        <div class="canvas-zoom-toolbar">
+                            <button id="zoomInBtn" class="zoom-btn" title="تكبير (Zoom In)">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5">
+                                    <circle cx="11" cy="11" r="7"></circle>
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                    <line x1="11" y1="8" x2="11" y2="14"></line>
+                                    <line x1="8" y1="11" x2="14" y2="11"></line>
+                                </svg>
+                            </button>
+                            <span id="zoomLevelBadge" class="zoom-badge">100%</span>
+                            <button id="zoomOutBtn" class="zoom-btn" title="تصغير (Zoom Out)">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5">
+                                    <circle cx="11" cy="11" r="7"></circle>
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                    <line x1="8" y1="11" x2="14" y2="11"></line>
+                                </svg>
+                            </button>
+                            <button id="zoomResetBtn" class="zoom-btn" title="إعادة ضبط المقياس (Reset / Fit)">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                                    <path d="M3 3v5h5"></path>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <!-- Interactive Bioclimatic & Solar Simulation Toolbar -->
+                        <div id="bioSimToolbar" class="bio-sim-toolbar">
+                            <div class="bio-sim-row">
+                                <div class="bio-sim-group">
+                                    <span class="bio-sim-icon">☀️</span>
+                                    <span class="bio-sim-label">وقت المحاكاة:</span>
+                                    <input type="range" id="bioTimeSlider" min="6" max="18" step="0.5" value="12" class="bio-slider">
+                                    <span id="bioTimeDisplay" class="bio-time-badge">12:00 ظهراً</span>
+                                    <button type="button" id="bioPlayBtn" class="btn-bio-play" title="تشغيل / إيقاف حركة الشمس التلقائية">▶️</button>
+                                </div>
+                                <div class="bio-sim-group">
+                                    <span class="bio-sim-label">فصل المحاكاة:</span>
+                                    <div class="bio-season-toggle">
+                                        <button type="button" class="btn-season active" id="btnSeasonSummer" data-season="summer">☀️ الصيف (حزيران)</button>
+                                        <button type="button" class="btn-season" id="btnSeasonWinter" data-season="winter">❄️ الشتاء (كانون)</button>
+                                    </div>
+                                </div>
+                                <div class="bio-sim-group bio-info-pill">
+                                    <span id="bioLiveMetricsText">ارتفاع الشمس: 80.1° • طول الظل: 0.53m</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <canvas id="mainCanvas" width="512" height="512"></canvas>
+                        <div id="loadingOverlay" class="loading-overlay hidden">
+                            <div class="spinner"></div>
+                            <p>جاري المعالجة المسبقة، الاستدلال التوليدي، وتطبيق التعامد الهندسي...</p>
+                        </div>
+                    </div>
+
+                    <!-- Canvas Footer: Categorized Visual Color-Coding Language Legend -->
+                    <div class="semantic-legend-container">
+                        <div class="legend-group">
+                            <span class="legend-group-title">الفضاءات والعناصر الخارجية (Outdoor Spaces & Site):</span>
+                            <div class="legend-items-row">
+                                <div class="legend-item"><span class="color-swatch line-blue" style="background-color: #0000fe;"></span><span>Street (#0000fe - Solid Blue)</span></div>
+                                <div class="legend-item"><span class="color-swatch line-red" style="background-color: #fc0005;"></span><span>Neighbor (#fc0005 - Solid Red)</span></div>
+                                <div class="legend-item"><span class="color-swatch" style="background-color: #e2ac2e;"></span><span>Site Entrance (#e2ac2e)</span></div>
+                                <div class="legend-item"><span class="color-swatch" style="background-color: #fe6300;"></span><span>Disabled Ramp (#fe6300)</span></div>
+                                <div class="legend-item"><span class="color-swatch" style="background-color: #b0b0b0;"></span><span>Garage/Path (#b0b0b0)</span></div>
+                                <div class="legend-item"><span class="color-swatch" style="background-color: #00ff01;"></span><span>Court/Garden (#00ff01)</span></div>
+                            </div>
+                        </div>
+
+                        <div class="legend-group">
+                            <span class="legend-group-title">الفضاءات الداخلية والمداخل (Internal Rooms & Circulation):</span>
+                            <div class="legend-items-row">
+                                <div class="legend-item"><span class="color-swatch" style="background-color: #019df2;"></span><span>Guest Room (#019df2)</span></div>
+                                <div class="legend-item"><span class="color-swatch" style="background-color: #01ffec;"></span><span>Living Room (#01ffec)</span></div>
+                                <div class="legend-item"><span class="color-swatch" style="background-color: #fefe0a;"></span><span>Standard Bed (#fefe0a)</span></div>
+                                <div class="legend-item"><span class="color-swatch" style="background-color: #e801f7;"></span><span>Disabled Master (#e801f7)</span></div>
+                                <div class="legend-item"><span class="color-swatch" style="background-color: #ff3464;"></span><span>ADA Bath (#ff3464)</span></div>
+                                <div class="legend-item"><span class="color-swatch" style="background-color: #6300fe;"></span><span>General Bath (#6300fe)</span></div>
+                                <div class="legend-item"><span class="color-swatch" style="background-color: #FFB8D8;"></span><span>Kitchen (#FFB8D8)</span></div>
+                                <div class="legend-item"><span class="color-swatch" style="background-color: #efde8e;"></span><span>Corridors (#efde8e)</span></div>
+                                <div class="legend-item"><span class="color-swatch" style="background-color: #000000;"></span><span>Walls (#000000)</span></div>
+                                <div class="legend-item"><span class="color-swatch" style="background-color: #aaabfe;"></span><span>Doors (#aaabfe)</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Sidebar: Live ADA Analytics & Room Breakdown -->
+            <aside class="sidebar-panel analytics-panel">
+                <!-- Compliance & AGCR Score Real-time Certification Card -->
+                <div class="panel-section">
+                    <h3 class="section-title">مؤشرات الامتثال والمساحات (ADA & BCR Analytics)</h3>
+                    
+                    <!-- AGCR Score Card -->
+                    <div class="score-card">
+                        <div class="score-header">
+                            <span class="score-title">نسبة الامتثال الهندسي للحركة (AGCR)</span>
+                            <span id="certBadge" class="cert-badge gold">الفئة الذهبية</span>
+                        </div>
+                        <div class="score-number-row">
+                            <span id="agcrScoreVal" class="score-huge">96.4%</span>
+                            <span class="score-sub">مطابق لكود ADA 2010</span>
+                        </div>
+                        <div class="progress-bar-bg">
+                            <div id="agcrProgressBar" class="progress-bar-fill" style="width: 96.4%;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Coverage Ratio Card (65% - 75%) -->
+                    <div class="coverage-score-card">
+                        <div class="coverage-header">
+                            <span>نسبة التغطية البنائية (Coverage Ratio):</span>
+                            <span id="coverageBadge" class="badge-tag pass">65% - 75% مطابق</span>
+                        </div>
+                        <div class="coverage-number-row">
+                            <span id="coveragePercentVal" class="coverage-num">69.8%</span>
+                            <span id="coverageDetailVal" class="coverage-sub">164.0 م² من أصل 235.0 م²</span>
+                        </div>
+                        <div class="progress-bar-bg">
+                            <div id="coverageProgressBar" class="coverage-bar-fill" style="width: 69.8%;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Research Paper Benchmark Metrics -->
+                    <div class="metrics-grid">
+                        <div class="metric-item">
+                            <span class="metric-label">مساحة الأرض الكلية</span>
+                            <span id="totalPlotAreaVal" class="metric-val">235.0 م²</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">المساحة المبنية الصافية</span>
+                            <span id="totalBuiltAreaVal" class="metric-val">164.0 م²</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">التشابه الهيكلي (SSIM)</span>
+                            <span class="metric-val">0.7810</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">زمن الاستدلال</span>
+                            <span id="inferenceTimeVal" class="metric-val">&lt; 0.18s</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Iraq Bioclimatic & Cultural Privacy Analytics Panel -->
+                <div class="panel-section bioclimatic-panel-section">
+                    <h3 class="section-title">
+                        <span>🇮🇶 المحاكاة المناخية والبيئية والخصوصية الاجتماعية</span>
+                    </h3>
+                    
+                    <div class="bio-analytics-card">
+                        <div class="bio-header">
+                            <span class="bio-title" id="bioLocationTitle">بغداد &bull; مناخ صحراوي حار وجاف</span>
+                            <span class="cert-badge gold" id="privacyBadge">خصوصية 100%</span>
+                        </div>
+
+                        <div class="bio-grid">
+                            <div class="bio-metric">
+                                <span class="bio-lbl">ارتفاع شمس الصيف (21 حزيران):</span>
+                                <span id="bioSummerSunVal" class="bio-val text-amber">80.1° (شبه عمودية)</span>
+                            </div>
+                            <div class="bio-metric">
+                                <span class="bio-lbl">ارتفاع شمس الشتاء (21 كانون):</span>
+                                <span id="bioWinterSunVal" class="bio-val text-blue">33.2° (مائلة دافئة)</span>
+                            </div>
+                            <div class="bio-metric">
+                                <span class="bio-lbl">كواسر التظليل المطلوبة:</span>
+                                <span id="bioOverhangVal" class="bio-val">0.45 متر (D=0.45m)</span>
+                            </div>
+                            <div class="bio-metric">
+                                <span class="bio-lbl">الرياح الشمالية الغربية:</span>
+                                <span id="bioWindEffVal" class="bio-val text-green">94% كفاءة تبريد</span>
+                            </div>
+                        </div>
+
+                        <!-- Educational Bioclimatic Explanation Guide -->
+                        <div class="bio-guide-box">
+                            <div class="bio-guide-item">
+                                <span class="guide-icon">☀️</span>
+                                <div class="guide-content">
+                                    <strong>مسار الشمس والظلال:</strong>
+                                    <span>في الصيف تكون الشمس مرتفعة (80.1°) وظلالها قصيرة فتحجبها كواسر التظليل. في الشتاء تنخفض (33.2°) وتخترق النوافذ الجنوبية لتدفئة الصالة طبيعياً.</span>
+                                </div>
+                            </div>
+                            <div class="bio-guide-item">
+                                <span class="guide-icon">🍃</span>
+                                <div class="guide-content">
+                                    <strong>الرياح السائدة والتبريد بالفناء:</strong>
+                                    <span>رياح "الشمالي" تهب من الشمال الغربي (315° NW). يدخل الهواء عبر المنور وفناء الحوش لتوليد تيار تبريدي صاعد يسحب حرارة البيت.</span>
+                                </div>
+                            </div>
+                            <div class="bio-guide-item">
+                                <span class="guide-icon">🛡️</span>
+                                <div class="guide-content">
+                                    <strong>الخصوصية الاجتماعية العراقية:</strong>
+                                    <span>فصل تام لمدخل الضيوف مع حمام مستقل، ونوافذ مرتفعة على الجوار (جلسة ≥ 1.60م) لحفظ حرمة الدار وحرية الأسرة.</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Iraqi Cultural Privacy Criteria Checklist -->
+                        <div class="privacy-checklist">
+                            <div class="privacy-item pass">
+                                <span class="chk-icon">🛡️</span>
+                                <span class="chk-text">عزل غرفة الضيوف بحاجز بصري وحمام مستقل</span>
+                            </div>
+                            <div class="privacy-item pass">
+                                <span class="chk-icon">🏡</span>
+                                <span class="chk-text">فناء داخلي/حوش ومنور لتأمين خصوصية عائلية تامة 100%</span>
+                            </div>
+                            <div class="privacy-item pass">
+                                <span class="chk-icon">🪟</span>
+                                <span class="chk-text">جلسات نوافذ مرتفعة (High Sill ≥1.6m) لحرمة الجوار</span>
+                            </div>
+                        </div>
+
+                        <div class="bio-recommendation-box">
+                            <span class="rec-title">💡 التوصية المعمارية للمحافظة:</span>
+                            <p id="bioRecommendationText" class="rec-text">
+                                كواسر شمس أفقية جنوبية بعمق 0.45م، عزل حراري للجدران، فناء وسطي (حوش) لتوليد تيار تبريدي طبيعي.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <h3 class="section-title">جدول الفضاءات والمساحات المحسوبة</h3>
+                    <div class="rooms-table-container">
+                        <table class="rooms-table" id="roomsTable">
+                            <thead>
+                                <tr>
+                                    <th>الفضاء المعماري</th>
+                                    <th>المساحة</th>
+                                    <th>قطر الدوران</th>
+                                    <th>الحالة</th>
+                                </tr>
+                            </thead>
+                            <tbody id="roomsTableBody">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="panel-section notice-section">
+                    <div class="notice-card">
+                        <h4>💡 ملاحظة من البحث (Section 5)</h4>
+                        <p>
+                            تثبت المخرجات كفاءة الذكاء الاصطناعي كـ <strong>محرك استنتاجي تشاركي (Co-pilot)</strong> 
+                            يختصر 70% من وقت الدراسات الفراغية الأولية مع الحفاظ على الإشراف والقرار البشري للمعمار.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="panel-section author-section">
+                    <div class="author-card">
+                        <div class="author-icon">👨‍🔬</div>
+                        <div class="author-info">
+                            <span class="author-label">Lead Researcher & Architect</span>
+                            <span class="author-name">Developed and Designed by Dr Ahmed Louay</span>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </main>
+
+        <!-- Platform Global Footer -->
+        <footer class="app-footer">
+            <div class="footer-content">
+                <div class="footer-credit">
+                    <span class="credit-star">✨</span>
+                    <span class="credit-main">Developed and Designed by <strong>Dr Ahmed Louay</strong></span>
+                </div>
+                <div class="footer-meta">
+                    <span>ArchAccess AI Platform &bull; Universal Spatial Architecture &bull; ADA & BIM Standards</span>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Modal for ADA Report -->
+    <div id="reportModal" class="modal-backdrop hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2>شهادة تدقيق الامتثال للتصميم الشامل (ADA Compliance Audit)</h2>
+                <button id="closeModalBtn" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body" id="reportBody">
+                <!-- Injected via JavaScript -->
+            </div>
+            <div class="modal-footer">
+                <button id="printReportBtn" class="btn btn-primary">طباعة التقرير / حفظ PDF</button>
+                <button id="dismissModalBtn" class="btn btn-secondary">إغلاق</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js?v=20260831_2039"></script>
+</body>
+</html>
