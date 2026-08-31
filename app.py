@@ -104,6 +104,8 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+import time
+
 # 3. HELPER TO BUNDLE WEB APPLICATION (FRESH DIRECT LOAD - NO STALE CACHE)
 def get_bundled_html():
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -122,6 +124,13 @@ def get_bundled_html():
     with open(js_path, "r", encoding="utf-8") as f:
         js_content = f.read()
         
+    # Inject cache-busting build timestamp
+    timestamp = int(time.time())
+    html_content = html_content.replace(
+        '<head>',
+        f'<head>\n    <!-- ArchAccess Build Version: {timestamp} -->'
+    )
+
     # Replace external styles with inlined CSS
     html_content = html_content.replace(
         '<link rel="stylesheet" href="styles.css">',
