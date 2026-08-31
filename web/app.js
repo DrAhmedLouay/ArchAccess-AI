@@ -929,7 +929,7 @@ const I18N = {
 
         iraqClimateTitle: "تسقيط الموقع في العراق والمناخ (Iraq GIS):",
         govLabel: "المحافظة / الإقليم المناخي:",
-        northOrientLabel: "توجيه الشمال للقطعة (North Orientation):",
+        northOrientLabel: "توجيه الشمال للقطعة:",
         govOptions: {
             baghdad: "بغداد (العاصمة) • صحراوي حار وجاف",
             basra: "البصرة (الجنوب) • حار ورطب ساحلي",
@@ -1154,7 +1154,7 @@ const I18N = {
 
         iraqClimateTitle: "Iraq GIS & Bioclimatic Location:",
         govLabel: "Governorate / Climate Zone:",
-        northOrientLabel: "North Orientation Angle:",
+        northOrientLabel: "North Orientation:",
         govOptions: {
             baghdad: "Baghdad (Capital) • Hot Arid Desert",
             basra: "Basra (South) • Hot Humid Coastal",
@@ -2272,23 +2272,23 @@ function renderCanvas() {
 
 function getDirectionLabel(angle) {
     if (state.lang === 'ar') {
-        if (angle >= 337.5 || angle < 22.5) return 'الشمال للأعلى';
-        if (angle >= 22.5 && angle < 67.5) return 'شمال شرق';
-        if (angle >= 67.5 && angle < 112.5) return 'الشرق لليمين';
-        if (angle >= 112.5 && angle < 157.5) return 'جنوب شرق';
-        if (angle >= 157.5 && angle < 202.5) return 'الجنوب للأسفل';
-        if (angle >= 202.5 && angle < 247.5) return 'جنوب غرب';
-        if (angle >= 247.5 && angle < 292.5) return 'الغرب لليسار';
-        return 'شمال غرب';
+        if (angle >= 337.5 || angle < 22.5) return 'شمال';
+        if (angle >= 22.5 && angle < 67.5) return 'ش.شرق';
+        if (angle >= 67.5 && angle < 112.5) return 'شرق';
+        if (angle >= 112.5 && angle < 157.5) return 'ج.شرق';
+        if (angle >= 157.5 && angle < 202.5) return 'جنوب';
+        if (angle >= 202.5 && angle < 247.5) return 'ج.غرب';
+        if (angle >= 247.5 && angle < 292.5) return 'غرب';
+        return 'ش.غرب';
     } else {
-        if (angle >= 337.5 || angle < 22.5) return 'North Up';
-        if (angle >= 22.5 && angle < 67.5) return 'North-East';
-        if (angle >= 67.5 && angle < 112.5) return 'East Right';
-        if (angle >= 112.5 && angle < 157.5) return 'South-East';
-        if (angle >= 157.5 && angle < 202.5) return 'South Down';
-        if (angle >= 202.5 && angle < 247.5) return 'South-West';
-        if (angle >= 247.5 && angle < 292.5) return 'West Left';
-        return 'North-West';
+        if (angle >= 337.5 || angle < 22.5) return 'North';
+        if (angle >= 22.5 && angle < 67.5) return 'NE';
+        if (angle >= 67.5 && angle < 112.5) return 'East';
+        if (angle >= 112.5 && angle < 157.5) return 'SE';
+        if (angle >= 157.5 && angle < 202.5) return 'South';
+        if (angle >= 202.5 && angle < 247.5) return 'SW';
+        if (angle >= 247.5 && angle < 292.5) return 'West';
+        return 'NW';
     }
 }
 
