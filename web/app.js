@@ -4966,13 +4966,22 @@ function updateAnalyticsHUD(layout) {
             name = state.lang === 'ar' ? 'منور إنارة وتهوية (Shaft)' : 'Ventilation Shaft';
         }
         const passText = state.lang === 'ar' ? 'مطابق ADA' : 'ADA Compliant';
+        
+        let diaMetric = `≥ ${r.minDia} ${unitLen}`;
+        if (r.key === 'disabled_bedroom') {
+            const wM = (r.bounds.w / 23.0).toFixed(2);
+            diaMetric = state.lang === 'ar' ? `عرض ${wM}م (≥ 4.50م)` : `Width ${wM}m (≥ 4.50m)`;
+        } else if (r.key === 'disabled_bathroom') {
+            diaMetric = state.lang === 'ar' ? `دوران Ø 1.60م (3×3م)` : `Turn Ø 1.60m (3x3m)`;
+        }
+
         tr.innerHTML = `
             <td>
                 <span class="color-swatch" style="background-color: ${r.hex}; display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-inline-end: 4px;"></span>
                 <strong>${name}</strong>
             </td>
             <td><code>${r.area_m2} ${unitArea}</code></td>
-            <td><code>≥ ${r.minDia} ${unitLen}</code></td>
+            <td><code>${diaMetric}</code></td>
             <td><span class="badge-tag pass">${passText}</span></td>
         `;
         roomsTableBody.appendChild(tr);
