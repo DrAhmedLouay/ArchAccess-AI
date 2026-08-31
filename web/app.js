@@ -2944,68 +2944,6 @@ function drawBoundary() {
         drawDetailedEntranceGate(entranceGate);
     }
 
-    // Dimension Lines
-    const widthMeters = state.currentPreset === 'dimensions' 
-        ? state.plotWidthM.toFixed(2) 
-        : ((maxX - minX) / 23.0).toFixed(2);
-    const lengthMeters = state.currentPreset === 'dimensions' 
-        ? state.plotLengthM.toFixed(2) 
-        : ((maxY - minY) / 23.0).toFixed(2);
-
-    ctx.strokeStyle = '#0969da';
-    ctx.fillStyle = '#0969da';
-    ctx.lineWidth = 1.5;
-    ctx.font = 'bold 11px JetBrains Mono, Cairo';
-
-    // Top Width Dimension
-    const dimY = minY - 34;
-    ctx.beginPath();
-    ctx.moveTo(minX, minY - 4); ctx.lineTo(minX, dimY - 4);
-    ctx.moveTo(maxX, minY - 4); ctx.lineTo(maxX, dimY - 4);
-    ctx.moveTo(minX, dimY); ctx.lineTo(maxX, dimY);
-    ctx.moveTo(minX - 3, dimY + 3); ctx.lineTo(minX + 3, dimY - 3);
-    ctx.moveTo(maxX - 3, dimY + 3); ctx.lineTo(maxX + 3, dimY - 3);
-    ctx.stroke();
-
-    const midPlotX = (minX + maxX) / 2;
-    ctx.fillStyle = '#38bdf8';
-    ctx.font = 'bold 12px JetBrains Mono, Cairo';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(`W: ${widthMeters}m`, midPlotX, dimY - 10);
-
-    // Right Length Dimension
-    const dimX = maxX + 18;
-    ctx.beginPath();
-    ctx.moveTo(maxX + 4, minY); ctx.lineTo(dimX + 4, minY);
-    ctx.moveTo(maxX + 4, maxY); ctx.lineTo(dimX + 4, maxY);
-    ctx.moveTo(dimX, minY); ctx.lineTo(dimX, maxY);
-    ctx.moveTo(dimX - 3, minY + 3); ctx.lineTo(dimX + 3, minY - 3);
-    ctx.moveTo(dimX - 3, maxY + 3); ctx.lineTo(dimX + 3, maxY - 3);
-    ctx.stroke();
-
-    const midPlotY = (minY + maxY) / 2;
-    ctx.fillStyle = '#f87171';
-    ctx.font = 'bold 12px JetBrains Mono, Cairo';
-    ctx.save();
-    ctx.translate(dimX + 12, midPlotY);
-    ctx.rotate(Math.PI / 2);
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(`L: ${lengthMeters}m`, 0, 0);
-    ctx.restore();
-
-    // Vertices Markers
-    pts.forEach((p) => {
-        ctx.fillStyle = '#1f6feb';
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-    });
-
     ctx.restore();
 }
 
@@ -4912,114 +4850,76 @@ function drawLabels() {
 
         const dimW = (w / pxPerMeter).toFixed(2);
         const dimH = (h / pxPerMeter).toFixed(2);
-        const dimText = isAr ? `${dimW}م × ${dimH}م` : `${dimW}m × ${dimH}m`;
         const areaText = isAr ? `${r.area_m2} م²` : `${r.area_m2} m²`;
+        const metricsBadge = isAr ? `${dimW}م × ${dimH}م (${areaText})` : `${dimW}m × ${dimH}m (${areaText})`;
 
-        // Check if space is narrow vertically (e.g. side shaft or central corridor strip)
-        const isVerticalStrip = (h > w * 2.1 && w < 58);
+        // Optimal room-specific centroid calculation to guarantee zero overlap with furniture & doors
+        if (r.key === 'kitchen') {
+            cx = Math.round(x + (w - 14) / 2);
+            cy = Math.round(y + h * 0.56);
+        } else if (r.key === 'bathroom') {
+            cx = Math.round(x + (w - 16) / 2 + 2);
+            cy = Math.round(y + h * 0.46);
+        } else if (r.key === 'disabled_bathroom') {
+            cx = Math.round(x + w / 2);
+            cy = Math.round(y + h / 2 - 2);
+        } else if (r.key === 'disabled_bedroom' || r.key === 'bedroom') {
+            cx = Math.round(x + w / 2);
+            cy = Math.round(y + h * 0.68);
+        } else if (r.key === 'guest_room') {
+            cx = Math.round(x + w / 2);
+            cy = Math.round(y + 14); // in the grand entry threshold
+        } else if (r.key === 'living_room') {
+            cx = Math.round(x + (w > 100 ? w * 0.62 : w / 2));
+            cy = Math.round(y + h * 0.38);
+        } else if (r.key === 'corridors') {
+            // Horizontal central gallery
+            cy = Math.round(y + 14);
+        }
+
+        // Check if space is narrow vertically (e.g. side light shaft)
+        const isVerticalStrip = (h > w * 2.2 && w < 48);
 
         ctx.save();
 
         if (isVerticalStrip) {
-            // Rotate label along vertical axis (without any white background patch)
             ctx.translate(cx, cy);
             ctx.rotate(-Math.PI / 2);
-
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
 
-            ctx.font = isAr ? 'bold 9px Cairo, sans-serif' : 'bold 8.5px Inter, sans-serif';
+            ctx.font = isAr ? 'bold 8.5px Cairo, sans-serif' : 'bold 8px Inter, sans-serif';
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
             ctx.lineWidth = 2.5;
-            ctx.strokeText(labelName, 0, -5);
+            ctx.strokeText(labelName, 0, -4.5);
             ctx.fillStyle = '#0f172a';
-            ctx.fillText(labelName, 0, -5);
+            ctx.fillText(labelName, 0, -4.5);
 
-            const compactBadge = `${dimW}×${dimH}م (${areaText})`;
-            ctx.font = 'bold 7.5px JetBrains Mono, Cairo';
+            ctx.font = 'bold 7px JetBrains Mono, Cairo';
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
             ctx.lineWidth = 2.0;
-            ctx.strokeText(compactBadge, 0, 5);
+            ctx.strokeText(metricsBadge, 0, 4.5);
             ctx.fillStyle = '#0284c7';
-            ctx.fillText(compactBadge, 0, 5);
-
+            ctx.fillText(metricsBadge, 0, 4.5);
         } else {
-            // Intelligent Centroid Offset away from door swings & furniture
-            if (doors) {
-                doors.forEach(d => {
-                    const dist = Math.hypot(cx - d.x, cy - d.y);
-                    if (dist < 32) {
-                        if (d.orientation === 'horizontal') {
-                            cy += (d.dir > 0 ? 10 : -10);
-                        } else {
-                            cx += (d.dir > 0 ? 10 : -10);
-                        }
-                    }
-                });
-            }
-
-            // In kitchen, place label slightly lower to clear top L-counter
-            if (r.key === 'kitchen') {
-                cy = Math.round(y + h * 0.58);
-            }
-            // In bedrooms, place label slightly lower to clear headboard
-            if (r.key === 'bedroom' || r.key === 'disabled_bedroom') {
-                cy = Math.round(y + h * 0.62);
-            }
-
-            // Keep label within room boundary padding
-            cx = Math.max(x + 16, Math.min(x + w - 16, cx));
-            cy = Math.max(y + 14, Math.min(y + h - 14, cy));
-
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
 
-            const isSmallSpace = (w < 70 || h < 64);
+            // Line 1: Space Title (Dark Slate with crisp White Halo)
+            ctx.font = isAr ? 'bold 9.5px Cairo, sans-serif' : 'bold 9px Inter, sans-serif';
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+            ctx.lineWidth = 2.8;
+            ctx.strokeText(labelName, cx, cy - 5.5);
+            ctx.fillStyle = '#0f172a';
+            ctx.fillText(labelName, cx, cy - 5.5);
 
-            if (isSmallSpace) {
-                // 2-line layout for compact spaces without any white background patch
-                ctx.font = isAr ? 'bold 9px Cairo, sans-serif' : 'bold 8.5px Inter, sans-serif';
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
-                ctx.lineWidth = 2.5;
-                ctx.strokeText(labelName, cx, cy - 5);
-                ctx.fillStyle = '#0f172a';
-                ctx.fillText(labelName, cx, cy - 5);
-
-                const subBadge = `${dimW}×${dimH}م • ${areaText}`;
-                ctx.font = 'bold 7.5px JetBrains Mono, Cairo';
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
-                ctx.lineWidth = 2.0;
-                ctx.strokeText(subBadge, cx, cy + 5);
-                ctx.fillStyle = '#0284c7';
-                ctx.fillText(subBadge, cx, cy + 5);
-
-            } else {
-                // 3-line layout for standard and large spaces without any white background patch
-                // Line 1: Space Name
-                ctx.font = isAr ? 'bold 10.5px Cairo, sans-serif' : 'bold 10px Inter, sans-serif';
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
-                ctx.lineWidth = 3.0;
-                ctx.strokeText(labelName, cx, cy - 9);
-                ctx.fillStyle = '#0f172a';
-                ctx.fillText(labelName, cx, cy - 9);
-
-                // Line 2: Architectural Dimensions (W x H)
-                const dimLine = `${dimText}`;
-                ctx.font = 'bold 8.5px JetBrains Mono, Cairo';
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
-                ctx.lineWidth = 2.5;
-                ctx.strokeText(dimLine, cx, cy + 1.5);
-                ctx.fillStyle = '#0284c7';
-                ctx.fillText(dimLine, cx, cy + 1.5);
-
-                // Line 3: Area in m2
-                ctx.font = 'bold 8px JetBrains Mono, Cairo';
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
-                ctx.lineWidth = 2.0;
-                ctx.strokeText(areaText, cx, cy + 11);
-                ctx.fillStyle = '#475569';
-                ctx.fillText(areaText, cx, cy + 11);
-            }
+            // Line 2: Architectural Dimensions & Area (Blue Badge with White Halo)
+            ctx.font = 'bold 7.8px JetBrains Mono, Cairo';
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+            ctx.lineWidth = 2.2;
+            ctx.strokeText(metricsBadge, cx, cy + 5.5);
+            ctx.fillStyle = '#0284c7';
+            ctx.fillText(metricsBadge, cx, cy + 5.5);
         }
 
         ctx.restore();
