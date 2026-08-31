@@ -1651,15 +1651,15 @@ function synthesizeLayout(boundary, variant, typology) {
             { id: "d_dis_bath", name: "باب الحمام المهيأ (En-Suite)", x: x_dis_end, y: y_corr_bot + 42, w: doorClearW, orientation: "vertical", widthM: 1.00, dir: 1, hingeAtEnd: false }
         ];
 
-        // Symmetrically Centered Windows
+        // Symmetrically Centered Windows (Only on Front Street Facade or Internal Light/Ventilation Shafts)
         windows = [
             { id: "w_guest", name: "نافذة الاستقبال", x: Math.round(x0 + doorClearW + cornerOffsetPx + 4 + ((x_bath_front - (x0 + doorClearW + cornerOffsetPx + 4)) - 28) / 2), y: y0, len: 28, orientation: "horizontal" },
             { id: "w_bath", name: "نافذة الحمام العام (على الخارج)", x: Math.round(x_bath_front + ((x_living_start - x_bath_front) - 20) / 2), y: y0, len: 20, orientation: "horizontal" },
             { id: "w_living", name: "نافذة المعيشة", x: Math.round(x_living_start + 32 + ((x5 - (x_living_start + 32)) - 44) / 2), y: y0, len: 44, orientation: "horizontal" },
-            { id: "w_kitchen", name: "نافذة المطبخ", x: x4, y: Math.round(y_corr_bot + ((y2 - y_corr_bot) - 30) / 2), len: 30, orientation: "vertical" },
-            { id: "w_bed", name: "نافذة غرفة النوم", x: x4, y: Math.round(y2 + ((y4 - y2) - 34) / 2), len: 34, orientation: "vertical" },
-            { id: "w_dis_bed", name: "نافذة جناح الاحتياجات", x: Math.round(x0 + ((x_dis_end - x0) - 28) / 2), y: y4, len: 28, orientation: "horizontal" },
-            { id: "w_dis_bath", name: "نافذة الحمام المهيأ", x: Math.round(x_dis_end + ((x_ada_end - x_dis_end) - 20) / 2), y: y_ada_end, len: 20, orientation: "horizontal" }
+            { id: "w_kitchen", name: "نافذة المطبخ على المنور الشرقي", x: x4, y: Math.round(y_corr_bot + ((y2 - y_corr_bot) - 30) / 2), len: 30, orientation: "vertical" },
+            { id: "w_bed", name: "نافذة غرفة النوم على المنور الشرقي", x: x4, y: Math.round(y2 + ((y4 - y2) - 34) / 2), len: 34, orientation: "vertical" },
+            { id: "w_dis_bed", name: "نافذة جناح الاحتياجات على المنور الغربي", x: x_dis_end, y: Math.round(y_ada_end + ((y4 - y_ada_end) - 24) / 2), len: 24, orientation: "vertical" },
+            { id: "w_dis_bath", name: "نافذة الحمام المهيأ على المنور الغربي", x: Math.round(x_dis_end + ((x_ada_end - x_dis_end) - 20) / 2), y: y_ada_end, len: 20, orientation: "horizontal" }
         ];
 
     } else if (varNum === 2) {
@@ -1729,15 +1729,15 @@ function synthesizeLayout(boundary, variant, typology) {
             { id: "d_dis_bath", name: "باب الحمام المهيأ (En-Suite)", x: x_dis_end2 + cornerOffsetPx, y: y3, w: doorClearW, orientation: "horizontal", widthM: 1.00, dir: 1, hingeAtEnd: false }
         ];
 
-        // Symmetrically Centered Windows
+        // Symmetrically Centered Windows (Only on Front Facade or Central/Rear Courtyards)
         windows = [
             { id: "w_guest", name: "نافذة الاستقبال", x: Math.round(x0 + doorClearW + cornerOffsetPx + 4 + ((x_bath_front - (x0 + doorClearW + cornerOffsetPx + 4)) - 28) / 2), y: y0, len: 28, orientation: "horizontal" },
             { id: "w_bath", name: "نافذة الحمام العام (على الخارج)", x: Math.round(x_bath_front + ((x_living_start - x_bath_front) - 20) / 2), y: y0, len: 20, orientation: "horizontal" },
             { id: "w_living", name: "نافذة المعيشة", x: Math.round(x_living_start + 32 + ((x5 - (x_living_start + 32)) - 44) / 2), y: y0, len: 44, orientation: "horizontal" },
-            { id: "w_kitchen", name: "نافذة المطبخ على الفناء", x: x2, y: Math.round(y_corr_bot + ((y_corr_top2 - y_corr_bot) - 30) / 2), len: 30, orientation: "vertical" },
-            { id: "w_bed", name: "نافذة غرفة النوم على الفناء", x: x3, y: Math.round(y_corr_bot + ((y_corr_top2 - y_corr_bot) - 34) / 2), len: 34, orientation: "vertical" },
-            { id: "w_dis_bed", name: "نافذة جناح الاحتياجات", x: Math.round(x0 + ((x_dis_end2 - x0) - 26) / 2), y: y4, len: 26, orientation: "horizontal" },
-            { id: "w_dis_bath", name: "نافذة الحمام المهيأ", x: x_ada_end2, y: Math.round(y3 + ((y4 - y3) - 20) / 2), len: 20, orientation: "vertical" }
+            { id: "w_kitchen", name: "نافذة المطبخ على الفناء الوسطي", x: x2, y: Math.round(y_corr_bot + ((y_corr_top2 - y_corr_bot) - 30) / 2), len: 30, orientation: "vertical" },
+            { id: "w_bed", name: "نافذة غرفة النوم على الفناء الوسطي", x: x3, y: Math.round(y_corr_bot + ((y_corr_top2 - y_corr_bot) - 34) / 2), len: 34, orientation: "vertical" },
+            { id: "w_dis_bed", name: "نافذة جناح الاحتياجات على الفناء الخلفي", x: x_dis_end2, y: Math.round(y3 + ((y4 - y3) - 24) / 2), len: 24, orientation: "vertical" },
+            { id: "w_dis_bath", name: "نافذة الحمام المهيأ على المنور", x: x_ada_end2, y: Math.round(y3 + ((y4 - y3) - 20) / 2), len: 20, orientation: "vertical" }
         ];
 
     } else {
@@ -1811,15 +1811,15 @@ function synthesizeLayout(boundary, variant, typology) {
             { id: "d_dis_bath", name: "باب الحمام المهيأ (En-Suite)", x: x_dis_start3, y: y_corr_bot + 42, w: doorClearW, orientation: "vertical", widthM: 1.00, dir: -1, hingeAtEnd: false }
         ];
 
-        // Symmetrically Centered Windows
+        // Symmetrically Centered Windows (Only on Front Facade or Interior Ventilation Shafts)
         windows = [
             { id: "w_living", name: "نافذة المعيشة", x: Math.round(x0 + 32 + ((x2 - (x0 + 32)) - 44) / 2), y: y0, len: 44, orientation: "horizontal" },
             { id: "w_bath", name: "نافذة الحمام العام (على الخارج)", x: Math.round(x2 + ((x_guest_start3 - x2) - 20) / 2), y: y0, len: 20, orientation: "horizontal" },
             { id: "w_guest", name: "نافذة الاستقبال", x: Math.round(x_guest_start3 + ((x5 - doorClearW - cornerOffsetPx - 4 - x_guest_start3) - 28) / 2), y: y0, len: 28, orientation: "horizontal" },
-            { id: "w_kitchen", name: "نافذة المطبخ", x: x1, y: Math.round(y_corr_bot + ((y2 - y_corr_bot) - 30) / 2), len: 30, orientation: "vertical" },
-            { id: "w_bed", name: "نافذة غرفة النوم", x: x1, y: Math.round(y2 + ((y4 - y2) - 34) / 2), len: 34, orientation: "vertical" },
-            { id: "w_dis_bed", name: "نافذة جناح الاحتياجات", x: Math.round(x_dis_start3 + ((x5 - x_dis_start3) - 26) / 2), y: y4, len: 26, orientation: "horizontal" },
-            { id: "w_dis_bath", name: "نافذة الحمام المهيأ", x: Math.round(x_ada_start3 + ((x_dis_start3 - x_ada_start3) - 20) / 2), y: y_ada_end3, len: 20, orientation: "horizontal" }
+            { id: "w_kitchen", name: "نافذة المطبخ على المنور الغربي", x: x1, y: Math.round(y_corr_bot + ((y2 - y_corr_bot) - 30) / 2), len: 30, orientation: "vertical" },
+            { id: "w_bed", name: "نافذة غرفة النوم على المنور الغربي", x: x1, y: Math.round(y2 + ((y4 - y2) - 34) / 2), len: 34, orientation: "vertical" },
+            { id: "w_dis_bed", name: "نافذة جناح الاحتياجات على المنور الداخلي", x: x_dis_start3, y: Math.round(y_ada_end3 + ((y4 - y_ada_end3) - 24) / 2), len: 24, orientation: "vertical" },
+            { id: "w_dis_bath", name: "نافذة الحمام المهيأ على المنور", x: Math.round(x_ada_start3 + ((x_dis_start3 - x_ada_start3) - 20) / 2), y: y_ada_end3, len: 20, orientation: "horizontal" }
         ];
     }
 
@@ -4940,12 +4940,25 @@ function drawDoors(doorsList) {
 
 /**
  * Draws Architectural Windows on Exterior Facades & Ventilation Shafts
+ * Strictly prohibits any windows on neighbor party boundary walls (حرمة الجوار)
  */
 function drawWindows(windowsList) {
-    if (!windowsList) return;
+    if (!windowsList || !state.currentLayout) return;
+    const { bldgMinX, bldgMaxX, bldgMinY, bldgMaxY } = state.currentLayout;
 
     windowsList.forEach(w => {
         const { x, y, len, orientation } = w;
+
+        // Strict Neighbor Wall Prohibition Guard (Zero windows on rear or side party walls)
+        if (orientation === "horizontal") {
+            // Rear boundary (bldgMaxY) is a neighbor party wall
+            if (Math.abs(y - bldgMaxY) < 2) return;
+        } else {
+            // Side boundaries are neighbor party walls (unless corner plot with setback)
+            if (state.plotType !== 'corner') {
+                if (Math.abs(x - bldgMinX) < 2 || Math.abs(x - bldgMaxX) < 2) return;
+            }
+        }
 
         if (orientation === "horizontal") {
             // White opening void in wall
