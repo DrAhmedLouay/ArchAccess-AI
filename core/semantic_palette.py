@@ -151,8 +151,8 @@ SEMANTIC_SPACES: Dict[str, SpaceStandard] = {
         rgb=(232, 1, 247),
         category="indoor",
         min_turning_diameter=1.60,
-        min_clear_width=1.00,
-        description="سعة دوران كاملة وخلوص حر 360 درجة بقطر ≥ 1.60م"
+        min_clear_width=4.50,
+        description="غرفة نوم مهيأة لا يقل عرضها عن 4.50م ومساحة ≥ 12.0م² مع سعة دوران كاملة بقطر ≥ 1.60م"
     ),
     "disabled_bathroom": SpaceStandard(
         name_ar="حمام مهيأ لذوي الاحتياجات (En-Suite)",

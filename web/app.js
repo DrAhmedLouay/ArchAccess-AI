@@ -29,7 +29,7 @@ const SEMANTIC_PALETTE = {
     living_room: { name_ar: "غرفة المعيشة", name_en: "Living Room", hex: "#01ffec", rgb: [1, 255, 236], minDia: 1.50, minW: 0.91, cat: "indoor" },
     kitchen: { name_ar: "المطبخ", name_en: "Kitchen", hex: "#FFB8D8", rgb: [255, 184, 216], minDia: 1.50, minW: 3.00, minL: 4.00, cat: "indoor" },
     bedroom: { name_ar: "غرفة النوم القياسية", name_en: "Bedroom", hex: "#fefe0a", rgb: [254, 254, 10], minDia: 1.50, minW: 3.00, minL: 4.00, cat: "indoor" },
-    disabled_bedroom: { name_ar: "جناح نوم مهيأ (Disabled)", name_en: "Disabled Suite", hex: "#e801f7", rgb: [232, 1, 247], minDia: 1.60, minW: 1.00, cat: "indoor" },
+    disabled_bedroom: { name_ar: "غرفة النوم المهيأة (Disabled)", name_en: "Disabled Suite", hex: "#e801f7", rgb: [232, 1, 247], minDia: 1.60, minW: 4.50, cat: "indoor" },
     disabled_bathroom: { name_ar: "حمام مهيأ (En-Suite)", name_en: "En-Suite ADA Bath", hex: "#ff3464", rgb: [255, 52, 100], minDia: 1.60, minW: 3.00, minL: 3.00, cat: "indoor" },
     bathroom: { name_ar: "حمام عام / WC", name_en: "General Bath / WC", hex: "#ff3464", rgb: [255, 52, 100], minDia: 1.50, minW: 1.20, cat: "indoor" },
     corridors: { name_ar: "الموزع المركزي", name_en: "Central Corridor", hex: "#efde8e", rgb: [239, 222, 142], minDia: 1.50, minW: 0.91, cat: "indoor" },
@@ -1493,9 +1493,11 @@ function synthesizeLayout(boundary, variant, typology) {
 
     // Strict Minimum Space Constraints:
     // Kitchen (>= 3.0m x 4.0m, >= 12m²), Bedroom (>= 3.0m x 4.0m, >= 12m²)
-    // Living Room (width >= 3.0m), Guest Room (width >= 3.0m), Front Row Depth >= 3.0m
+    // Living Room (width >= 4.0m), Guest Room (width >= 4.0m), Front Row Depth >= 4.0m
+    // Disabled Bedroom (width >= 4.50m strictly)
     const min3mPx = Math.round(3.00 * pxPerMeter); // 69px (3.00m)
     const min4mPx = Math.round(4.00 * pxPerMeter); // 92px (4.00m)
+    const min4_5mPx = Math.round(4.50 * pxPerMeter); // 104px (4.50m minimum width for disabled bedroom)
     const min1_5mPx = Math.round(1.50 * pxPerMeter); // 35px (1.50m corridor/distributor min width)
     const minBathWPx = Math.round(1.50 * pxPerMeter); // 35px (1.50m)
 
@@ -1508,13 +1510,16 @@ function synthesizeLayout(boundary, variant, typology) {
         const y0 = bldgMinY;
         const y4 = bldgMaxY;
 
-        // Strictly guarantee: guest_room >= 4.0m, living_room >= 4.0m, bathroom >= 1.50m
+        // Strictly guarantee: guest_room >= 4.0m, living_room >= 4.0m, bathroom >= 1.50m, disabled_bedroom width >= 4.50m
         const frontRemW = Math.max(0, bw - (min4mPx + minBathWPx + min4mPx));
         const guestW = min4mPx + Math.round(frontRemW * 0.48);
         const livingW = Math.max(min4mPx, bw - guestW - minBathWPx);
 
         const x_bath_front = x0 + guestW;
-        const x2 = x_bath_front + (bw - guestW - livingW);
+        let x2 = x_bath_front + (bw - guestW - livingW);
+        if (x2 - x0 < min4_5mPx) {
+            x2 = x0 + min4_5mPx;
+        }
 
         const x1 = snap(bldgMinX + Math.max(bw * (0.14 + stochJitterW * 0.5), 40));
         // Central Distribution Spine width strictly >= 1.50m (35px)
@@ -1553,7 +1558,7 @@ function synthesizeLayout(boundary, variant, typology) {
             { key: 'kitchen', x: x3, y: y_corr_bot, w: x4 - x3, h: y2 - y_corr_bot },
             { key: 'bedroom', x: x3, y: y2, w: x4 - x3, h: y4 - y2 },
             { key: 'court_garden', x: x4, y: y1, w: x5 - x4, h: y4 - y1 },
-            // West Wing: Disabled Master Suite, En-suite ADA Bath (>= 3.0m x 3.0m), West Light Shaft
+            // West Wing: Disabled Master Suite (Width >= 4.50m strictly), En-suite ADA Bath (>= 3.0m x 3.0m), West Light Shaft
             { key: 'disabled_bedroom', x: x0, y: y_corr_bot, w: x2 - x0, h: y3 - y_corr_bot },
             { key: 'court_garden', x: x0, y: y3, w: x1 - x0, h: y4 - y3 },
             { key: 'disabled_bathroom', x: x1, y: y3, w: x2 - x1, h: y4 - y3 }
@@ -1591,13 +1596,16 @@ function synthesizeLayout(boundary, variant, typology) {
         const y0 = bldgMinY;
         const y4 = bldgMaxY;
 
-        // Strictly guarantee: guest_room >= 4.0m, living_room >= 4.0m, bathroom >= 1.50m
+        // Strictly guarantee: guest_room >= 4.0m, living_room >= 4.0m, bathroom >= 1.50m, disabled_bedroom width >= 4.50m
         const frontRemW = Math.max(0, bw - (min4mPx + minBathWPx + min4mPx));
         const guestW = min4mPx + Math.round(frontRemW * 0.48);
         const livingW = Math.max(min4mPx, bw - guestW - minBathWPx);
 
         const x_bath_front = x0 + guestW;
-        const x2 = x_bath_front + (bw - guestW - livingW);
+        let x2 = x_bath_front + (bw - guestW - livingW);
+        if (x2 - x0 < min4_5mPx) {
+            x2 = x0 + min4_5mPx;
+        }
 
         let x3 = snap(bldgMinX + bw * (0.58 - tempJitter * 0.5));
         const x4 = snap(bldgMaxX - Math.max(bw * 0.16, 44));
@@ -1625,7 +1633,7 @@ function synthesizeLayout(boundary, variant, typology) {
             { key: 'kitchen', x: x0, y: y_corr_bot, w: x2 - x0, h: y_corr_top2 - y_corr_bot },
             { key: 'court_garden', x: x2, y: y_corr_bot, w: x3 - x2, h: y_corr_top2 - y_corr_bot },
             { key: 'bedroom', x: x3, y: y_corr_bot, w: x5 - x3, h: y_corr_top2 - y_corr_bot },
-            // Rear Zone: Disabled Suite, En-Suite ADA Bath (>= 3.0m x 3.0m), Rear Shaft
+            // Rear Zone: Disabled Suite (Width >= 4.50m strictly), En-Suite ADA Bath (>= 3.0m x 3.0m), Rear Shaft
             { key: 'disabled_bedroom', x: x0, y: y3, w: x2 - x0, h: y4 - y3 },
             { key: 'disabled_bathroom', x: x2, y: y3, w: x4 - x2, h: y4 - y3 },
             { key: 'court_garden', x: x4, y: y3, w: x5 - x4, h: y4 - y3 }
@@ -1663,17 +1671,22 @@ function synthesizeLayout(boundary, variant, typology) {
         const y0 = bldgMinY;
         const y4 = bldgMaxY;
 
-        // Strictly guarantee: living_room >= 4.0m, guest_room >= 4.0m, bathroom >= 1.50m
+        // Strictly guarantee: living_room >= 4.0m, guest_room >= 4.0m, bathroom >= 1.50m, disabled_bedroom width >= 4.50m
         const frontRemW = Math.max(0, bw - (min4mPx + minBathWPx + min4mPx));
         const livingW3 = min4mPx + Math.round(frontRemW * 0.52);
         const guestW3 = Math.max(min4mPx, bw - livingW3 - minBathWPx);
 
-        const x2 = x0 + livingW3;
+        let x2 = x0 + livingW3;
         const x_bath_front3 = x2 + (bw - livingW3 - guestW3);
 
         const x1 = snap(bldgMinX + Math.max(bw * 0.14, 40));
         // Central Distribution Spine width strictly >= 1.50m (35px)
         let x3 = snap(x2 + Math.max(min1_5mPx, Math.round(1.50 * pxPerMeter)));
+        // Ensure disabled_bedroom (x3 to x5) width strictly >= 4.50m (104px)
+        if (x5 - x3 < min4_5mPx) {
+            x3 = x5 - min4_5mPx;
+            x2 = Math.min(x2, x3 - min1_5mPx);
+        }
         const x4 = snap(bldgMaxX - Math.max(bw * 0.14, 38));
 
         // Front Row depth (y1 - y0) >= 4.0m
@@ -1701,7 +1714,7 @@ function synthesizeLayout(boundary, variant, typology) {
             { key: 'court_garden', x: x0, y: y_corr_bot, w: x1 - x0, h: y4 - y_corr_bot },
             { key: 'kitchen', x: x1, y: y_corr_bot, w: x2 - x1, h: y2 - y_corr_bot },
             { key: 'bedroom', x: x1, y: y2, w: x2 - x1, h: y4 - y2 },
-            // East Wing: Large Disabled Suite, En-Suite ADA Bath (>= 3.0m x 3.0m), Rear East Shaft
+            // East Wing: Large Disabled Suite (Width >= 4.50m strictly), En-Suite ADA Bath (>= 3.0m x 3.0m), Rear East Shaft
             { key: 'disabled_bedroom', x: x3, y: y_corr_bot, w: x5 - x3, h: y3 - y_corr_bot },
             { key: 'disabled_bathroom', x: x3, y: y3, w: x4 - x3, h: y4 - y3 },
             { key: 'court_garden', x: x4, y: y3, w: x5 - x4, h: y4 - y3 }
@@ -2052,16 +2065,17 @@ function calculateDynamicAGCR(rooms, doors, ramp, accessibleParking, circulation
         });
     }
 
-    // 6. Accessible Bedroom Clearance (Area >= 12.0m² & min dimension >= 3.0m)
+    // 6. Accessible Bedroom Clearance (Area >= 12.0m² & Width >= 4.50m strictly)
     const disBed = rooms.find(r => r.key === 'disabled_bedroom');
     if (disBed) {
         totalCheckpoints++;
-        const isCompliant = disBed.area_m2 >= 12.0 && disBed.minDia >= 1.50;
+        const bedWidthM = disBed.bounds.w / 23.0;
+        const isCompliant = disBed.area_m2 >= 12.0 && bedWidthM >= 4.45;
         if (isCompliant) compliantCheckpoints++;
         checkpointDetails.push({
-            name: 'غرفة نوم ذوي الإعاقة',
-            required: 'مساحة ≥ 12.0م² ودوران Ø 1.60m',
-            actual: `مساحة ${disBed.area_m2.toFixed(1)}م² ودوران Ø ${disBed.minDia.toFixed(2)}m`,
+            name: 'غرفة نوم ذوي الإعاقة (عرض ≥ 4.50م)',
+            required: 'عرض ≥ 4.50م ومساحة ≥ 12.0م²',
+            actual: `عرض ${bedWidthM.toFixed(2)}م ومساحة ${disBed.area_m2.toFixed(1)}م²`,
             compliant: isCompliant
         });
     }
