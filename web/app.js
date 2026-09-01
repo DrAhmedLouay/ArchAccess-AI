@@ -211,6 +211,7 @@ const state = {
     theme: 'dark',
     showTags: true,
     showFurniture: true,
+    useSemanticColors: false,
     selectedRoomKey: 'living_room',
     roomFurniture: {
         living_room: { rotation: 0, style: 1 },
@@ -618,6 +619,14 @@ function setupEventListeners() {
     if (toggleFurnitureCheckbox) {
         toggleFurnitureCheckbox.addEventListener('change', (e) => {
             state.showFurniture = e.target.checked;
+            renderCanvas();
+        });
+    }
+
+    const toggleSemanticColorsCheckbox = document.getElementById('toggleSemanticColorsCheckbox');
+    if (toggleSemanticColorsCheckbox) {
+        toggleSemanticColorsCheckbox.addEventListener('change', (e) => {
+            state.useSemanticColors = e.target.checked;
             renderCanvas();
         });
     }
@@ -1269,6 +1278,7 @@ const I18N = {
         tabMaxCanvas: "توسيع الشاشة",
         toggleTagsText: "🏷️ تسميات الفضاءات (Tags)",
         toggleFurnitureText: "🛋️ إظهار الأثاث (Furniture)",
+        toggleSemanticColorsText: "🎨 التلوين الدلالي (Colors)",
         toggleSunOverlayText: "☀️ مسار الشمس والرياح",
         scaleInfo: "المقياس: 1m = 23px • تغطية البناء 65% - 75%",
         loadingText: "جاري المعالجة المسبقة، الاستدلال التوليدي والتعامد الهندسي...",
@@ -1384,6 +1394,7 @@ const I18N = {
         tabMaxCanvas: "Max Canvas",
         toggleTagsText: "🏷️ Space Tags",
         toggleFurnitureText: "🛋️ Show Furniture",
+        toggleSemanticColorsText: "🎨 Semantic Colors",
         toggleSunOverlayText: "☀️ Sun Path & Winds",
         scaleInfo: "Scale: 1m = 23px • Building Coverage 65% - 75%",
         loadingText: "Preprocessing, Generative Inference, and Orthogonalization in progress...",
@@ -1643,6 +1654,8 @@ function updateUIForLang() {
     if (toggleTagsText) toggleTagsText.textContent = t.toggleTagsText;
     const toggleFurnitureText = document.getElementById('toggleFurnitureText');
     if (toggleFurnitureText) toggleFurnitureText.textContent = t.toggleFurnitureText;
+    const toggleSemanticColorsText = document.getElementById('toggleSemanticColorsText');
+    if (toggleSemanticColorsText) toggleSemanticColorsText.textContent = t.toggleSemanticColorsText;
     const toggleSunOverlayText = document.getElementById('toggleSunOverlayText');
     if (toggleSunOverlayText) toggleSunOverlayText.textContent = t.toggleSunOverlayText;
 
@@ -5512,11 +5525,34 @@ function renderOrthogonalMode() {
         }
     }
 
-    // 4. Draw High-End Architectural Room Flooring & Textures
-    drawArchitecturalRoomFlooring(rooms);
+    // 4. Draw Floor Finishes (Semantic Color Scheme or High-End Architectural Materials)
+    if (state.useSemanticColors) {
+        // Research Semantic Color Palette
+        rooms.forEach(r => {
+            const { x, y, w, h } = r.bounds;
+            ctx.fillStyle = r.hex;
+            ctx.fillRect(x, y, w, h);
 
-    // 4.5. Draw Directional 2D Wall Drop Shadows (Ambient Occlusion Depth)
-    drawArchitecturalWallShadows(rooms);
+            // Ventilation shaft cross lines
+            if (r.key === 'court_garden') {
+                ctx.fillStyle = 'rgba(0, 100, 0, 0.12)';
+                ctx.fillRect(x, y, w, h);
+                ctx.strokeStyle = '#008000';
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([3, 3]);
+                ctx.beginPath();
+                ctx.moveTo(x, y); ctx.lineTo(x + w, y + h);
+                ctx.moveTo(x + w, y); ctx.lineTo(x, y + h);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+        });
+    } else {
+        // High-End Architectural Room Flooring & Surface Materials
+        drawArchitecturalRoomFlooring(rooms);
+        // Directional 2D Wall Drop Shadows (Ambient Occlusion Depth)
+        drawArchitecturalWallShadows(rooms);
+    }
 
     // 5. Draw Rich Architectural CAD Furniture & Sanitary Details
     drawArchitecturalDetails(rooms, doors, windows);
