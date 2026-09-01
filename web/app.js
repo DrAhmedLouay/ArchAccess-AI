@@ -1851,6 +1851,7 @@ function synthesizeLayout(boundary, variant, typology) {
         const x0 = bldgMinX;
         const x5 = bldgMaxX;
         const y0 = bldgMinY;
+        const y4 = bldgMaxY;
         const surplusFrontW = Math.max(0, bw - minKitchWPx - minGuestBathWPx - minGuestWPx);
         const kitchExtra = surplusFrontW > 0 ? snap(surplusFrontW * (0.15 + 0.35 * r1)) : 0;
         const kitchW = minKitchWPx + kitchExtra;
