@@ -164,15 +164,25 @@ SEMANTIC_SPACES: Dict[str, SpaceStandard] = {
         min_clear_width=2.70,
         description="حمام مهيأ خاص لا تقل أبعاده عن 2.70م × 2.20م (مساحة ≥ 5.94م²) متصل مباشرة بالجناح المهيأ"
     ),
-    "bathroom": SpaceStandard(
-        name_ar="حمام عام / WC",
-        name_en="General Bathroom / WC",
+    "guest_bathroom": SpaceStandard(
+        name_ar="حمام الضيوف / WC",
+        name_en="Guest Bathroom / WC",
         hex_code="#ff3464",
         rgb=(255, 52, 100),
         category="indoor",
         min_turning_diameter=1.50,
         min_clear_width=1.70,
-        description="حمام ضيوف / عام لا يقل عن 1.70م × 1.10م (مساحة ≥ 1.87م²)"
+        description="حمام ضيوف لا يقل عن 1.70م × 1.10م (مساحة ≥ 1.87م²)"
+    ),
+    "bathroom": SpaceStandard(
+        name_ar="حمام البيت العام",
+        name_en="House Bathroom / General",
+        hex_code="#ff3464",
+        rgb=(255, 52, 100),
+        category="indoor",
+        min_turning_diameter=1.50,
+        min_clear_width=2.40,
+        description="حمام عام للعائلة لا يقل عن 2.40م × 2.70م (مساحة ≥ 6.48م²)"
     ),
     "corridors": SpaceStandard(
         name_ar="الممرات ومناطق الخدمات",

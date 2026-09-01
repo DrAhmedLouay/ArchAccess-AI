@@ -29,13 +29,15 @@ from core.bioclimatic_engine import IRAQI_GOVERNORATES, evaluate_iraqi_privacy_a
 
 def test_semantic_palette():
     print("Testing Exact Semantic Palette...")
-    assert len(SEMANTIC_SPACES) == 16, f"Must contain all 16 semantic classes (including dual bathrooms), got {len(SEMANTIC_SPACES)}"
+    assert len(SEMANTIC_SPACES) == 17, f"Must contain all 17 semantic classes (including triple bathrooms: Disabled, Guest, House), got {len(SEMANTIC_SPACES)}"
     assert SEMANTIC_SPACES["kitchen"].hex_code.upper() == "#FFB8D8"
     assert SEMANTIC_SPACES["guest_room"].hex_code == "#019df2"
     assert SEMANTIC_SPACES["living_room"].hex_code == "#01ffec"
     assert SEMANTIC_SPACES["bedroom"].hex_code == "#fefe0a"
     assert SEMANTIC_SPACES["disabled_bedroom"].hex_code == "#e801f7"
     assert SEMANTIC_SPACES["disabled_bathroom"].hex_code == "#ff3464"
+    assert SEMANTIC_SPACES["guest_bathroom"].hex_code == "#ff3464"
+    assert SEMANTIC_SPACES["bathroom"].hex_code == "#ff3464"
     assert SEMANTIC_SPACES["court_garden"].hex_code == "#00ff01"
     assert SEMANTIC_SPACES["walls"].hex_code == "#000000"
     assert SEMANTIC_SPACES["disabled_ramp"].hex_code == "#fe6300"
@@ -126,6 +128,40 @@ def test_probabilistic_spatial_synthesis():
     assert layout1["spatial_entropy_bits"] > 1.5, "Entropy must be realistic (> 1.5 bits)"
     assert layout1["layout_diversity_percent"] >= 80.0, "Diversity index must be >= 80%"
     print(f"  -> Stochastic Entropy: {layout1['spatial_entropy_bits']} bits | Diversity: {layout1['layout_diversity_percent']}% | Seed: #{layout1['stochastic_seed']}")
+def test_9_space_strict_dimensions():
+    print("Testing Strict 9-Space Architectural Dimensions (Zero Compromise)...")
+    gen = ArchAccessLayoutGenerator()
+    targets = {
+        'guest_room': (5.00, 3.90, 19.50),
+        'guest_bathroom': (1.70, 1.10, 1.87),
+        'living_room': (4.00, 3.90, 15.60),
+        'kitchen': (3.50, 3.50, 12.25),
+        'disabled_bedroom': (4.80, 4.00, 19.20),
+        'disabled_bathroom': (2.70, 2.20, 5.94),
+        'bathroom': (2.40, 2.70, 6.48),
+        'bedroom': (3.90, 3.90, 15.21)
+    }
+    
+    for variant in [1, 2, 3]:
+        for typology in ['back_to_back', 'corner_plot']:
+            layout = gen.generate_layout_from_dimensions(16.0, 16.0, style_variant=variant, plot_type=typology)
+            rooms = layout["rooms"]
+            found_keys = {r["key"] for r in rooms}
+            for req_key in targets:
+                assert req_key in found_keys, f"Missing required space {req_key} in Variant {variant} ({typology})"
+            
+            for r in rooms:
+                k = r["key"]
+                poly = r["polygon"]
+                pw = round(abs(poly[1][0] - poly[0][0]) / 23.0, 2)
+                ph = round(abs(poly[2][1] - poly[1][1]) / 23.0, 2)
+                area = round(pw * ph, 2)
+                if k in targets:
+                    min_w, min_h, min_a = targets[k]
+                    dim_ok = (pw >= min_w and ph >= min_h) or (pw >= min_h and ph >= min_w)
+                    assert dim_ok, f"Variant {variant} {k} dimension failure: got {pw}x{ph}m, expected >= {min_w}x{min_h}m"
+                    assert area >= min_a, f"Variant {variant} {k} area failure: got {area} m2, expected >= {min_a} m2"
+    print("  -> All 9 Spaces verified 100% compliant across all 3 variants and plot typologies!")
     print("  -> Passed!")
 
 if __name__ == "__main__":
@@ -136,4 +172,5 @@ if __name__ == "__main__":
     test_coverage_ratio_and_dimensions()
     test_iraq_bioclimatic_and_privacy()
     test_probabilistic_spatial_synthesis()
-    print("\nALL 7 PIPELINE, BIOCLIMATIC & PROBABILISTIC TESTS PASSED SUCCESSFULLY! ✅")
+    test_9_space_strict_dimensions()
+    print("\nALL 8 PIPELINE, BIOCLIMATIC & 9-SPACE ARCHITECTURAL TESTS PASSED SUCCESSFULLY! ✅")
