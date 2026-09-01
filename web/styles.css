@@ -716,6 +716,43 @@ body {
     flex-shrink: 0;
 }
 
+.toolbar-room-picker {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background-color: var(--bg-card);
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    padding: 2px 6px;
+    height: 28px;
+    border-radius: var(--radius-sm);
+    box-sizing: border-box;
+}
+
+.toolbar-room-label {
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: #38bdf8;
+    white-space: nowrap !important;
+}
+
+.toolbar-room-select {
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.78rem;
+    font-weight: 600;
+    outline: none;
+    cursor: pointer;
+    white-space: nowrap !important;
+    padding-inline-end: 4px;
+}
+
+.toolbar-room-select option {
+    background-color: #0f172a;
+    color: #ffffff;
+}
+
 .tags-checkbox-label {
     display: inline-flex;
     align-items: center;

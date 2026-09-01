@@ -211,8 +211,17 @@ const state = {
     theme: 'dark',
     showTags: true,
     showFurniture: true,
-    furnitureRotation: 0,
-    furnitureStyle: 1,
+    selectedRoomKey: 'living_room',
+    roomFurniture: {
+        living_room: { rotation: 0, style: 1 },
+        guest_room: { rotation: 0, style: 1 },
+        disabled_bedroom: { rotation: 0, style: 1 },
+        bedroom: { rotation: 0, style: 1 },
+        kitchen: { rotation: 0, style: 1 },
+        disabled_bathroom: { rotation: 0, style: 1 },
+        bathroom: { rotation: 0, style: 1 },
+        court_garden: { rotation: 0, style: 1 }
+    },
     currentLayout: null,
     
     // Probabilistic & Stochastic Synthesis State
@@ -614,6 +623,8 @@ function setupEventListeners() {
     }
 
     // Furniture Studio Controls
+    const toolbarRoomSelect = document.getElementById('toolbarRoomSelect');
+    const furnitureRoomSelect = document.getElementById('furnitureRoomSelect');
     const furnitureStyleSelect = document.getElementById('furnitureStyleSelect');
     const rotateFurnitureBtn = document.getElementById('rotateFurnitureBtn');
     const rotateFurnitureBtnText = document.getElementById('rotateFurnitureBtnText');
@@ -621,26 +632,57 @@ function setupEventListeners() {
     const changeFurnitureStyleBtnText = document.getElementById('changeFurnitureStyleBtnText');
 
     function syncFurnitureControls() {
-        if (furnitureStyleSelect) furnitureStyleSelect.value = state.furnitureStyle.toString();
+        const activeKey = state.selectedRoomKey || 'living_room';
+        if (!state.roomFurniture[activeKey]) {
+            state.roomFurniture[activeKey] = { rotation: 0, style: 1 };
+        }
+        const currentRot = state.roomFurniture[activeKey].rotation;
+        const currentStyle = state.roomFurniture[activeKey].style;
+
+        if (toolbarRoomSelect) toolbarRoomSelect.value = activeKey;
+        if (furnitureRoomSelect) furnitureRoomSelect.value = activeKey;
+        if (furnitureStyleSelect) furnitureStyleSelect.value = currentStyle.toString();
+
         document.querySelectorAll('.btn-furn-rot').forEach(b => {
-            b.classList.toggle('active', parseInt(b.dataset.rot) === state.furnitureRotation);
+            b.classList.toggle('active', parseInt(b.dataset.rot) === currentRot);
         });
+
         const isAr = state.lang === 'ar';
         if (rotateFurnitureBtnText) {
             rotateFurnitureBtnText.textContent = isAr 
-                ? `تدوير الأثاث (${state.furnitureRotation}°)` 
-                : `Rotate (${state.furnitureRotation}°)`;
+                ? `تدوير (${currentRot}°)` 
+                : `Rotate (${currentRot}°)`;
         }
         if (changeFurnitureStyleBtnText) {
             changeFurnitureStyleBtnText.textContent = isAr 
-                ? `طراز الأثاث (${state.furnitureStyle})` 
-                : `Style (${state.furnitureStyle})`;
+                ? `طراز (${currentStyle})` 
+                : `Style (${currentStyle})`;
         }
+    }
+
+    if (toolbarRoomSelect) {
+        toolbarRoomSelect.addEventListener('change', (e) => {
+            state.selectedRoomKey = e.target.value;
+            syncFurnitureControls();
+            renderCanvas();
+        });
+    }
+
+    if (furnitureRoomSelect) {
+        furnitureRoomSelect.addEventListener('change', (e) => {
+            state.selectedRoomKey = e.target.value;
+            syncFurnitureControls();
+            renderCanvas();
+        });
     }
 
     if (furnitureStyleSelect) {
         furnitureStyleSelect.addEventListener('change', (e) => {
-            state.furnitureStyle = parseInt(e.target.value) || 1;
+            const activeKey = state.selectedRoomKey || 'living_room';
+            if (!state.roomFurniture[activeKey]) {
+                state.roomFurniture[activeKey] = { rotation: 0, style: 1 };
+            }
+            state.roomFurniture[activeKey].style = parseInt(e.target.value) || 1;
             syncFurnitureControls();
             renderCanvas();
         });
@@ -648,7 +690,11 @@ function setupEventListeners() {
 
     document.querySelectorAll('.btn-furn-rot').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            state.furnitureRotation = parseInt(e.currentTarget.dataset.rot) || 0;
+            const activeKey = state.selectedRoomKey || 'living_room';
+            if (!state.roomFurniture[activeKey]) {
+                state.roomFurniture[activeKey] = { rotation: 0, style: 1 };
+            }
+            state.roomFurniture[activeKey].rotation = parseInt(e.currentTarget.dataset.rot) || 0;
             syncFurnitureControls();
             renderCanvas();
         });
@@ -656,7 +702,11 @@ function setupEventListeners() {
 
     if (rotateFurnitureBtn) {
         rotateFurnitureBtn.addEventListener('click', () => {
-            state.furnitureRotation = (state.furnitureRotation + 90) % 360;
+            const activeKey = state.selectedRoomKey || 'living_room';
+            if (!state.roomFurniture[activeKey]) {
+                state.roomFurniture[activeKey] = { rotation: 0, style: 1 };
+            }
+            state.roomFurniture[activeKey].rotation = (state.roomFurniture[activeKey].rotation + 90) % 360;
             syncFurnitureControls();
             renderCanvas();
         });
@@ -664,7 +714,11 @@ function setupEventListeners() {
 
     if (changeFurnitureStyleBtn) {
         changeFurnitureStyleBtn.addEventListener('click', () => {
-            state.furnitureStyle = (state.furnitureStyle % 3) + 1;
+            const activeKey = state.selectedRoomKey || 'living_room';
+            if (!state.roomFurniture[activeKey]) {
+                state.roomFurniture[activeKey] = { rotation: 0, style: 1 };
+            }
+            state.roomFurniture[activeKey].style = (state.roomFurniture[activeKey].style % 3) + 1;
             syncFurnitureControls();
             renderCanvas();
         });
@@ -879,16 +933,30 @@ function setupEventListeners() {
     }
 
     canvas.addEventListener('click', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const screenX = e.clientX - rect.left;
+        const screenY = e.clientY - rect.top;
+
+        const worldX = Math.round((screenX - state.panX) / state.zoom);
+        const worldY = Math.round((screenY - state.panY) / state.zoom);
+
         if (state.currentPreset === 'custom') {
-            const rect = canvas.getBoundingClientRect();
-            const screenX = e.clientX - rect.left;
-            const screenY = e.clientY - rect.top;
-
-            const worldX = Math.round((screenX - state.panX) / state.zoom);
-            const worldY = Math.round((screenY - state.panY) / state.zoom);
-
             state.boundaryPoints.push({ x: worldX, y: worldY });
             renderCanvas();
+            return;
+        }
+
+        // Interactive Click on Room to Select & Customize!
+        if (state.currentLayout && state.currentLayout.rooms) {
+            const hitRoom = state.currentLayout.rooms.find(r => {
+                const b = r.bounds;
+                return worldX >= b.x && worldX <= b.x + b.w && worldY >= b.y && worldY <= b.y + b.h;
+            });
+            if (hitRoom) {
+                state.selectedRoomKey = hitRoom.key;
+                syncFurnitureControls();
+                renderCanvas();
+            }
         }
     });
 
@@ -1177,13 +1245,14 @@ const I18N = {
         diversityLabel: "مؤشر التنوع:",
 
         furnControlTitle: "استوديو تأثيث وتدوير الفضاءات (Furniture Studio):",
-        furnStyleLabel: "نمط وفرش الفضاءات:",
-        furnRotationLabel: "تدوير اتجاه الأثاث:",
-        rotateFurnitureBtnText: "تدوير الأثاث",
-        changeFurnitureStyleBtnText: "طراز الأثاث",
-        furnStyleOpt1: "طراز 1: ركنة مودرن L-Sofa + سرير ماستر",
-        furnStyleOpt2: "طراز 2: مجلس عربي U-Majlis + سرير مهيأ",
-        furnStyleOpt3: "طراز 3: صالون معاصر + أسرة توأم Twin",
+        furnRoomLabel: "الفضاء المعماري المحدد (أو انقر على المخطط):",
+        furnStyleLabel: "نمط وفرش الفضاء المحدد:",
+        furnRotationLabel: "تدوير اتجاه الأثاث للفضاء:",
+        rotateFurnitureBtnText: "تدوير",
+        changeFurnitureStyleBtnText: "طراز",
+        furnStyleOpt1: "طراز 1: التوزيع الأساسي الملكي",
+        furnStyleOpt2: "طراز 2: التوزيع العربي المهيأ ADA",
+        furnStyleOpt3: "طراز 3: التوزيع المعاصر Contemporary",
 
         step3Title: "3. التصدير وحفظ المخططات (Export & Save)",
         exportImageBtn: "حفظ كصورة فائقة الدقة (Export 4K Ultra HD)",
@@ -1291,13 +1360,14 @@ const I18N = {
         diversityLabel: "Diversity Index:",
 
         furnControlTitle: "Interior Furniture & Rotation Studio:",
-        furnStyleLabel: "Furniture Layout Style:",
-        furnRotationLabel: "Rotate Furniture Orientation:",
-        rotateFurnitureBtnText: "Rotate Furniture",
-        changeFurnitureStyleBtnText: "Furniture Style",
-        furnStyleOpt1: "Style 1: Modern L-Sofa & Master Bed",
-        furnStyleOpt2: "Style 2: Arabesque U-Majlis & ADA Bed",
-        furnStyleOpt3: "Style 3: Contemporary Salon & Twin Beds",
+        furnRoomLabel: "Selected Space (or click floorplan):",
+        furnStyleLabel: "Selected Space Furniture Style:",
+        furnRotationLabel: "Rotate Selected Room Furniture:",
+        rotateFurnitureBtnText: "Rotate",
+        changeFurnitureStyleBtnText: "Style",
+        furnStyleOpt1: "Style 1: Royal Baseline Layout",
+        furnStyleOpt2: "Style 2: Arabesque ADA Accessible",
+        furnStyleOpt3: "Style 3: Contemporary Modern Layout",
 
         step3Title: "3. Export & BIM Integration",
         exportImageBtn: "Export 4K Ultra HD Image (PNG)",
@@ -1525,6 +1595,8 @@ function updateUIForLang() {
     // Furniture Studio Translations
     const furnControlTitle = document.getElementById('furnControlTitle');
     if (furnControlTitle) furnControlTitle.textContent = t.furnControlTitle;
+    const furnRoomLabel = document.getElementById('furnRoomLabel');
+    if (furnRoomLabel) furnRoomLabel.textContent = t.furnRoomLabel;
     const furnStyleLabel = document.getElementById('furnStyleLabel');
     if (furnStyleLabel) furnStyleLabel.textContent = t.furnStyleLabel;
     const furnRotationLabel = document.getElementById('furnRotationLabel');
@@ -1535,10 +1607,7 @@ function updateUIForLang() {
         furnStyleSelect.options[1].text = t.furnStyleOpt2;
         furnStyleSelect.options[2].text = t.furnStyleOpt3;
     }
-    const rotFurnBtnText = document.getElementById('rotateFurnitureBtnText');
-    if (rotFurnBtnText) rotFurnBtnText.textContent = `${t.rotateFurnitureBtnText} (${state.furnitureRotation}°)`;
-    const chgFurnStyleBtnText = document.getElementById('changeFurnitureStyleBtnText');
-    if (chgFurnStyleBtnText) chgFurnStyleBtnText.textContent = `${t.changeFurnitureStyleBtnText} (${state.furnitureStyle})`;
+    syncFurnitureControls();
 
     const genBtnSpan = document.querySelector('#generateBtn span');
     if (genBtnSpan) genBtnSpan.textContent = t.generateBtn;
@@ -4027,11 +4096,12 @@ function drawDraftingGrid(plotBounds) {
 function drawArchitecturalDetails(rooms, doors, windows) {
     if (state.showFurniture === false) return;
     const isAr = state.lang === 'ar';
-    const rot = state.furnitureRotation || 0; // 0, 90, 180, 270 degrees
-    const style = state.furnitureStyle || 1;   // 1, 2, 3
 
     rooms.forEach(r => {
         const { x, y, w, h } = r.bounds;
+        const roomConfig = (state.roomFurniture && state.roomFurniture[r.key]) || { rotation: 0, style: 1 };
+        const rot = roomConfig.rotation || 0; // 0, 90, 180, 270 degrees
+        const style = roomConfig.style || 1;   // 1, 2, 3
 
         // =========================================================================
         // 1. KITCHEN (#FFB8D8): L-Counter, Galley, or U-Island (Zero Door Obstruction)
@@ -5150,6 +5220,57 @@ function renderOrthogonalMode() {
     // 9. Draw Room Labels & Area Tags (Controlled by Tick Box)
     if (state.showTags) {
         drawLabels();
+    }
+
+    // 9.5 Draw Active Room Selection CAD Grip Handles & Highlight
+    if (state.selectedRoomKey && rooms) {
+        const selectedRoom = rooms.find(r => r.key === state.selectedRoomKey);
+        if (selectedRoom) {
+            const { x, y, w, h } = selectedRoom.bounds;
+            ctx.save();
+            ctx.strokeStyle = '#38bdf8';
+            ctx.fillStyle = 'rgba(56, 189, 248, 0.08)';
+            ctx.lineWidth = 1.8;
+            ctx.fillRect(x, y, w, h);
+            ctx.strokeRect(x, y, w, h);
+
+            // 4 corner CAD grip boxes
+            ctx.fillStyle = '#ffffff';
+            ctx.strokeStyle = '#0284c7';
+            ctx.lineWidth = 1;
+            const gripSize = 5;
+            [
+                { gx: x - gripSize / 2, gy: y - gripSize / 2 },
+                { gx: x + w - gripSize / 2, gy: y - gripSize / 2 },
+                { gx: x - gripSize / 2, gy: y + h - gripSize / 2 },
+                { gx: x + w - gripSize / 2, gy: y + h - gripSize / 2 }
+            ].forEach(g => {
+                ctx.fillRect(g.gx, g.gy, gripSize, gripSize);
+                ctx.strokeRect(g.gx, g.gy, gripSize, gripSize);
+            });
+
+            // Selected Room Badge in corner
+            const isAr = state.lang === 'ar';
+            const badgeW = isAr ? 56 : 62;
+            const badgeH = 14;
+            const badgeX = x + w - badgeW - 3;
+            const badgeY = y + 3;
+            if (w > badgeW + 6 && h > 26) {
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+                ctx.strokeStyle = '#38bdf8';
+                ctx.lineWidth = 0.8;
+                ctx.beginPath();
+                ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 3);
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = '#38bdf8';
+                ctx.font = 'bold 7px Cairo, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(isAr ? '✨ محدد للتعديل' : '✨ Selected', badgeX + badgeW / 2, badgeY + badgeH / 2);
+            }
+            ctx.restore();
+        }
     }
 
     // 10. Draw Exterior Chain Dimensions, North Compass & Graphic Scale Bar

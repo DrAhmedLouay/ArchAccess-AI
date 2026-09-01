@@ -300,15 +300,28 @@
                             <span class="furn-title" id="furnControlTitle">استوديو تأثيث وتدوير الفضاءات (Furniture Studio):</span>
                         </div>
                         <div class="furn-row">
-                            <label for="furnitureStyleSelect" id="furnStyleLabel">نمط وفرش الفضاءات:</label>
-                            <select id="furnitureStyleSelect" class="form-select">
-                                <option value="1" selected>طراز 1: ركنة مودرن L-Sofa + سرير ماستر</option>
-                                <option value="2">طراز 2: مجلس عربي U-Majlis + سرير مهيأ</option>
-                                <option value="3">طراز 3: صالون معاصر + أسرة توأم Twin</option>
+                            <label for="furnitureRoomSelect" id="furnRoomLabel">الفضاء المعماري المحدد (أو انقر على المخطط):</label>
+                            <select id="furnitureRoomSelect" class="form-select">
+                                <option value="living_room" selected>🛋️ صالة المعيشة (Living Room)</option>
+                                <option value="guest_room">☕ غرفة الضيوف / المجلس (Salon)</option>
+                                <option value="disabled_bedroom">♿ جناح النوم المهيأ (ADA Suite)</option>
+                                <option value="bedroom">🛏️ غرفة النوم الرئيسية (Bedroom)</option>
+                                <option value="kitchen">🍳 المطبخ (Kitchen)</option>
+                                <option value="disabled_bathroom">🚿 الحمام المهيأ (ADA Bathroom)</option>
+                                <option value="bathroom">🛁 حمام العائلة / الضيوف (Bathroom)</option>
+                                <option value="court_garden">🌿 المنور والحديقة (Courtyard)</option>
                             </select>
                         </div>
                         <div class="furn-row">
-                            <label id="furnRotationLabel">تدوير اتجاه الأثاث:</label>
+                            <label for="furnitureStyleSelect" id="furnStyleLabel">نمط وفرش الفضاء المحدد:</label>
+                            <select id="furnitureStyleSelect" class="form-select">
+                                <option value="1" selected>طراز 1: التوزيع الأساسي الملكي</option>
+                                <option value="2">طراز 2: التوزيع العربي المهيأ ADA</option>
+                                <option value="3">طراز 3: التوزيع المعاصر Contemporary</option>
+                            </select>
+                        </div>
+                        <div class="furn-row">
+                            <label id="furnRotationLabel">تدوير اتجاه الأثاث للفضاء:</label>
                             <div class="furn-rot-buttons">
                                 <button type="button" class="btn-furn-rot active" data-rot="0" title="اتجاه أصلي (0°)">0°</button>
                                 <button type="button" class="btn-furn-rot" data-rot="90" title="تدوير 90° باتجاه عقارب الساعة">90°</button>
@@ -408,15 +421,28 @@
 
                         <div class="options-divider"></div>
 
-                        <!-- Group B: Furniture Studio Actions -->
+                        <!-- Group B: Target Space & Furniture Studio Actions -->
                         <div class="options-group">
-                            <button type="button" id="rotateFurnitureBtn" class="btn-viewport-action" title="تدوير اتجاه الأثاث في المخطط (0° / 90° / 180° / 270°)">
+                            <div class="toolbar-room-picker">
+                                <span class="toolbar-room-label">📍 الفضاء:</span>
+                                <select id="toolbarRoomSelect" class="toolbar-room-select" title="اختر الفضاء المعماري لتعديل فرشه وتدويره أو انقر مباشرة على الفضاء في المخطط">
+                                    <option value="living_room" selected>🛋️ المعيشة</option>
+                                    <option value="guest_room">☕ الضيوف</option>
+                                    <option value="disabled_bedroom">♿ النوم المهيأ</option>
+                                    <option value="bedroom">🛏️ النوم</option>
+                                    <option value="kitchen">🍳 المطبخ</option>
+                                    <option value="disabled_bathroom">🚿 حمام ADA</option>
+                                    <option value="bathroom">🛁 الحمام</option>
+                                    <option value="court_garden">🌿 المنور</option>
+                                </select>
+                            </div>
+                            <button type="button" id="rotateFurnitureBtn" class="btn-viewport-action" title="تدوير اتجاه أثاث الفضاء المحدد (0° / 90° / 180° / 270°)">
                                 <span>🔄</span>
-                                <span id="rotateFurnitureBtnText">تدوير الأثاث (0°)</span>
+                                <span id="rotateFurnitureBtnText">تدوير (0°)</span>
                             </button>
-                            <button type="button" id="changeFurnitureStyleBtn" class="btn-viewport-action" title="تبديل طراز ونمط فرش الغرف (Style 1 / 2 / 3)">
+                            <button type="button" id="changeFurnitureStyleBtn" class="btn-viewport-action" title="تبديل طراز ونمط فرش الفضاء المحدد (Style 1 / 2 / 3)">
                                 <span>🛋️</span>
-                                <span id="changeFurnitureStyleBtnText">طراز الأثاث (1)</span>
+                                <span id="changeFurnitureStyleBtnText">طراز (1)</span>
                             </button>
                         </div>
 
