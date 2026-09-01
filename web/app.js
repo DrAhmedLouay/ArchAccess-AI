@@ -499,11 +499,19 @@ function setupZoomAndPan() {
         state.isPanning = true;
         state.panStartX = e.clientX - state.panX;
         state.panStartY = e.clientY - state.panY;
+        state.mouseStartX = e.clientX;
+        state.mouseStartY = e.clientY;
+        state.hasMovedWhilePanning = false;
         canvas.classList.add('panning');
     });
 
     window.addEventListener('mousemove', (e) => {
         if (!state.isPanning) return;
+        const dx = Math.abs(e.clientX - state.mouseStartX);
+        const dy = Math.abs(e.clientY - state.mouseStartY);
+        if (dx > 4 || dy > 4) {
+            state.hasMovedWhilePanning = true;
+        }
         state.panX = e.clientX - state.panStartX;
         state.panY = e.clientY - state.panStartY;
         renderCanvas();
@@ -1448,6 +1456,12 @@ function setupEventListeners() {
     }
 
     canvas.addEventListener('click', (e) => {
+        // If the user was dragging/panning the canvas, cancel space selection click!
+        if (state.hasMovedWhilePanning) {
+            state.hasMovedWhilePanning = false;
+            return;
+        }
+
         const rect = canvas.getBoundingClientRect();
         const screenX = e.clientX - rect.left;
         const screenY = e.clientY - rect.top;
@@ -4633,21 +4647,63 @@ function drawAccessibleParkingAndVehicularPath(ctx, parking, gate, ramp) {
 }
 
 /**
- * Draws Architectural Drafting Paper Grid Background
+ * Draws High-End Architectural Drafting Paper Grid Background centered on the drawing
  */
 function drawDraftingGrid(plotBounds) {
+    if (!plotBounds) return;
     ctx.save();
+    
+    // Architectural Drafting Sheet Background framed with balanced professional margins
+    const marginX = Math.max(160, Math.round(plotBounds.plotW * 0.55));
+    const marginY = Math.max(140, Math.round(plotBounds.plotH * 0.45));
+    const sheetX = plotBounds.minX - marginX;
+    const sheetY = plotBounds.minY - marginY;
+    const sheetW = plotBounds.plotW + marginX * 2;
+    const sheetH = plotBounds.plotH + marginY * 2;
+    
+    // 1. Soft Paper Drop Shadow
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.40)';
+    ctx.shadowBlur = 18;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 6;
+    
+    // 2. High-Grade Architectural Bright Paper Surface
     ctx.fillStyle = '#f8fafc';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(sheetX, sheetY, sheetW, sheetH);
+    
+    // Reset Shadow
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+    
+    // 3. Crisp Sheet Outer Border
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.lineWidth = 1.0;
+    ctx.strokeRect(sheetX, sheetY, sheetW, sheetH);
 
-    // Subtle 1m CAD grid lines across the sheet
-    ctx.strokeStyle = 'rgba(226, 232, 240, 0.65)';
+    // 4. Inner Architectural Margin Inset (8px)
+    ctx.strokeStyle = 'rgba(148, 163, 184, 0.4)';
+    ctx.lineWidth = 0.6;
+    ctx.strokeRect(sheetX + 8, sheetY + 8, sheetW - 16, sheetH - 16);
+
+    // 5. Subtle 1m CAD Grid Lines across the sheet
+    ctx.strokeStyle = 'rgba(226, 232, 240, 0.7)';
     ctx.lineWidth = 0.5;
-    for (let x = 0; x < canvas.width; x += 23) {
-        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+    const startX = Math.floor(sheetX / 23) * 23;
+    const endX = sheetX + sheetW;
+    const startY = Math.floor(sheetY / 23) * 23;
+    const endY = sheetY + sheetH;
+
+    for (let x = startX; x <= endX; x += 23) {
+        if (x >= sheetX && x <= endX) {
+            ctx.beginPath(); ctx.moveTo(x, sheetY); ctx.lineTo(x, sheetY + sheetH); ctx.stroke();
+        }
     }
-    for (let y = 0; y < canvas.height; y += 23) {
-        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+    for (let y = startY; y <= endY; y += 23) {
+        if (y >= sheetY && y <= endY) {
+            ctx.beginPath(); ctx.moveTo(sheetX, y); ctx.lineTo(sheetX + sheetW, y); ctx.stroke();
+        }
     }
     ctx.restore();
 }
