@@ -141,7 +141,9 @@ body {
 /* Workspace Grid - Ultra-Wide Floorplan Canvas Viewport */
 .workspace-grid {
     display: grid;
-    grid-template-columns: 315px 1fr 265px;
+    grid-template-columns: minmax(315px, 315px) 1fr minmax(265px, 265px);
+    width: 100%;
+    max-width: 100vw;
     flex: 1;
     overflow: hidden;
     position: relative;
@@ -149,11 +151,11 @@ body {
 }
 
 .workspace-grid.left-collapsed {
-    grid-template-columns: 0px 1fr 265px;
+    grid-template-columns: 0px 1fr minmax(265px, 265px);
 }
 
 .workspace-grid.right-collapsed {
-    grid-template-columns: 315px 1fr 0px;
+    grid-template-columns: minmax(315px, 315px) 1fr 0px;
 }
 
 .workspace-grid.both-collapsed {
@@ -170,7 +172,10 @@ body {
     display: flex;
     flex-direction: column;
     gap: 10px;
+    width: 100%;
+    max-width: 100%;
     min-width: 0;
+    box-sizing: border-box;
     transition: opacity 0.2s, transform 0.2s;
 }
 
@@ -226,6 +231,10 @@ body {
     padding: 10px 12px;
     border-radius: var(--radius-md);
     border: 1px solid var(--border-color);
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
 }
 
 .section-title {
@@ -259,36 +268,40 @@ body {
 .presets-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 8px;
+    gap: 6px;
     margin-bottom: 12px;
 }
 
 .preset-btn {
     background-color: var(--bg-card);
     border: 1px solid var(--border-color);
-    color: var(--text-primary);
-    padding: 8px 10px;
     border-radius: var(--radius-sm);
-    text-align: right;
+    padding: 8px 6px;
+    color: var(--text-secondary);
     cursor: pointer;
-    transition: all 0.2s ease;
+    font-family: inherit;
     display: flex;
     flex-direction: column;
+    align-items: center;
     gap: 2px;
+    transition: all 0.2s;
+    text-align: center;
 }
 
 .preset-btn:hover {
     border-color: var(--accent-blue);
+    color: var(--text-primary);
 }
 
 .preset-btn.active {
-    background-color: rgba(56, 139, 253, 0.15);
+    background-color: rgba(99, 102, 241, 0.15);
     border-color: var(--accent-blue);
+    color: var(--accent-blue);
 }
 
-.preset-name {
+.preset-title {
+    font-size: 0.78rem;
     font-weight: 600;
-    font-size: 0.8rem;
 }
 
 .preset-tag {
@@ -303,6 +316,10 @@ body {
     border-radius: var(--radius-sm);
     padding: 10px 12px;
     margin-bottom: 12px;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
 }
 
 .dim-header {
@@ -310,12 +327,20 @@ body {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 8px;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    gap: 8px;
 }
 
 .dim-title {
     font-size: 0.8rem;
     font-weight: 700;
     color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 0;
 }
 
 .plot-area-badge {
@@ -327,6 +352,8 @@ body {
     padding: 2px 8px;
     border-radius: 12px;
     border: 1px solid rgba(57, 197, 207, 0.3);
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .dim-inputs-grid {
@@ -398,14 +425,19 @@ body {
 
 .form-select {
     width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
     background-color: var(--bg-card);
     color: var(--text-primary);
     border: 1px solid var(--border-color);
     padding: 8px 12px;
     border-radius: var(--radius-sm);
     font-family: inherit;
-    font-size: 0.85rem;
+    font-size: 0.82rem;
     outline: none;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
 }
 
 .slider-header {
@@ -570,31 +602,38 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
 }
 
 .view-mode-tabs {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     background-color: var(--bg-card);
     padding: 4px;
     border-radius: var(--radius-md);
     border: 1px solid var(--border-color);
+    flex-shrink: 0;
+    min-width: 0;
 }
 
 .view-tab {
     background: transparent;
     border: none;
     color: var(--text-secondary);
-    padding: 6px 14px;
+    padding: 6px 12px;
     border-radius: var(--radius-sm);
     font-family: inherit;
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     font-weight: 600;
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     transition: all 0.2s;
+    white-space: nowrap;
 }
 
 .view-tab.active {
@@ -617,7 +656,9 @@ body {
 .viewport-options {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 8px;
+    flex-shrink: 0;
+    min-width: 0;
 }
 
 .tags-checkbox-label {
@@ -680,6 +721,11 @@ body {
     display: flex;
     flex-direction: column;
     gap: 10px;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .furn-header {
