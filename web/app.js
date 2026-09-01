@@ -27,7 +27,7 @@ const SEMANTIC_PALETTE = {
 
     guest_room: { name_ar: "غرفة الضيوف", name_en: "Guest Room", hex: "#019df2", rgb: [1, 157, 242], minDia: 1.50, minW: 0.91, cat: "indoor" },
     living_room: { name_ar: "غرفة المعيشة", name_en: "Living Room", hex: "#01ffec", rgb: [1, 255, 236], minDia: 1.50, minW: 0.91, cat: "indoor" },
-    kitchen: { name_ar: "المطبخ", name_en: "Kitchen", hex: "#FFB8D8", rgb: [255, 184, 216], minDia: 1.50, minW: 3.00, minL: 4.00, cat: "indoor" },
+    kitchen: { name_ar: "المطبخ", name_en: "Kitchen", hex: "#FFB8D8", rgb: [255, 184, 216], minDia: 1.50, minW: 3.00, minL: 3.00, cat: "indoor" },
     bedroom: { name_ar: "غرفة النوم القياسية", name_en: "Bedroom", hex: "#fefe0a", rgb: [254, 254, 10], minDia: 1.50, minW: 3.00, minL: 4.00, cat: "indoor" },
     disabled_bedroom: { name_ar: "غرفة النوم المهيأة (Disabled)", name_en: "Disabled Suite", hex: "#e801f7", rgb: [232, 1, 247], minDia: 1.60, minW: 4.50, cat: "indoor" },
     disabled_bathroom: { name_ar: "حمام مهيأ (En-Suite)", name_en: "En-Suite ADA Bath", hex: "#ff3464", rgb: [255, 52, 100], minDia: 1.60, minW: 3.00, minL: 3.00, cat: "indoor" },
@@ -1613,11 +1613,14 @@ function synthesizeLayout(boundary, variant, typology) {
         // Central Spine Corridor (Width >= 1.50m):
         const x_corr_end = x_ada_end + min1_5mPx;
 
-        // East Wing: Kitchen, Bedroom, East Shaft
-        const x4 = snap(bldgMaxX - Math.max(bw * 0.12, 35));
+        // East Wing: Dedicated Kitchen, Standard Bedroom, East Shaft
+        let x4 = snap(bldgMaxX - Math.max(bw * 0.08, 1.20 * pxPerMeter));
+        if (x4 - x_corr_end < min3mPx) {
+            x4 = bldgMaxX;
+        }
         let y2 = snap(y_corr_bot + (y4 - y_corr_bot) * 0.50);
-        if (y2 - y_corr_bot < min4mPx) y2 = y_corr_bot + min4mPx;
-        if (y4 - y2 < min4mPx) y2 = y4 - min4mPx;
+        if (y2 - y_corr_bot < min3mPx) y2 = y_corr_bot + min3mPx;
+        if (y4 - y2 < min3mPx) y2 = y4 - min3mPx;
 
         roomTemplates = [
             // Reception Zone: Guest Room (>= 4.0m) & General Bathroom facing Front
@@ -1633,7 +1636,7 @@ function synthesizeLayout(boundary, variant, typology) {
             // En-Suite ADA Bathroom (>= 3.0m x 3.0m) & West Ventilation Shaft
             { key: 'disabled_bathroom', x: x_dis_end, y: y_corr_bot, w: x_ada_end - x_dis_end, h: y_ada_end - y_corr_bot },
             { key: 'court_garden', x: x_dis_end, y: y_ada_end, w: x_ada_end - x_dis_end, h: y4 - y_ada_end },
-            // East Wing: Dedicated Kitchen, Standard Bedroom, East Shaft
+            // East Wing: Dedicated Kitchen (>= 3.0m x 3.0m), Standard Bedroom (>= 3.0m x 3.0m), East Shaft
             { key: 'kitchen', x: x_corr_end, y: y_corr_bot, w: x4 - x_corr_end, h: y2 - y_corr_bot },
             { key: 'bedroom', x: x_corr_end, y: y2, w: x4 - x_corr_end, h: y4 - y2 },
             { key: 'court_garden', x: x4, y: y1, w: x5 - x4, h: y4 - y1 }
@@ -1684,8 +1687,9 @@ function synthesizeLayout(boundary, variant, typology) {
         const x_living_start = x_bath_front + minBathWPx;
 
         // Middle Zone: Kitchen, Central Patio, Standard Bedroom
-        let x2 = snap(bldgMinX + bw * 0.30);
-        let x3 = snap(bldgMinX + bw * 0.58);
+        let x2 = snap(bldgMinX + Math.max(min3mPx, bw * 0.30));
+        let x3 = snap(bldgMinX + Math.max(min3mPx * 2, bw * 0.58));
+        if (x2 - x0 < min3mPx) x2 = x0 + min3mPx;
 
         // Rear Zone: Disabled Suite (Width >= 4.50m strictly, Length <= 6.0m strictly)
         const disBedW2 = Math.max(min4_5mPx, snap(Math.min(bw * 0.35, 4.80 * pxPerMeter)));
@@ -1695,7 +1699,10 @@ function synthesizeLayout(boundary, variant, typology) {
         let y3 = snap(y4 - targetDisBedH2);
         if (y4 - y3 > max6mPx) y3 = y4 - max6mPx;
         if (y4 - y3 < min4mPx) y3 = y4 - min4mPx;
-        const y_corr_top2 = snap(y3 - Math.max(min1_5mPx, Math.round(1.50 * pxPerMeter)));
+        let y_corr_top2 = snap(y3 - Math.max(min1_5mPx, Math.round(1.50 * pxPerMeter)));
+        if (y_corr_top2 - y_corr_bot < min3mPx) {
+            y_corr_top2 = y_corr_bot + min3mPx;
+        }
 
         const x_ada_end2 = x_dis_end2 + min3mPx;
 
@@ -1707,7 +1714,7 @@ function synthesizeLayout(boundary, variant, typology) {
             // Continuous Central Distribution Gallery (Horizontal full span)
             { key: 'corridors', x: x0, y: y1, w: x5 - x0, h: y_corr_h },
             { key: 'corridors', x: x0, y: y_corr_top2, w: x5 - x0, h: y3 - y_corr_top2 },
-            // Middle Core Zone: Kitchen on West, Central Courtyard (#00ff01), Standard Bed on East
+            // Middle Core Zone: Kitchen on West (>= 3.0m x 3.0m), Central Courtyard (#00ff01), Standard Bed on East
             { key: 'kitchen', x: x0, y: y_corr_bot, w: x2 - x0, h: y_corr_top2 - y_corr_bot },
             { key: 'court_garden', x: x2, y: y_corr_bot, w: x3 - x2, h: y_corr_top2 - y_corr_bot },
             { key: 'bedroom', x: x3, y: y_corr_bot, w: x5 - x3, h: y_corr_top2 - y_corr_bot },
@@ -1771,10 +1778,12 @@ function synthesizeLayout(boundary, variant, typology) {
         const x_ada_start3 = x_dis_start3 - min3mPx;
 
         // West Wing: Kitchen, Standard Bedroom, West Shaft
-        const x1 = snap(bldgMinX + Math.max(bw * 0.12, 35));
+        let x1 = snap(bldgMinX + Math.max(bw * 0.08, 1.20 * pxPerMeter));
+        if (x3 - x1 < min3mPx) x1 = Math.max(x0, x3 - min3mPx);
+
         let y2 = snap(y_corr_bot + (y4 - y_corr_bot) * 0.50);
-        if (y2 - y_corr_bot < min4mPx) y2 = y_corr_bot + min4mPx;
-        if (y4 - y2 < min4mPx) y2 = y4 - min4mPx;
+        if (y2 - y_corr_bot < min3mPx) y2 = y_corr_bot + min3mPx;
+        if (y4 - y2 < min3mPx) y2 = y4 - min3mPx;
 
         let y_ada_end3 = snap(y_corr_bot + Math.max(min3mPx, Math.round((y4 - y_corr_bot) * 0.65)));
         if (y_ada_end3 - y_corr_bot < min3mPx) y_ada_end3 = y_corr_bot + min3mPx;
@@ -1789,7 +1798,7 @@ function synthesizeLayout(boundary, variant, typology) {
             { key: 'corridors', x: x0, y: y1, w: x5 - x0, h: y_corr_h },
             // Continuous Central Vertical Spine (Connecting to Horizontal Gallery)
             { key: 'corridors', x: x3, y: y_corr_bot, w: x_dis_start3 - x3, h: y4 - y_corr_bot },
-            // West Wing: West Shaft, Kitchen (>= 3.0m x 4.0m), Standard Bedroom (>= 3.0m x 4.0m)
+            // West Wing: West Shaft, Kitchen (>= 3.0m x 3.0m), Standard Bedroom (>= 3.0m x 3.0m)
             { key: 'court_garden', x: x0, y: y_corr_bot, w: x1 - x0, h: y4 - y_corr_bot },
             { key: 'kitchen', x: x1, y: y_corr_bot, w: x3 - x1, h: y2 - y_corr_bot },
             { key: 'bedroom', x: x1, y: y2, w: x3 - x1, h: y4 - y2 },

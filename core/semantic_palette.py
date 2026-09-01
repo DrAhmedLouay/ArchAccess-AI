@@ -132,7 +132,7 @@ SEMANTIC_SPACES: Dict[str, SpaceStandard] = {
         category="indoor",
         min_turning_diameter=1.50,
         min_clear_width=3.00,
-        description="أبعاد قياسية رحبة لا تقل عن 3.00م × 4.00م (مساحة ≥ 12.0م²) مع ممرات ومسار حركة مريح"
+        description="أبعاد قياسية رحبة لا تقل عن 3.00م × 3.00م (مساحة ≥ 9.0م²) مع ممرات ومسار حركة مريح"
     ),
     "bedroom": SpaceStandard(
         name_ar="غرفة النوم القياسية",
