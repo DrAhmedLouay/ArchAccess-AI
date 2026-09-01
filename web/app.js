@@ -487,71 +487,66 @@ function setupZoomAndPan() {
 }
 
 function setupEventListeners() {
+    function updateTypologySelection(val) {
+        state.plotTypology = val;
+        document.querySelectorAll('.typology-option').forEach(opt => {
+            const radio = opt.querySelector('input[name="plotTypology"]');
+            const isActive = (radio && radio.value === val);
+            opt.classList.toggle('active', isActive);
+            if (radio) radio.checked = isActive;
+        });
+
+        const cornerSel = document.getElementById('cornerEntrySelector');
+        if (cornerSel) {
+            cornerSel.style.display = (state.plotTypology === 'corner_plot') ? 'flex' : 'none';
+        }
+        if (state.currentPreset === 'dimensions') {
+            state.boundaryPoints = computeBoundaryFromDimensions(state.plotLengthM, state.plotWidthM);
+        }
+        generateFloorplan();
+    }
+
     document.querySelectorAll('.typology-option').forEach(option => {
         option.addEventListener('click', (e) => {
             const radio = option.querySelector('input[name="plotTypology"]');
-            if (radio) {
-                radio.checked = true;
-                state.plotTypology = radio.value;
-                document.querySelectorAll('.typology-option').forEach(opt => opt.classList.remove('active'));
-                option.classList.add('active');
-
-                const cornerSel = document.getElementById('cornerEntrySelector');
-                if (cornerSel) {
-                    cornerSel.style.display = (state.plotTypology === 'corner_plot') ? 'flex' : 'none';
-                }
-                if (state.currentPreset === 'dimensions') {
-                    state.boundaryPoints = computeBoundaryFromDimensions(state.plotLengthM, state.plotWidthM);
-                }
-                generateFloorplan();
+            if (radio && radio.value !== state.plotTypology) {
+                updateTypologySelection(radio.value);
             }
         });
     });
 
     document.querySelectorAll('input[name="plotTypology"]').forEach(radio => {
         radio.addEventListener('change', (e) => {
-            state.plotTypology = e.target.value;
-            document.querySelectorAll('.typology-option').forEach(opt => opt.classList.remove('active'));
-            const parentOpt = radio.closest('.typology-option');
-            if (parentOpt) parentOpt.classList.add('active');
-
-            const cornerSel = document.getElementById('cornerEntrySelector');
-            if (cornerSel) {
-                cornerSel.style.display = (state.plotTypology === 'corner_plot') ? 'flex' : 'none';
-            }
-            if (state.currentPreset === 'dimensions') {
-                state.boundaryPoints = computeBoundaryFromDimensions(state.plotLengthM, state.plotWidthM);
-            }
-            generateFloorplan();
+            updateTypologySelection(e.target.value);
         });
     });
+
+    function updateCornerEntrySelection(val) {
+        state.cornerGarageEntry = val;
+        document.querySelectorAll('.corner-entry-opt').forEach(opt => {
+            const radio = opt.querySelector('input[name="cornerEntrySide"]');
+            const isActive = (radio && radio.value === val);
+            opt.classList.toggle('active', isActive);
+            if (radio) radio.checked = isActive;
+        });
+        if (state.currentPreset === 'dimensions') {
+            state.boundaryPoints = computeBoundaryFromDimensions(state.plotLengthM, state.plotWidthM);
+        }
+        generateFloorplan();
+    }
 
     document.querySelectorAll('.corner-entry-opt').forEach(option => {
         option.addEventListener('click', (e) => {
             const radio = option.querySelector('input[name="cornerEntrySide"]');
-            if (radio) {
-                radio.checked = true;
-                state.cornerGarageEntry = radio.value;
-                document.querySelectorAll('.corner-entry-opt').forEach(opt => opt.classList.remove('active'));
-                option.classList.add('active');
-                if (state.currentPreset === 'dimensions') {
-                    state.boundaryPoints = computeBoundaryFromDimensions(state.plotLengthM, state.plotWidthM);
-                }
-                generateFloorplan();
+            if (radio && radio.value !== state.cornerGarageEntry) {
+                updateCornerEntrySelection(radio.value);
             }
         });
     });
 
     document.querySelectorAll('input[name="cornerEntrySide"]').forEach(radio => {
         radio.addEventListener('change', (e) => {
-            state.cornerGarageEntry = e.target.value;
-            document.querySelectorAll('.corner-entry-opt').forEach(opt => opt.classList.remove('active'));
-            const parentOpt = radio.closest('.corner-entry-opt');
-            if (parentOpt) parentOpt.classList.add('active');
-            if (state.currentPreset === 'dimensions') {
-                state.boundaryPoints = computeBoundaryFromDimensions(state.plotLengthM, state.plotWidthM);
-            }
-            generateFloorplan();
+            updateCornerEntrySelection(e.target.value);
         });
     });
 
@@ -4431,6 +4426,148 @@ function drawDraftingGrid(plotBounds) {
 }
 
 /**
+ * Draws Realistic Urban Context, Streets, Sidewalks & Neighbor Property Demarcations
+ */
+function drawUrbanContextAndSurroundingStreets(plotBounds) {
+    if (!plotBounds) return;
+    const { minX, minY, plotW, plotH } = plotBounds;
+    const isAr = state.lang === 'ar';
+    const isCorner = (state.plotTypology === 'corner_plot');
+
+    ctx.save();
+
+    // 1. FRONT (NORTH) MAIN STREET (الشارع الرئيسي الأمامي)
+    const streetDepth = 48;
+    const streetY = minY - streetDepth;
+    const streetExtW = plotW + (isCorner ? 90 : 60);
+    const streetStartX = isCorner ? minX - 70 : minX - 30;
+
+    // A. Asphalt Road Bed
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(streetStartX, streetY, streetExtW, streetDepth);
+
+    // B. Road Centerline (Dashed Yellow/White)
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = 1.2;
+    ctx.setLineDash([8, 6]);
+    ctx.beginPath();
+    ctx.moveTo(streetStartX, streetY + streetDepth / 2);
+    ctx.lineTo(streetStartX + streetExtW, streetY + streetDepth / 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // C. Concrete Curb & Sidewalk Strip in front of plot
+    ctx.fillStyle = '#cbd5e1';
+    ctx.fillRect(minX, minY - 10, plotW, 10);
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 1.0;
+    ctx.strokeRect(minX, minY - 10, plotW, 10);
+
+    // D. Main Street Name Badge
+    ctx.font = 'bold 7.5px Cairo, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const mainStreetTitle = isAr ? '🛣️ الشارع الرئيسي عرض 12م (Main Street)' : '🛣️ Main Street (12m Width)';
+    ctx.fillStyle = '#f8fafc';
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
+    ctx.lineWidth = 2.0;
+    ctx.strokeText(mainStreetTitle, minX + plotW / 2, streetY + 14);
+    ctx.fillText(mainStreetTitle, minX + plotW / 2, streetY + 14);
+
+    // 2. CORNER PLOT: WEST SIDE BRANCH STREET (الشارع الفرعي الركني الجانبي)
+    if (isCorner) {
+        const sideStreetW = 54;
+        const sideStreetX = minX - sideStreetW;
+        const sideStreetH = plotH + 50;
+
+        // A. Asphalt Side Road Bed
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(sideStreetX, minY, sideStreetW, sideStreetH);
+
+        // B. Side Road Centerline
+        ctx.strokeStyle = '#f59e0b';
+        ctx.lineWidth = 1.2;
+        ctx.setLineDash([8, 6]);
+        ctx.beginPath();
+        ctx.moveTo(sideStreetX + sideStreetW / 2, minY);
+        ctx.lineTo(sideStreetX + sideStreetW / 2, minY + sideStreetH);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // C. Side Street Sidewalk along West edge of plot
+        ctx.fillStyle = '#cbd5e1';
+        ctx.fillRect(minX - 8, minY, 8, plotH);
+        ctx.strokeStyle = '#94a3b8';
+        ctx.lineWidth = 1.0;
+        ctx.strokeRect(minX - 8, minY, 8, plotH);
+
+        // D. Side Street Name Badge (Vertical)
+        ctx.save();
+        ctx.translate(sideStreetX + 16, minY + plotH / 2);
+        ctx.rotate(-Math.PI / 2);
+        const sideStreetTitle = isAr ? '🛣️ الشارع الفرعي الجانبي عرض 10م (Side Branch Street)' : '🛣️ Side Branch Street (10m Width)';
+        ctx.font = 'bold 7.2px Cairo, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#f8fafc';
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
+        ctx.lineWidth = 2.0;
+        ctx.strokeText(sideStreetTitle, 0, 0);
+        ctx.fillText(sideStreetTitle, 0, 0);
+        ctx.restore();
+    } else {
+        // BACK-TO-BACK: West Neighbor Plot Demarcation
+        drawNeighborPlotHatch(minX - 22, minY, 20, plotH, isAr ? 'جار ملاصق (Neighbor)' : 'Neighboring Plot', true);
+    }
+
+    // 3. EAST NEIGHBOR PLOT (Always Neighbor)
+    drawNeighborPlotHatch(minX + plotW + 2, minY, 20, plotH, isAr ? 'جار ملاصق (Neighbor)' : 'Neighboring Plot', true);
+
+    // 4. SOUTH REAR NEIGHBOR PLOT (Always Neighbor)
+    drawNeighborPlotHatch(minX, minY + plotH + 2, plotW, 18, isAr ? 'جار خلفي ملاصق (Rear Neighbor)' : 'Rear Neighboring Plot', false);
+
+    ctx.restore();
+}
+
+function drawNeighborPlotHatch(x, y, w, h, label, isVertical) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(241, 245, 249, 0.7)';
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = 'rgba(203, 213, 225, 0.8)';
+    ctx.lineWidth = 0.8;
+    ctx.strokeRect(x, y, w, h);
+
+    // Subtle diagonal boundary lines
+    ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
+    ctx.lineWidth = 0.6;
+    const step = 8;
+    for (let px = x; px < x + w + h; px += step) {
+        ctx.beginPath();
+        ctx.moveTo(Math.max(x, px - h), y + Math.max(0, px - (x + w)));
+        ctx.lineTo(Math.min(x + w, px), y + Math.min(h, px - x));
+        ctx.stroke();
+    }
+
+    // Neighbor Badge
+    ctx.font = '6.5px Cairo, sans-serif';
+    ctx.fillStyle = '#64748b';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    if (isVertical && h > 60) {
+        ctx.save();
+        ctx.translate(x + w / 2, y + h / 2);
+        ctx.rotate(-Math.PI / 2);
+        ctx.fillText(label, 0, 0);
+        ctx.restore();
+    } else {
+        ctx.fillText(label, x + w / 2, y + h / 2);
+    }
+
+    ctx.restore();
+}
+
+/**
  * Draws High-End Architectural Presentation Room Flooring & Surface Materials
  */
 function drawArchitecturalRoomFlooring(rooms) {
@@ -5749,6 +5886,9 @@ function renderOrthogonalMode() {
 
     // 1. Draw Architectural Drafting Paper Grid Base
     drawDraftingGrid(plotBounds);
+
+    // 1.B. Draw Urban Context, Surrounding Streets, Sidewalks & Neighbor Plots
+    drawUrbanContextAndSurroundingStreets(plotBounds);
 
     // 2. Draw Structured Outdoor Zones (Landscaped Gardens, Perimeter Walkways & Garage)
     if (outdoorZones && outdoorZones.length) {
