@@ -502,7 +502,7 @@ class ArchAccessLayoutGenerator:
                 {
                     "key": "disabled_bathroom",
                     "poly": [(x_dis_end, y_priv_start), (x_dis_bath_end, y_priv_start),
-                             (x_dis_bath_end, y_priv_start + min_dis_bath_h), (x_dis_end, y_priv_start + min_dis_bath_h)]
+                             (x_dis_bath_end, y_priv_start + min_hbath_h), (x_dis_end, y_priv_start + min_hbath_h)]
                 },
                 {
                     "key": "bathroom",
@@ -511,7 +511,7 @@ class ArchAccessLayoutGenerator:
                 },
                 {
                     "key": "court_garden",
-                    "poly": [(x_dis_end, y_priv_start + min_dis_bath_h), (bldg_max_x, y_priv_start + min_dis_bath_h),
+                    "poly": [(x_dis_end, y_priv_start + min_hbath_h), (bldg_max_x, y_priv_start + min_hbath_h),
                              (bldg_max_x, bldg_max_y), (x_dis_end, bldg_max_y)]
                 }
             ]

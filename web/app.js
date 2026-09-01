@@ -1867,9 +1867,9 @@ function synthesizeLayout(boundary, variant, typology) {
             { key: 'court_garden', x: x_living_end, y: y_front_end, w: x5 - x_living_end, h: y_living_end - y_front_end },
             { key: 'corridors', x: x0, y: y_living_end, w: bw, h: y_corr_h },
             { key: 'disabled_bedroom', x: x0, y: y_priv_start, w: disBedW, h: privH },
-            { key: 'disabled_bathroom', x: x_dis_end, y: y_priv_start, w: x_dis_bath_end - x_dis_end, h: minDisBathHPx },
+            { key: 'disabled_bathroom', x: x_dis_end, y: y_priv_start, w: x_dis_bath_end - x_dis_end, h: minHBathHPx },
             { key: 'bathroom', x: x_dis_bath_end, y: y_priv_start, w: x5 - x_dis_bath_end, h: minHBathHPx },
-            { key: 'court_garden', x: x_dis_end, y: y_priv_start + minDisBathHPx, w: x5 - x_dis_end, h: privH - minDisBathHPx }
+            { key: 'court_garden', x: x_dis_end, y: y_priv_start + minHBathHPx, w: x5 - x_dis_end, h: privH - minHBathHPx }
         ];
 
         doors = [
@@ -1889,9 +1889,9 @@ function synthesizeLayout(boundary, variant, typology) {
             { id: "w_gbath", name: "نافذة حمام الضيوف", x: Math.round(x_gbath_start + (gbathW - 20) / 2), y: y0, len: 20, orientation: "horizontal" },
             { id: "w_guest", name: "نافذة الاستقبال", x: Math.round(x_guest_start + ((x5 - x_guest_start) - 36) / 2), y: y0, len: 36, orientation: "horizontal" },
             { id: "w_living", name: "نافذة المعيشة على الفناء الأوسط", x: x_living_end, y: Math.round(y_front_end + (livingH - 44) / 2), len: 44, orientation: "vertical" },
-            { id: "w_dis_bed", name: "نافذة الغرفة المهيأة على المنور الخلفي", x: x_dis_end, y: Math.round(y_priv_start + minDisBathHPx + ((privH - minDisBathHPx) - 30) / 2), len: 30, orientation: "vertical" },
-            { id: "w_dis_bath", name: "نافذة الحمام المهيأ", x: Math.round(x_dis_end + ((x_dis_bath_end - x_dis_end) - 20) / 2), y: y_priv_start + minDisBathHPx, len: 20, orientation: "horizontal" },
-            { id: "w_hbath", name: "نافذة حمام البيت", x: Math.round(x_dis_bath_end + ((x5 - x_dis_bath_end) - 20) / 2), y: y_priv_start + minHBathHPx, len: 20, orientation: "horizontal" }
+            { id: "w_dis_bed", name: "نافذة الغرفة المهيأة على المنور الخلفي", x: x_dis_end, y: Math.round(y_priv_start + minHBathHPx + ((privH - minHBathHPx) - 30) / 2), len: 30, orientation: "vertical" },
+            { id: "w_dis_bath", name: "نافذة الحمام المهيأ على المنور", x: Math.round(x_dis_end + ((x_dis_bath_end - x_dis_end) - 20) / 2), y: y_priv_start + minHBathHPx, len: 20, orientation: "horizontal" },
+            { id: "w_hbath", name: "نافذة حمام البيت على المنور", x: Math.round(x_dis_bath_end + ((x5 - x_dis_bath_end) - 20) / 2), y: y_priv_start + minHBathHPx, len: 20, orientation: "horizontal" }
         ];
     }
 
