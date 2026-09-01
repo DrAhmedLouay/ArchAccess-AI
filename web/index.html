@@ -293,13 +293,19 @@
                         </div>
                     </div>
 
-                    <!-- Furniture Customization & Rotation Card -->
-                    <div class="furniture-control-card" id="furnitureControlCard">
-                        <div class="furn-header">
-                            <span class="furn-icon">🛋️</span>
-                            <span class="furn-title" id="furnControlTitle">استوديو تأثيث وتدوير الفضاءات (Furniture Studio):</span>
+                    <!-- Parametric Space Inspector & Customization Studio -->
+                    <div class="parametric-inspector-card" id="parametricInspectorCard">
+                        <!-- Header with Space Title & ADA Status -->
+                        <div class="inspector-header">
+                            <div class="inspector-title-wrap">
+                                <span class="inspector-icon">📐</span>
+                                <span class="inspector-title" id="inspectorTitle">المحرر البارامتري للفضاء (Space Inspector):</span>
+                            </div>
+                            <span class="badge-ada-status pass" id="inspectorAdaBadge">ADA مطابق ✅</span>
                         </div>
-                        <div class="furn-row">
+
+                        <!-- Target Room Selector -->
+                        <div class="inspector-row">
                             <label for="furnitureRoomSelect" id="furnRoomLabel">الفضاء المعماري المحدد (أو انقر على المخطط):</label>
                             <select id="furnitureRoomSelect" class="form-select">
                                 <option value="living_room" selected>🛋️ صالة المعيشة (Living Room)</option>
@@ -312,23 +318,117 @@
                                 <option value="court_garden">🌿 المنور والحديقة (Courtyard)</option>
                             </select>
                         </div>
-                        <div class="furn-row">
-                            <label for="furnitureStyleSelect" id="furnStyleLabel">نمط وفرش الفضاء المحدد:</label>
-                            <select id="furnitureStyleSelect" class="form-select">
-                                <option value="1" selected>طراز 1: التوزيع الأساسي الملكي</option>
-                                <option value="2">طراز 2: التوزيع العربي المهيأ ADA</option>
-                                <option value="3">طراز 3: التوزيع المعاصر Contemporary</option>
-                            </select>
-                        </div>
-                        <div class="furn-row">
-                            <label id="furnRotationLabel">تدوير اتجاه الأثاث للفضاء:</label>
-                            <div class="furn-rot-buttons">
-                                <button type="button" class="btn-furn-rot active" data-rot="0" title="اتجاه أصلي (0°)">0°</button>
-                                <button type="button" class="btn-furn-rot" data-rot="90" title="تدوير 90° باتجاه عقارب الساعة">90°</button>
-                                <button type="button" class="btn-furn-rot" data-rot="180" title="تدوير 180°">180°</button>
-                                <button type="button" class="btn-furn-rot" data-rot="270" title="تدوير 270°">270°</button>
+
+                        <!-- Section 1: Dimensions & Area -->
+                        <div class="inspector-subgroup">
+                            <div class="subgroup-title">
+                                <span>📏 الأبعاد والمساحة المعمارية:</span>
+                                <span class="area-tag" id="valRoomArea">24.50 م²</span>
+                            </div>
+                            
+                            <!-- Width Slider -->
+                            <div class="slider-row">
+                                <div class="slider-meta">
+                                    <label id="lblRoomWidth">العرض (Width):</label>
+                                    <span class="val-badge" id="valRoomWidth">4.50 م</span>
+                                </div>
+                                <input type="range" id="rangeRoomWidth" min="2.0" max="7.5" step="0.1" value="4.5">
+                            </div>
+
+                            <!-- Length Slider -->
+                            <div class="slider-row">
+                                <div class="slider-meta">
+                                    <label id="lblRoomLength">العمق (Length):</label>
+                                    <span class="val-badge" id="valRoomLength">5.20 م</span>
+                                </div>
+                                <input type="range" id="rangeRoomLength" min="2.0" max="7.5" step="0.1" value="5.2">
                             </div>
                         </div>
+
+                        <!-- Section 2: Doors & Movement -->
+                        <div class="inspector-subgroup">
+                            <div class="subgroup-title">
+                                <span>🚪 فتحات الأبواب ومسار الدخول:</span>
+                            </div>
+                            <div class="control-dual-grid">
+                                <div class="control-cell">
+                                    <label id="lblDoorWidth">عرض الباب:</label>
+                                    <select id="selectDoorWidth" class="form-select-sm">
+                                        <option value="90">0.90م (كود ADA)</option>
+                                        <option value="100" selected>1.00م (قياسي)</option>
+                                        <option value="110">1.10م (عريض)</option>
+                                        <option value="120">1.20م (مزدوج)</option>
+                                    </select>
+                                </div>
+                                <div class="control-cell">
+                                    <label id="lblDoorFlip">اتجاه القوس:</label>
+                                    <button type="button" id="btnFlipDoorSwing" class="btn-sm-action">🔄 عكس الفتح</button>
+                                </div>
+                            </div>
+                            <div class="slider-row">
+                                <div class="slider-meta">
+                                    <label id="lblDoorPos">موقع الباب على الجدار:</label>
+                                    <span class="val-badge" id="valDoorPos">50%</span>
+                                </div>
+                                <input type="range" id="rangeDoorPosition" min="15" max="85" step="5" value="50">
+                            </div>
+                        </div>
+
+                        <!-- Section 3: Windows & Glazing -->
+                        <div class="inspector-subgroup">
+                            <div class="subgroup-title">
+                                <span>🪟 النوافذ والتهوية الطبيعية:</span>
+                                <label class="mini-toggle-label">
+                                    <input type="checkbox" id="checkWindowEnabled" checked>
+                                    <span id="lblWindowEnable">مفعلة</span>
+                                </label>
+                            </div>
+                            <div class="control-dual-grid">
+                                <div class="control-cell">
+                                    <label id="lblWindowWidth">عرض النافذة:</label>
+                                    <select id="selectWindowWidth" class="form-select-sm">
+                                        <option value="1.0">1.00م</option>
+                                        <option value="1.2" selected>1.20م</option>
+                                        <option value="1.5">1.50م</option>
+                                        <option value="1.8">1.80م</option>
+                                        <option value="2.4">2.40م</option>
+                                    </select>
+                                </div>
+                                <div class="control-cell">
+                                    <label id="lblWindowPos">موقع النافذة:</label>
+                                    <span class="val-badge" id="valWindowPos">50%</span>
+                                </div>
+                            </div>
+                            <input type="range" id="rangeWindowPosition" min="15" max="85" step="5" value="50">
+                        </div>
+
+                        <!-- Section 4: Furniture Studio -->
+                        <div class="inspector-subgroup">
+                            <div class="subgroup-title">
+                                <span>🛋️ طراز وتدوير الأثاث:</span>
+                            </div>
+                            <div class="furn-row">
+                                <select id="furnitureStyleSelect" class="form-select">
+                                    <option value="1" selected>طراز 1: التوزيع الأساسي الملكي</option>
+                                    <option value="2">طراز 2: التوزيع العربي المهيأ ADA</option>
+                                    <option value="3">طراز 3: التوزيع المعاصر Contemporary</option>
+                                </select>
+                            </div>
+                            <div class="furn-row">
+                                <div class="furn-rot-buttons">
+                                    <button type="button" class="btn-furn-rot active" data-rot="0" title="اتجاه أصلي (0°)">0°</button>
+                                    <button type="button" class="btn-furn-rot" data-rot="90" title="تدوير 90°">90°</button>
+                                    <button type="button" class="btn-furn-rot" data-rot="180" title="تدوير 180°">180°</button>
+                                    <button type="button" class="btn-furn-rot" data-rot="270" title="تدوير 270°">270°</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section 5: Reset to Optimal Defaults -->
+                        <button type="button" id="btnResetRoomDefaults" class="btn-inspector-reset" title="استعادة أبعاد وموقع فتحات الفضاء المحسوبة تلقائياً بواسطة الذكاء الاصطناعي">
+                            <span>↺</span>
+                            <span id="btnResetRoomDefaultsText">استعادة الأبعاد النموذجية للفضاء</span>
+                        </button>
                     </div>
 
                     <button id="generateBtn" class="btn btn-primary btn-block generate-btn">

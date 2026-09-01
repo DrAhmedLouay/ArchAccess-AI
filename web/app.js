@@ -631,7 +631,9 @@ function setupEventListeners() {
         });
     }
 
-    // Furniture Studio Controls
+    // =========================================================================
+    // PARAMETRIC SPACE INSPECTOR & INTERACTIVE CUSTOMIZATION SUITE
+    // =========================================================================
     const toolbarRoomSelect = document.getElementById('toolbarRoomSelect');
     const furnitureRoomSelect = document.getElementById('furnitureRoomSelect');
     const furnitureStyleSelect = document.getElementById('furnitureStyleSelect');
@@ -640,7 +642,61 @@ function setupEventListeners() {
     const changeFurnitureStyleBtn = document.getElementById('changeFurnitureStyleBtn');
     const changeFurnitureStyleBtnText = document.getElementById('changeFurnitureStyleBtnText');
 
+    const rangeRoomWidth = document.getElementById('rangeRoomWidth');
+    const rangeRoomLength = document.getElementById('rangeRoomLength');
+    const valRoomWidth = document.getElementById('valRoomWidth');
+    const valRoomLength = document.getElementById('valRoomLength');
+    const valRoomArea = document.getElementById('valRoomArea');
+    const inspectorAdaBadge = document.getElementById('inspectorAdaBadge');
+
+    const selectDoorWidth = document.getElementById('selectDoorWidth');
+    const rangeDoorPosition = document.getElementById('rangeDoorPosition');
+    const valDoorPosition = document.getElementById('valDoorPosition');
+    const btnFlipDoorSwing = document.getElementById('btnFlipDoorSwing');
+
+    const checkWindowEnabled = document.getElementById('checkWindowEnabled');
+    const selectWindowWidth = document.getElementById('selectWindowWidth');
+    const rangeWindowPosition = document.getElementById('rangeWindowPosition');
+    const valWindowPosition = document.getElementById('valWindowPosition');
+
+    const btnResetRoomDefaults = document.getElementById('btnResetRoomDefaults');
+
+    // Baseline snapshots for resetting
+    const baselineRoomSnapshots = {};
+
+    function isDoorNearRoom(door, room) {
+        if (!door || !room) return false;
+        const { x, y, w, h } = room.bounds;
+        const margin = 10;
+        return (door.x >= x - margin && door.x <= x + w + margin && door.y >= y - margin && door.y <= y + h + margin);
+    }
+
+    function isWindowNearRoom(win, room) {
+        if (!win || !room) return false;
+        const { x, y, w, h } = room.bounds;
+        const margin = 10;
+        return (win.x >= x - margin && win.x <= x + w + margin && win.y >= y - margin && win.y <= y + h + margin);
+    }
+
+    function findRoomDoor(roomKey) {
+        if (!state.currentLayout || !state.currentLayout.doors) return null;
+        const room = state.currentLayout.rooms.find(r => r.key === roomKey);
+        if (!room) return null;
+        return state.currentLayout.doors.find(d => d.roomKey === roomKey || isDoorNearRoom(d, room));
+    }
+
+    function findRoomWindow(roomKey) {
+        if (!state.currentLayout || !state.currentLayout.windows) return null;
+        const room = state.currentLayout.rooms.find(r => r.key === roomKey);
+        if (!room) return null;
+        return state.currentLayout.windows.find(w => w.roomKey === roomKey || isWindowNearRoom(w, room));
+    }
+
     function syncFurnitureControls() {
+        syncSpaceInspectorUI();
+    }
+
+    function syncSpaceInspectorUI() {
         const activeKey = state.selectedRoomKey || 'living_room';
         if (!state.roomFurniture[activeKey]) {
             state.roomFurniture[activeKey] = { rotation: 0, style: 1 };
@@ -667,12 +723,166 @@ function setupEventListeners() {
                 ? `طراز (${currentStyle})` 
                 : `Style (${currentStyle})`;
         }
+
+        if (!state.currentLayout || !state.currentLayout.rooms) return;
+
+        const room = state.currentLayout.rooms.find(r => r.key === activeKey);
+        if (!room) return;
+
+        const pxPerMeter = 23.0;
+        const wM = (room.bounds.w / pxPerMeter);
+        const lM = (room.bounds.h / pxPerMeter);
+        const areaM2 = (wM * lM).toFixed(2);
+
+        // 1. Dimensions UI
+        if (valRoomWidth) valRoomWidth.textContent = `${wM.toFixed(2)} ${isAr ? 'م' : 'm'}`;
+        if (rangeRoomWidth) {
+            rangeRoomWidth.value = wM.toFixed(1);
+        }
+        if (valRoomLength) valRoomLength.textContent = `${lM.toFixed(2)} ${isAr ? 'م' : 'm'}`;
+        if (rangeRoomLength) {
+            rangeRoomLength.value = lM.toFixed(1);
+        }
+        if (valRoomArea) valRoomArea.textContent = `${areaM2} ${isAr ? 'م²' : 'm²'}`;
+
+        // 2. ADA Status Badge
+        if (inspectorAdaBadge) {
+            const minW = room.key === 'disabled_bedroom' ? 4.4 : (room.key === 'disabled_bathroom' ? 2.8 : 1.8);
+            const isAdaPass = wM >= minW && lM >= 1.8;
+            inspectorAdaBadge.className = isAdaPass ? 'badge-ada-status pass' : 'badge-ada-status warn';
+            inspectorAdaBadge.textContent = isAdaPass 
+                ? (isAr ? 'ADA مطابق ✅' : 'ADA PASS ✅') 
+                : (isAr ? 'تنبيه: أبعاد ضيقة ⚠️' : 'ADA Warning ⚠️');
+        }
+
+        // 3. Doors UI
+        const door = findRoomDoor(activeKey);
+        if (door) {
+            const dWidthCm = Math.round((door.w / pxPerMeter) * 100);
+            if (selectDoorWidth) {
+                const options = [90, 100, 110, 120];
+                const closest = options.reduce((prev, curr) => Math.abs(curr - dWidthCm) < Math.abs(prev - dWidthCm) ? curr : prev);
+                selectDoorWidth.value = closest.toString();
+            }
+            if (valDoorPosition && rangeDoorPosition) {
+                const pct = door.offsetPct || 50;
+                rangeDoorPosition.value = pct;
+                valDoorPosition.textContent = `${pct}%`;
+            }
+        }
+
+        // 4. Windows UI
+        const win = findRoomWindow(activeKey);
+        if (win) {
+            if (checkWindowEnabled) checkWindowEnabled.checked = !win.disabled;
+            const winLenM = (win.len / pxPerMeter).toFixed(1);
+            if (selectWindowWidth) {
+                selectWindowWidth.value = ['1.0', '1.2', '1.5', '1.8', '2.4'].includes(winLenM) ? winLenM : '1.2';
+            }
+            if (valWindowPosition && rangeWindowPosition) {
+                const pct = win.offsetPct || 50;
+                rangeWindowPosition.value = pct;
+                valWindowPosition.textContent = `${pct}%`;
+            }
+        }
+    }
+
+    function updateParametricRoomDimension(roomKey, dimType, valM) {
+        if (!state.currentLayout || !state.currentLayout.rooms) return;
+        const room = state.currentLayout.rooms.find(r => r.key === roomKey);
+        if (!room) return;
+
+        const pxPerMeter = 23.0;
+        const newPx = Math.round(valM * pxPerMeter);
+
+        // Snapshot original if not already saved
+        if (!baselineRoomSnapshots[roomKey]) {
+            baselineRoomSnapshots[roomKey] = {
+                bounds: { ...room.bounds },
+                area_m2: room.area_m2
+            };
+        }
+
+        if (dimType === 'width') {
+            const oldW = room.bounds.w;
+            const deltaW = newPx - oldW;
+            room.bounds.w = newPx;
+            
+            // Adjust touching neighbor rooms to preserve orthogonal wall alignment
+            state.currentLayout.rooms.forEach(other => {
+                if (other.key === roomKey) return;
+                if (Math.abs(other.bounds.x - (room.bounds.x + oldW)) < 4) {
+                    other.bounds.x += deltaW;
+                }
+            });
+        } else if (dimType === 'length') {
+            const oldH = room.bounds.h;
+            const deltaH = newPx - oldH;
+            room.bounds.h = newPx;
+
+            // Adjust touching neighbor rooms
+            state.currentLayout.rooms.forEach(other => {
+                if (other.key === roomKey) return;
+                if (Math.abs(other.bounds.y - (room.bounds.y + oldH)) < 4) {
+                    other.bounds.y += deltaH;
+                }
+            });
+        }
+
+        room.area_m2 = parseFloat(((room.bounds.w * room.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
+        if (valRoomArea) valRoomArea.textContent = `${(room.bounds.w * room.bounds.h / (pxPerMeter * pxPerMeter)).toFixed(2)} ${state.lang === 'ar' ? 'م²' : 'm²'}`;
+
+        // Recompute doors & windows positioning along the updated room walls
+        realignRoomDoorsAndWindows(room);
+
+        // Update Analytics HUD & Canvas
+        updateAnalyticsHUD(state.currentLayout);
+        renderCanvas();
+    }
+
+    function realignRoomDoorsAndWindows(room) {
+        if (!room) return;
+        const { x, y, w, h } = room.bounds;
+
+        if (state.currentLayout.doors) {
+            state.currentLayout.doors.forEach(door => {
+                if (door.roomKey === room.key || isDoorNearRoom(door, room)) {
+                    door.roomKey = room.key;
+                    if (door.orientation === 'horizontal') {
+                        door.y = (door.wallSide === 'bottom') ? y + h : y;
+                        const pct = (door.offsetPct || 50) / 100.0;
+                        door.x = x + Math.max(6, Math.min(w - door.w - 6, w * pct - door.w / 2));
+                    } else {
+                        door.x = (door.wallSide === 'right') ? x + w : x;
+                        const pct = (door.offsetPct || 50) / 100.0;
+                        door.y = y + Math.max(6, Math.min(h - door.w - 6, h * pct - door.w / 2));
+                    }
+                }
+            });
+        }
+
+        if (state.currentLayout.windows) {
+            state.currentLayout.windows.forEach(win => {
+                if (win.roomKey === room.key || isWindowNearRoom(win, room)) {
+                    win.roomKey = room.key;
+                    if (win.orientation === 'horizontal') {
+                        win.y = (win.wallSide === 'bottom') ? y + h : y;
+                        const pct = (win.offsetPct || 50) / 100.0;
+                        win.x = x + Math.max(6, Math.min(w - win.len - 6, w * pct - win.len / 2));
+                    } else {
+                        win.x = (win.wallSide === 'right') ? x + w : x;
+                        const pct = (win.offsetPct || 50) / 100.0;
+                        win.y = y + Math.max(6, Math.min(h - win.len - 6, h * pct - win.len / 2));
+                    }
+                }
+            });
+        }
     }
 
     if (toolbarRoomSelect) {
         toolbarRoomSelect.addEventListener('change', (e) => {
             state.selectedRoomKey = e.target.value;
-            syncFurnitureControls();
+            syncSpaceInspectorUI();
             renderCanvas();
         });
     }
@@ -680,8 +890,121 @@ function setupEventListeners() {
     if (furnitureRoomSelect) {
         furnitureRoomSelect.addEventListener('change', (e) => {
             state.selectedRoomKey = e.target.value;
-            syncFurnitureControls();
+            syncSpaceInspectorUI();
             renderCanvas();
+        });
+    }
+
+    if (rangeRoomWidth) {
+        rangeRoomWidth.addEventListener('input', (e) => {
+            const activeKey = state.selectedRoomKey || 'living_room';
+            const valM = parseFloat(e.target.value);
+            if (valRoomWidth) valRoomWidth.textContent = `${valM.toFixed(2)} ${state.lang === 'ar' ? 'م' : 'm'}`;
+            updateParametricRoomDimension(activeKey, 'width', valM);
+        });
+    }
+
+    if (rangeRoomLength) {
+        rangeRoomLength.addEventListener('input', (e) => {
+            const activeKey = state.selectedRoomKey || 'living_room';
+            const valM = parseFloat(e.target.value);
+            if (valRoomLength) valRoomLength.textContent = `${valM.toFixed(2)} ${state.lang === 'ar' ? 'م' : 'm'}`;
+            updateParametricRoomDimension(activeKey, 'length', valM);
+        });
+    }
+
+    if (selectDoorWidth) {
+        selectDoorWidth.addEventListener('change', (e) => {
+            const activeKey = state.selectedRoomKey || 'living_room';
+            const widthCm = parseInt(e.target.value) || 100;
+            const widthM = widthCm / 100.0;
+            const door = findRoomDoor(activeKey);
+            if (door) {
+                door.w = widthM * 23.0;
+                door.widthM = widthM;
+                renderCanvas();
+            }
+        });
+    }
+
+    if (rangeDoorPosition) {
+        rangeDoorPosition.addEventListener('input', (e) => {
+            const activeKey = state.selectedRoomKey || 'living_room';
+            const pct = parseInt(e.target.value) || 50;
+            if (valDoorPosition) valDoorPosition.textContent = `${pct}%`;
+            const room = state.currentLayout.rooms.find(r => r.key === activeKey);
+            const door = findRoomDoor(activeKey);
+            if (door && room) {
+                door.offsetPct = pct;
+                realignRoomDoorsAndWindows(room);
+                renderCanvas();
+            }
+        });
+    }
+
+    if (btnFlipDoorSwing) {
+        btnFlipDoorSwing.addEventListener('click', () => {
+            const activeKey = state.selectedRoomKey || 'living_room';
+            const door = findRoomDoor(activeKey);
+            if (door) {
+                door.dir = (door.dir || 1) * -1;
+                renderCanvas();
+            }
+        });
+    }
+
+    if (selectWindowWidth) {
+        selectWindowWidth.addEventListener('change', (e) => {
+            const activeKey = state.selectedRoomKey || 'living_room';
+            const lenM = parseFloat(e.target.value) || 1.2;
+            const win = findRoomWindow(activeKey);
+            if (win) {
+                win.len = lenM * 23.0;
+                renderCanvas();
+            }
+        });
+    }
+
+    if (rangeWindowPosition) {
+        rangeWindowPosition.addEventListener('input', (e) => {
+            const activeKey = state.selectedRoomKey || 'living_room';
+            const pct = parseInt(e.target.value) || 50;
+            if (valWindowPosition) valWindowPosition.textContent = `${pct}%`;
+            const room = state.currentLayout.rooms.find(r => r.key === activeKey);
+            const win = findRoomWindow(activeKey);
+            if (win && room) {
+                win.offsetPct = pct;
+                realignRoomDoorsAndWindows(room);
+                renderCanvas();
+            }
+        });
+    }
+
+    if (checkWindowEnabled) {
+        checkWindowEnabled.addEventListener('change', (e) => {
+            const activeKey = state.selectedRoomKey || 'living_room';
+            const win = findRoomWindow(activeKey);
+            if (win) {
+                win.disabled = !e.target.checked;
+                renderCanvas();
+            }
+        });
+    }
+
+    if (btnResetRoomDefaults) {
+        btnResetRoomDefaults.addEventListener('click', () => {
+            const activeKey = state.selectedRoomKey || 'living_room';
+            if (baselineRoomSnapshots[activeKey]) {
+                const room = state.currentLayout.rooms.find(r => r.key === activeKey);
+                if (room) {
+                    room.bounds = { ...baselineRoomSnapshots[activeKey].bounds };
+                    room.area_m2 = baselineRoomSnapshots[activeKey].area_m2;
+                    realignRoomDoorsAndWindows(room);
+                    syncSpaceInspectorUI();
+                    updateAnalyticsHUD(state.currentLayout);
+                    renderCanvas();
+                }
+            }
         });
     }
 
@@ -692,7 +1015,7 @@ function setupEventListeners() {
                 state.roomFurniture[activeKey] = { rotation: 0, style: 1 };
             }
             state.roomFurniture[activeKey].style = parseInt(e.target.value) || 1;
-            syncFurnitureControls();
+            syncSpaceInspectorUI();
             renderCanvas();
         });
     }
@@ -704,7 +1027,7 @@ function setupEventListeners() {
                 state.roomFurniture[activeKey] = { rotation: 0, style: 1 };
             }
             state.roomFurniture[activeKey].rotation = parseInt(e.currentTarget.dataset.rot) || 0;
-            syncFurnitureControls();
+            syncSpaceInspectorUI();
             renderCanvas();
         });
     });
@@ -716,7 +1039,7 @@ function setupEventListeners() {
                 state.roomFurniture[activeKey] = { rotation: 0, style: 1 };
             }
             state.roomFurniture[activeKey].rotation = (state.roomFurniture[activeKey].rotation + 90) % 360;
-            syncFurnitureControls();
+            syncSpaceInspectorUI();
             renderCanvas();
         });
     }
@@ -728,7 +1051,7 @@ function setupEventListeners() {
                 state.roomFurniture[activeKey] = { rotation: 0, style: 1 };
             }
             state.roomFurniture[activeKey].style = (state.roomFurniture[activeKey].style % 3) + 1;
-            syncFurnitureControls();
+            syncSpaceInspectorUI();
             renderCanvas();
         });
     }
@@ -1735,6 +2058,7 @@ function generateFloorplan() {
         if (layout) {
             updateAnalyticsHUD(layout);
             updateBioclimaticUI();
+            syncSpaceInspectorUI();
         }
         renderCanvas();
     } catch (err) {
