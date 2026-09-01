@@ -96,7 +96,7 @@ class ArchAccessLayoutGenerator:
         # Coverage Ratio 65% <= BCR <= 75%:
         # In realistic architectural planning:
         # Front garage & setback takes ~26% of plot depth, yielding ~74% gross and ~68% net built area.
-        front_yard_depth_px = plot_h * 0.26
+        front_yard_depth_px = plot_h * 0.20
         
         if plot_type == "corner_plot":
             # Side branch setback: strictly >= 1.20m (28px at 23px/m scale)
@@ -272,17 +272,22 @@ class ArchAccessLayoutGenerator:
                     "poly": [(bldg_min_x, y_front_end), (bldg_max_x, y_front_end),
                              (bldg_max_x, y_corr_bot), (bldg_min_x, y_corr_bot)]
                 },
-                # Disabled Bedroom (Master Accessible Wing strictly >= 4.50m width)
-                {
-                    "key": "disabled_bedroom", # #e801f7
-                    "poly": [(bldg_min_x, y_corr_bot), (bldg_min_x + dis_bed_w, y_corr_bot),
-                             (bldg_min_x + dis_bed_w, bldg_max_y), (bldg_min_x, bldg_max_y)]
-                },
-                # En-Suite ADA Bathroom (3.0m x 3.0m)
                 {
                     "key": "disabled_bathroom", # #ff3464
-                    "poly": [(bldg_min_x + dis_bed_w - min_3m_px, y_corr_bot), (bldg_min_x + dis_bed_w, y_corr_bot),
-                             (bldg_min_x + dis_bed_w, y_corr_bot + min_3m_px), (bldg_min_x + dis_bed_w - min_3m_px, y_corr_bot + min_3m_px)]
+                    "poly": [(bldg_min_x, y_corr_bot), (bldg_min_x + min_3m_px, y_corr_bot),
+                             (bldg_min_x + min_3m_px, y_corr_bot + min_3m_px), (bldg_min_x, y_corr_bot + min_3m_px)]
+                },
+                # West Light & Ventilation Shaft (#00ff01)
+                {
+                    "key": "court_garden", # #00ff01
+                    "poly": [(bldg_min_x + min_3m_px, y_corr_bot), (bldg_min_x + dis_bed_w, y_corr_bot),
+                             (bldg_min_x + dis_bed_w, y_corr_bot + min_3m_px), (bldg_min_x + min_3m_px, y_corr_bot + min_3m_px)]
+                },
+                # Disabled Bedroom (Master Accessible Wing strictly >= 4.50m width, below ADA Bath)
+                {
+                    "key": "disabled_bedroom", # #e801f7
+                    "poly": [(bldg_min_x, y_corr_bot + min_3m_px), (bldg_min_x + dis_bed_w, y_corr_bot + min_3m_px),
+                             (bldg_min_x + dis_bed_w, bldg_max_y), (bldg_min_x, bldg_max_y)]
                 },
                 # Kitchen (Uncompressed >= 3.4m x 4.8m)
                 {
@@ -336,14 +341,19 @@ class ArchAccessLayoutGenerator:
                              (bldg_max_x, y_corr_bot), (bldg_min_x, y_corr_bot)]
                 },
                 {
-                    "key": "disabled_bedroom", # #e801f7 (Width >= 4.50m strictly)
-                    "poly": [(bldg_min_x, y_corr_bot), (bldg_min_x + dis_bed_w, y_corr_bot),
-                             (bldg_min_x + dis_bed_w, bldg_max_y), (bldg_min_x, bldg_max_y)]
+                    "key": "disabled_bathroom", # #ff3464
+                    "poly": [(bldg_min_x, y_corr_bot), (bldg_min_x + min_3m_px, y_corr_bot),
+                             (bldg_min_x + min_3m_px, y_corr_bot + min_3m_px), (bldg_min_x, y_corr_bot + min_3m_px)]
                 },
                 {
-                    "key": "disabled_bathroom", # #ff3464
-                    "poly": [(bldg_min_x + dis_bed_w - min_3m_px, y_corr_bot), (bldg_min_x + dis_bed_w, y_corr_bot),
-                             (bldg_min_x + dis_bed_w, y_corr_bot + min_3m_px), (bldg_min_x + dis_bed_w - min_3m_px, y_corr_bot + min_3m_px)]
+                    "key": "court_garden", # #00ff01
+                    "poly": [(bldg_min_x + min_3m_px, y_corr_bot), (bldg_min_x + dis_bed_w, y_corr_bot),
+                             (bldg_min_x + dis_bed_w, y_corr_bot + min_3m_px), (bldg_min_x + min_3m_px, y_corr_bot + min_3m_px)]
+                },
+                {
+                    "key": "disabled_bedroom", # #e801f7 (Width >= 4.50m strictly)
+                    "poly": [(bldg_min_x, y_corr_bot + min_3m_px), (bldg_min_x + dis_bed_w, y_corr_bot + min_3m_px),
+                             (bldg_min_x + dis_bed_w, bldg_max_y), (bldg_min_x, bldg_max_y)]
                 },
                 {
                     "key": "kitchen", # #FFB8D8
@@ -409,14 +419,19 @@ class ArchAccessLayoutGenerator:
                              (x3, bldg_max_y), (x_shaft_end, bldg_max_y)]
                 },
                 {
-                    "key": "disabled_bedroom", # #e801f7 (Width >= 4.50m strictly)
-                    "poly": [(x_dis_start, y_corr_bot), (bldg_max_x, y_corr_bot),
-                             (bldg_max_x, bldg_max_y), (x_dis_start, bldg_max_y)]
+                    "key": "court_garden", # #00ff01 (East Shaft)
+                    "poly": [(x_dis_start, y_corr_bot), (bldg_max_x - min_3m_px, y_corr_bot),
+                             (bldg_max_x - min_3m_px, y_corr_bot + min_3m_px), (x_dis_start, y_corr_bot + min_3m_px)]
                 },
                 {
                     "key": "disabled_bathroom", # #ff3464
-                    "poly": [(x_dis_start, y_corr_bot), (x_dis_start + min_3m_px, y_corr_bot),
-                             (x_dis_start + min_3m_px, y_corr_bot + min_3m_px), (x_dis_start, y_corr_bot + min_3m_px)]
+                    "poly": [(bldg_max_x - min_3m_px, y_corr_bot), (bldg_max_x, y_corr_bot),
+                             (bldg_max_x, y_corr_bot + min_3m_px), (bldg_max_x - min_3m_px, y_corr_bot + min_3m_px)]
+                },
+                {
+                    "key": "disabled_bedroom", # #e801f7 (Width >= 4.50m strictly)
+                    "poly": [(x_dis_start, y_corr_bot + min_3m_px), (bldg_max_x, y_corr_bot + min_3m_px),
+                             (bldg_max_x, bldg_max_y), (x_dis_start, bldg_max_y)]
                 }
             ]
 

@@ -1653,6 +1653,9 @@ function synthesizeLayout(boundary, variant, typology) {
             const x_kitch_end = x_corr_end + kitchW;
             const x_shaft_end = x_kitch_end + shaftW;
 
+            const y_ada_end = snap(y_corr_bot + min3mPx);
+            const disBedH = snap(y4 - y_ada_end);
+
             roomTemplates = [
                 // Reception Zone: Guest Room (>= 4.0m) & General Bathroom facing Front
                 { key: 'guest_room', x: x0, y: y0, w: x_bath_front - x0, h: y1 - y0 },
@@ -1662,11 +1665,10 @@ function synthesizeLayout(boundary, variant, typology) {
                 { key: 'corridors', x: x0, y: y1, w: x5 - x0, h: y_corr_h },
                 // Continuous Central Vertical Spine
                 { key: 'corridors', x: x_dis_end, y: y_corr_bot, w: x_corr_end - x_dis_end, h: privH },
-                // West Wing: Disabled Master Bedroom (Width >= 4.50m strictly, Depth <= 6.0m strictly)
-                { key: 'disabled_bedroom', x: x0, y: y_corr_bot, w: disBedW, h: Math.min(max6mPx, privH) },
-                // En-Suite ADA Bathroom (>= 3.0m x 3.0m) & West Ventilation Shaft
-                { key: 'disabled_bathroom', x: x_dis_end - min3mPx, y: y_corr_bot, w: min3mPx, h: min3mPx },
-                { key: 'court_garden', x: x_dis_end - min3mPx, y: y_corr_bot + min3mPx, w: min3mPx, h: privH - min3mPx },
+                // West Wing: ADA Bathroom (3.0m x 3.0m) + West Shaft + Disabled Master Suite (Width >= 4.50m strictly, Length <= 6.0m strictly)
+                { key: 'disabled_bathroom', x: x0, y: y_corr_bot, w: min3mPx, h: min3mPx },
+                { key: 'court_garden', x: x0 + min3mPx, y: y_corr_bot, w: disBedW - min3mPx, h: min3mPx },
+                { key: 'disabled_bedroom', x: x0, y: y_ada_end, w: disBedW, h: disBedH },
                 // East Wing: Dedicated Kitchen (>= 3.4m x 4.8m), Central East Light Shaft (#00ff01), Standard Bedroom (>= 3.4m x 4.8m)
                 { key: 'kitchen', x: x_corr_end, y: y_corr_bot, w: x_kitch_end - x_corr_end, h: privH },
                 { key: 'court_garden', x: x_kitch_end, y: y_corr_bot, w: shaftW, h: privH },
@@ -1681,8 +1683,8 @@ function synthesizeLayout(boundary, variant, typology) {
                 { id: "d_living", name: "فتحة المعيشة للموزع المركزي", x: x_living_start + cornerOffsetPx, y: y1, w: 26, orientation: "horizontal", widthM: 1.15, dir: -1, hingeAtEnd: false },
                 { id: "d_kitchen", name: "مدخل المطبخ من الموزع المركزي", x: x_corr_end + cornerOffsetPx, y: y_corr_bot, w: doorClearW, orientation: "horizontal", widthM: 1.00, dir: 1, hingeAtEnd: false },
                 { id: "d_bed", name: "باب غرفة النوم من الموزع المركزي", x: x_shaft_end + cornerOffsetPx, y: y_corr_bot, w: doorClearW, orientation: "horizontal", widthM: 1.00, dir: 1, hingeAtEnd: false },
-                { id: "d_dis_bed", name: "باب جناح ذوي الاحتياجات من الموزع", x: x0 + cornerOffsetPx, y: y_corr_bot, w: doorClearW, orientation: "horizontal", widthM: 1.00, dir: 1, hingeAtEnd: false },
-                { id: "d_dis_bath", name: "باب الحمام المهيأ (En-Suite)", x: x_dis_end - min3mPx, y: y_corr_bot + 42, w: doorClearW, orientation: "vertical", widthM: 1.00, dir: 1, hingeAtEnd: false }
+                { id: "d_dis_bed", name: "باب جناح ذوي الاحتياجات من الموزع", x: x_dis_end, y: y_ada_end + cornerOffsetPx, w: doorClearW, orientation: "vertical", widthM: 1.00, dir: 1, hingeAtEnd: false },
+                { id: "d_dis_bath", name: "باب الحمام المهيأ (En-Suite)", x: x0 + 10, y: y_ada_end, w: doorClearW, orientation: "horizontal", widthM: 1.00, dir: -1, hingeAtEnd: false }
             ];
 
             windows = [
@@ -1691,8 +1693,8 @@ function synthesizeLayout(boundary, variant, typology) {
                 { id: "w_living", name: "نافذة المعيشة", x: Math.round(x_living_start + 32 + ((x5 - (x_living_start + 32)) - 44) / 2), y: y0, len: 44, orientation: "horizontal" },
                 { id: "w_kitchen", name: "نافذة المطبخ على المنور", x: x_kitch_end, y: Math.round(y_corr_bot + privH * 0.5 - 15), len: 30, orientation: "vertical" },
                 { id: "w_bed", name: "نافذة غرفة النوم على المنور", x: x_shaft_end, y: Math.round(y_corr_bot + privH * 0.5 - 15), len: 34, orientation: "vertical" },
-                { id: "w_dis_bed", name: "نافذة جناح الاحتياجات على المنور الغربي", x: x_dis_end - min3mPx, y: Math.round(y_corr_bot + min3mPx + ((privH - min3mPx) - 24) / 2), len: 24, orientation: "vertical" },
-                { id: "w_dis_bath", name: "نافذة الحمام المهيأ على المنور الغربي", x: Math.round(x_dis_end - min3mPx + (min3mPx - 20) / 2), y: y_corr_bot + min3mPx, len: 20, orientation: "horizontal" }
+                { id: "w_dis_bed", name: "نافذة جناح الاحتياجات على المنور الغربي", x: Math.round(x0 + min3mPx + ((disBedW - min3mPx) - 24) / 2), y: y_ada_end, len: 24, orientation: "horizontal" },
+                { id: "w_dis_bath", name: "نافذة الحمام المهيأ على المنور الغربي", x: x0 + min3mPx, y: Math.round(y_corr_bot + (min3mPx - 20) / 2), len: 20, orientation: "vertical" }
             ];
 
         } else {
@@ -1840,6 +1842,9 @@ function synthesizeLayout(boundary, variant, typology) {
             const x_kitch_end = x_corr_end + kitchW;
             const x_shaft_end = x_kitch_end + shaftW;
 
+            const y_ada_end2 = snap(y_corr_bot + min3mPx);
+            const disBedH2 = snap(y4 - y_ada_end2);
+
             roomTemplates = [
                 // Reception Zone
                 { key: 'guest_room', x: x0, y: y0, w: x_bath_front - x0, h: y1 - y0 },
@@ -1848,10 +1853,10 @@ function synthesizeLayout(boundary, variant, typology) {
                 // Continuous Central Distribution Gallery
                 { key: 'corridors', x: x0, y: y1, w: x5 - x0, h: y_corr_h },
                 { key: 'corridors', x: x_dis_end, y: y_corr_bot, w: x_corr_end - x_dis_end, h: privH },
-                // West Wing: Disabled Suite
-                { key: 'disabled_bedroom', x: x0, y: y_corr_bot, w: disBedW, h: Math.min(max6mPx, privH) },
-                { key: 'disabled_bathroom', x: x_dis_end - min3mPx, y: y_corr_bot, w: min3mPx, h: min3mPx },
-                { key: 'court_garden', x: x_dis_end - min3mPx, y: y_corr_bot + min3mPx, w: min3mPx, h: privH - min3mPx },
+                // West Wing: ADA Bathroom (3.0m x 3.0m) + West Shaft + Disabled Suite
+                { key: 'disabled_bathroom', x: x0, y: y_corr_bot, w: min3mPx, h: min3mPx },
+                { key: 'court_garden', x: x0 + min3mPx, y: y_corr_bot, w: disBedW - min3mPx, h: min3mPx },
+                { key: 'disabled_bedroom', x: x0, y: y_ada_end2, w: disBedW, h: disBedH2 },
                 // East Wing: Spacious Kitchen (>= 3.4m x 4.8m), Central East Light Shaft (#00ff01), Standard Bed (>= 3.4m x 4.8m)
                 { key: 'kitchen', x: x_corr_end, y: y_corr_bot, w: x_kitch_end - x_corr_end, h: privH },
                 { key: 'court_garden', x: x_kitch_end, y: y_corr_bot, w: shaftW, h: privH },
@@ -1866,8 +1871,8 @@ function synthesizeLayout(boundary, variant, typology) {
                 { id: "d_living", name: "باب المعيشة للموزع المركزي", x: x_living_start + cornerOffsetPx, y: y1, w: 26, orientation: "horizontal", widthM: 1.15, dir: -1, hingeAtEnd: false },
                 { id: "d_kitchen", name: "مدخل المطبخ المستقل", x: x_corr_end + cornerOffsetPx, y: y_corr_bot, w: doorClearW, orientation: "horizontal", widthM: 1.00, dir: 1, hingeAtEnd: false },
                 { id: "d_bed", name: "باب غرفة النوم القياسية", x: x_shaft_end + cornerOffsetPx, y: y_corr_bot, w: doorClearW, orientation: "horizontal", widthM: 1.00, dir: 1, hingeAtEnd: false },
-                { id: "d_dis_bed", name: "باب جناح ذوي الاحتياجات من الموزع", x: x0 + cornerOffsetPx, y: y_corr_bot, w: doorClearW, orientation: "horizontal", widthM: 1.00, dir: 1, hingeAtEnd: false },
-                { id: "d_dis_bath", name: "باب الحمام المهيأ (En-Suite)", x: x_dis_end - min3mPx, y: y_corr_bot + 42, w: doorClearW, orientation: "vertical", widthM: 1.00, dir: 1, hingeAtEnd: false }
+                { id: "d_dis_bed", name: "باب جناح ذوي الاحتياجات من الموزع", x: x_dis_end, y: y_ada_end2 + cornerOffsetPx, w: doorClearW, orientation: "vertical", widthM: 1.00, dir: 1, hingeAtEnd: false },
+                { id: "d_dis_bath", name: "باب الحمام المهيأ (En-Suite)", x: x0 + 10, y: y_ada_end2, w: doorClearW, orientation: "horizontal", widthM: 1.00, dir: -1, hingeAtEnd: false }
             ];
 
             windows = [
@@ -1876,8 +1881,8 @@ function synthesizeLayout(boundary, variant, typology) {
                 { id: "w_living", name: "نافذة المعيشة", x: Math.round(x_living_start + 32 + ((x5 - (x_living_start + 32)) - 44) / 2), y: y0, len: 44, orientation: "horizontal" },
                 { id: "w_kitchen", name: "نافذة المطبخ على المنور الوسطي", x: x_kitch_end, y: Math.round(y_corr_bot + privH * 0.5 - 15), len: 30, orientation: "vertical" },
                 { id: "w_bed", name: "نافذة غرفة النوم على المنور الوسطي", x: x_shaft_end, y: Math.round(y_corr_bot + privH * 0.5 - 15), len: 34, orientation: "vertical" },
-                { id: "w_dis_bed", name: "نافذة جناح الاحتياجات على المنور الغربي", x: x_dis_end - min3mPx, y: Math.round(y_corr_bot + min3mPx + ((privH - min3mPx) - 24) / 2), len: 24, orientation: "vertical" },
-                { id: "w_dis_bath", name: "نافذة الحمام المهيأ على المنور", x: Math.round(x_dis_end - min3mPx + (min3mPx - 20) / 2), y: y_corr_bot + min3mPx, len: 20, orientation: "horizontal" }
+                { id: "w_dis_bed", name: "نافذة جناح الاحتياجات على المنور الغربي", x: Math.round(x0 + min3mPx + ((disBedW - min3mPx) - 24) / 2), y: y_ada_end2, len: 24, orientation: "horizontal" },
+                { id: "w_dis_bath", name: "نافذة الحمام المهيأ على المنور", x: x0 + min3mPx, y: Math.round(y_corr_bot + (min3mPx - 20) / 2), len: 20, orientation: "vertical" }
             ];
         }
 
@@ -1922,6 +1927,9 @@ function synthesizeLayout(boundary, variant, typology) {
             const x_kitch_end = x0 + kitchW;
             const x_shaft_end = x_kitch_end + shaftW;
 
+            const y_ada_end3 = snap(y_corr_bot + min3mPx);
+            const disBedH3 = snap(y4 - y_ada_end3);
+
             roomTemplates = [
                 // Front Zone: Large Family Salon on Left + General Bath + Guest Reception on Right
                 { key: 'living_room', x: x0, y: y0, w: x2 - x0, h: y1 - y0 },
@@ -1935,10 +1943,10 @@ function synthesizeLayout(boundary, variant, typology) {
                 { key: 'kitchen', x: x0, y: y_corr_bot, w: x_kitch_end - x0, h: privH },
                 { key: 'court_garden', x: x_kitch_end, y: y_corr_bot, w: shaftW, h: privH },
                 { key: 'bedroom', x: x_shaft_end, y: y_corr_bot, w: x3 - x_shaft_end, h: privH },
-                // East Wing: Large Disabled Suite (Width >= 4.50m strictly, Depth <= 6.0m strictly), En-Suite ADA Bath (>= 3.0m x 3.0m), Rear East Shaft
-                { key: 'disabled_bedroom', x: x_dis_start3, y: y_corr_bot, w: x5 - x_dis_start3, h: Math.min(max6mPx, privH) },
-                { key: 'disabled_bathroom', x: x_dis_start3, y: y_corr_bot, w: min3mPx, h: min3mPx },
-                { key: 'court_garden', x: x_dis_start3 + min3mPx, y: y_corr_bot, w: x5 - (x_dis_start3 + min3mPx), h: min3mPx }
+                // East Wing: ADA Bathroom (3.0m x 3.0m) + East Shaft + Large Disabled Suite (Width >= 4.50m strictly, Depth <= 6.0m strictly)
+                { key: 'court_garden', x: x_dis_start3, y: y_corr_bot, w: disBedW3 - min3mPx, h: min3mPx },
+                { key: 'disabled_bathroom', x: x5 - min3mPx, y: y_corr_bot, w: min3mPx, h: min3mPx },
+                { key: 'disabled_bedroom', x: x_dis_start3, y: y_ada_end3, w: disBedW3, h: disBedH3 }
             ];
 
             doors = [
@@ -1949,8 +1957,8 @@ function synthesizeLayout(boundary, variant, typology) {
                 { id: "d_living", name: "فتحة المعيشة للموزع المركزي", x: x2 - 26 - cornerOffsetPx, y: y1, w: 26, orientation: "horizontal", widthM: 1.05, dir: -1, hingeAtEnd: false },
                 { id: "d_kitchen", name: "مدخل المطبخ المستقل", x: x0 + cornerOffsetPx, y: y_corr_bot, w: doorClearW, orientation: "horizontal", widthM: 1.00, dir: 1, hingeAtEnd: false },
                 { id: "d_bed", name: "باب غرفة النوم المستقل", x: x_shaft_end + cornerOffsetPx, y: y_corr_bot, w: doorClearW, orientation: "horizontal", widthM: 1.00, dir: 1, hingeAtEnd: false },
-                { id: "d_dis_bed", name: "باب جناح ذوي الاحتياجات من الموزع", x: x_dis_start3, y: y_corr_bot + min3mPx + cornerOffsetPx, w: doorClearW, orientation: "vertical", widthM: 1.00, dir: 1, hingeAtEnd: false },
-                { id: "d_dis_bath", name: "باب الحمام المهيأ (En-Suite)", x: x_dis_start3 + 10, y: y_corr_bot + min3mPx, w: doorClearW, orientation: "horizontal", widthM: 1.00, dir: -1, hingeAtEnd: false }
+                { id: "d_dis_bed", name: "باب جناح ذوي الاحتياجات من الموزع", x: x_dis_start3, y: y_ada_end3 + cornerOffsetPx, w: doorClearW, orientation: "vertical", widthM: 1.00, dir: 1, hingeAtEnd: false },
+                { id: "d_dis_bath", name: "باب الحمام المهيأ (En-Suite)", x: x5 - doorClearW - 10, y: y_ada_end3, w: doorClearW, orientation: "horizontal", widthM: 1.00, dir: -1, hingeAtEnd: false }
             ];
 
             windows = [
@@ -1959,8 +1967,8 @@ function synthesizeLayout(boundary, variant, typology) {
                 { id: "w_living", name: "نافذة المعيشة", x: Math.round(x0 + 32 + ((x2 - (x0 + 32)) - 44) / 2), y: y0, len: 44, orientation: "horizontal" },
                 { id: "w_kitchen", name: "نافذة المطبخ على المنور الغربي", x: x_kitch_end, y: Math.round(y_corr_bot + privH * 0.5 - 15), len: 30, orientation: "vertical" },
                 { id: "w_bed", name: "نافذة غرفة النوم على المنور الغربي", x: x_shaft_end, y: Math.round(y_corr_bot + privH * 0.5 - 15), len: 34, orientation: "vertical" },
-                { id: "w_dis_bed", name: "نافذة جناح الاحتياجات على المنور الشرقي", x: x_dis_start3 + min3mPx, y: Math.round(y_corr_bot + min3mPx + ((privH - min3mPx) - 24) / 2), len: 24, orientation: "vertical" },
-                { id: "w_dis_bath", name: "نافذة الحمام المهيأ على المنور", x: Math.round(x_dis_start3 + min3mPx + ((x5 - (x_dis_start3 + min3mPx)) - 20) / 2), y: y_corr_bot, len: 20, orientation: "horizontal" }
+                { id: "w_dis_bed", name: "نافذة جناح الاحتياجات على المنور الشرقي", x: Math.round(x_dis_start3 + ((disBedW3 - min3mPx) - 24) / 2), y: y_ada_end3, len: 24, orientation: "horizontal" },
+                { id: "w_dis_bath", name: "نافذة الحمام المهيأ على المنور", x: x5 - min3mPx, y: Math.round(y_corr_bot + (min3mPx - 20) / 2), len: 20, orientation: "vertical" }
             ];
 
         } else {
