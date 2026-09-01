@@ -2307,8 +2307,100 @@ function synthesizeLayout(boundary, variant, typology) {
     if (entropyEl) entropyEl.textContent = `${state.spatialEntropy} bits`;
     const diversityEl = document.getElementById('layoutDiversityVal');
     if (diversityEl) diversityEl.textContent = `${state.layoutDiversity}%`;
-    const currentSeedVal = document.getElementById('currentSeedVal');
-    if (currentSeedVal) currentSeedVal.textContent = `#${seed}`;
+    // Outdoor Spatial Decomposition:
+    // Decomposes the exterior unbuilt area into:
+    // 1. Accessible Garage & Driveway Zone (كراج وموقف سيارة مهيأ)
+    // 2. Landscaped Garden & Green Yard (حديقة وفناء أمامي وخارجي)
+    // 3. Perimeter Accessible Walkways & Setbacks (ممشى محيطي ومسار وصول)
+    let outdoorZones = [];
+    if (isCornerSideEntry) {
+        const garageZone = {
+            key: 'garage_zone',
+            type: 'garage',
+            bounds: { x: minX, y: minY, w: accessibleParking.bounds.w, h: accessibleParking.bounds.h },
+            area_m2: parseFloat(((accessibleParking.bounds.w / pxPerMeter) * (accessibleParking.bounds.h / pxPerMeter)).toFixed(1)),
+            name_ar: "كراج وموقف سيارة مهيأ",
+            name_en: "Accessible Parking & Garage",
+            hex: "#334155"
+        };
+        const frontGarden = {
+            key: 'front_garden',
+            type: 'garden',
+            bounds: { x: bldgMinX, y: minY, w: maxX - bldgMinX, h: bldgMinY - minY },
+            area_m2: parseFloat((((maxX - bldgMinX) / pxPerMeter) * ((bldgMinY - minY) / pxPerMeter)).toFixed(1)),
+            name_ar: "حديقة وفناء أمامي",
+            name_en: "Front Landscaped Garden",
+            hex: "#15803d"
+        };
+        const sideWalkway = {
+            key: 'side_walkway',
+            type: 'walkway',
+            bounds: { x: minX, y: minY + accessibleParking.bounds.h, w: bldgMinX - minX, h: maxY - (minY + accessibleParking.bounds.h) },
+            area_m2: parseFloat((((bldgMinX - minX) / pxPerMeter) * ((maxY - (minY + accessibleParking.bounds.h)) / pxPerMeter)).toFixed(1)),
+            name_ar: "ممشى محيطي وارتداد خدمي",
+            name_en: "Side Perimeter Walkway",
+            hex: "#cbd5e1"
+        };
+        outdoorZones = [garageZone, frontGarden, sideWalkway];
+    } else if (typology === 'corner_plot' && state.cornerGarageEntry === 'front') {
+        const garageZone = {
+            key: 'garage_zone',
+            type: 'garage',
+            bounds: { x: accessibleParking.bounds.x, y: minY, w: accessibleParking.bounds.w, h: bldgMinY - minY },
+            area_m2: parseFloat(((accessibleParking.bounds.w / pxPerMeter) * ((bldgMinY - minY) / pxPerMeter)).toFixed(1)),
+            name_ar: "كراج وموقف سيارة مهيأ",
+            name_en: "Accessible Parking & Garage",
+            hex: "#334155"
+        };
+        const frontGarden = {
+            key: 'front_garden',
+            type: 'garden',
+            bounds: { x: bldgMinX, y: minY, w: accessibleParking.bounds.x - bldgMinX, h: bldgMinY - minY },
+            area_m2: parseFloat((((accessibleParking.bounds.x - bldgMinX) / pxPerMeter) * ((bldgMinY - minY) / pxPerMeter)).toFixed(1)),
+            name_ar: "حديقة وفناء أمامي",
+            name_en: "Front Landscaped Garden",
+            hex: "#15803d"
+        };
+        const sideWalkway = {
+            key: 'side_walkway',
+            type: 'walkway',
+            bounds: { x: minX, y: minY, w: bldgMinX - minX, h: maxY - minY },
+            area_m2: parseFloat((((bldgMinX - minX) / pxPerMeter) * ((maxY - minY) / pxPerMeter)).toFixed(1)),
+            name_ar: "ممشى محيطي وارتداد خدمي",
+            name_en: "Side Perimeter Walkway",
+            hex: "#cbd5e1"
+        };
+        outdoorZones = [garageZone, frontGarden, sideWalkway];
+    } else {
+        const garageZone = {
+            key: 'garage_zone',
+            type: 'garage',
+            bounds: { x: accessibleParking.bounds.x, y: minY, w: accessibleParking.bounds.w, h: bldgMinY - minY },
+            area_m2: parseFloat(((accessibleParking.bounds.w / pxPerMeter) * ((bldgMinY - minY) / pxPerMeter)).toFixed(1)),
+            name_ar: "كراج وموقف سيارة مهيأ",
+            name_en: "Accessible Parking & Garage",
+            hex: "#334155"
+        };
+        const frontGarden = {
+            key: 'front_garden',
+            type: 'garden',
+            bounds: { x: minX, y: minY, w: accessibleParking.bounds.x - minX, h: bldgMinY - minY },
+            area_m2: parseFloat((((accessibleParking.bounds.x - minX) / pxPerMeter) * ((bldgMinY - minY) / pxPerMeter)).toFixed(1)),
+            name_ar: "حديقة وفناء أمامي",
+            name_en: "Front Landscaped Garden",
+            hex: "#15803d"
+        };
+        const walkway = {
+            key: 'entrance_walkway',
+            type: 'walkway',
+            bounds: { x: minX, y: bldgMinY - Math.round(1.50 * pxPerMeter), w: accessibleParking.bounds.x - minX, h: Math.round(1.50 * pxPerMeter) },
+            area_m2: parseFloat((((accessibleParking.bounds.x - minX) / pxPerMeter) * 1.50).toFixed(1)),
+            name_ar: "ممشى الوصول للمنحدر",
+            name_en: "Approach Walkway",
+            hex: "#cbd5e1"
+        };
+        outdoorZones = [garageZone, frontGarden, walkway];
+    }
 
     return {
         typology: typology,
@@ -2317,6 +2409,7 @@ function synthesizeLayout(boundary, variant, typology) {
         buildingBounds: { bldgMinX, bldgMinY, bldgMaxX, bldgMaxY, bw, bh },
         garageBounds: garageBounds,
         accessibleParking: accessibleParking,
+        outdoorZones: outdoorZones,
         rooms: rooms,
         doors: doors,
         windows: windows,
@@ -4823,15 +4916,168 @@ function drawGraphicScaleBar(plotBounds) {
     ctx.restore();
 }
 
+/**
+ * Draws Professional Outdoor Zones:
+ * 1. Landscaped Garden & Green Yards (حديقة وفناء خارجي) with rich grass texture & shrubs
+ * 2. Perimeter Accessible Walkways (ممشى محيطي ومسار وصول) with stone interlocking pavers
+ * 3. Garage & Driveway Base (كراج وموقف سيارة)
+ */
+function drawOutdoorZonesAndGardens(ctx, outdoorZones, plotBounds) {
+    if (!outdoorZones || !outdoorZones.length) return;
+    const isAr = state.lang === 'ar';
+
+    outdoorZones.forEach(z => {
+        const { x, y, w, h } = z.bounds;
+        if (w <= 0 || h <= 0) return;
+
+        if (z.type === 'garden') {
+            // 1. Lush Green Landscaped Garden Base
+            const grad = ctx.createLinearGradient(x, y, x + w, y + h);
+            grad.addColorStop(0, '#15803d');
+            grad.addColorStop(0.5, '#16a34a');
+            grad.addColorStop(1, '#14532d');
+            ctx.fillStyle = grad;
+            ctx.fillRect(x, y, w, h);
+
+            // Subtle Grass Lawn Blades / Stipple Texture
+            ctx.fillStyle = 'rgba(220, 252, 231, 0.25)';
+            const step = 14;
+            for (let gx = x + 8; gx < x + w - 8; gx += step) {
+                for (let gy = y + 8; gy < y + h - 8; gy += step) {
+                    ctx.beginPath();
+                    ctx.arc(gx, gy, 1.2, 0, Math.PI * 2);
+                    ctx.fill();
+                    // Small grass blade tuft
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.20)';
+                    ctx.lineWidth = 0.8;
+                    ctx.beginPath();
+                    ctx.moveTo(gx - 1, gy + 1);
+                    ctx.lineTo(gx, gy - 2);
+                    ctx.lineTo(gx + 1, gy + 1);
+                    ctx.stroke();
+                }
+            }
+
+            // Cluster of Architectural Shrubs / Bushes
+            const shrubCount = Math.max(2, Math.min(6, Math.round((w * h) / 1200)));
+            for (let i = 0; i < shrubCount; i++) {
+                const sx = x + 18 + ((i * 47) % Math.max(10, w - 36));
+                const sy = y + 14 + ((i * 31) % Math.max(10, h - 28));
+                const sr = 6 + (i % 3) * 2;
+
+                ctx.fillStyle = '#22c55e';
+                ctx.strokeStyle = '#14532d';
+                ctx.lineWidth = 0.8;
+                ctx.beginPath();
+                ctx.arc(sx, sy, sr, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                // Inner shrub highlight
+                ctx.fillStyle = '#86efac';
+                ctx.beginPath();
+                ctx.arc(sx - 1.5, sy - 1.5, sr * 0.45, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Stepping Stone Path through the Garden
+            ctx.fillStyle = '#e2e8f0';
+            ctx.strokeStyle = '#94a3b8';
+            ctx.lineWidth = 0.7;
+            for (let px = x + 16; px < x + w - 20; px += 22) {
+                const py = y + h * 0.55 + Math.sin(px * 0.08) * 6;
+                if (py > y + 4 && py < y + h - 10) {
+                    ctx.fillRect(px, py, 9, 6);
+                    ctx.strokeRect(px, py, 9, 6);
+                }
+            }
+
+            // Garden Label Badge
+            if (state.showTags && w > 40 && h > 25) {
+                const label = isAr ? '🌳 حديقة وفناء خارجي' : '🌳 Landscaped Green Yard';
+                ctx.font = 'bold 8px Cairo, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                const tagX = x + w / 2;
+                const tagY = y + h * 0.35;
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.75)';
+                ctx.lineWidth = 2.2;
+                ctx.strokeText(label, tagX, tagY);
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText(label, tagX, tagY);
+            }
+
+        } else if (z.type === 'walkway') {
+            // 2. Perimeter Walkway with Interlocking Pavers
+            ctx.fillStyle = '#cbd5e1';
+            ctx.fillRect(x, y, w, h);
+
+            // Paver Pattern Grid
+            ctx.strokeStyle = '#94a3b8';
+            ctx.lineWidth = 0.6;
+            const paverS = 10;
+            for (let px = x; px <= x + w; px += paverS) {
+                ctx.beginPath(); ctx.moveTo(px, y); ctx.lineTo(px, y + h); ctx.stroke();
+            }
+            for (let py = y; py <= y + h; py += paverS) {
+                ctx.beginPath(); ctx.moveTo(x, py); ctx.lineTo(x + w, py); ctx.stroke();
+            }
+
+            // Outer Curb / Border
+            ctx.strokeStyle = '#64748b';
+            ctx.lineWidth = 1.2;
+            ctx.strokeRect(x, y, w, h);
+
+            // Walkway Label Badge
+            if (state.showTags && w > 30 && h > 30) {
+                const label = isAr ? '🚶‍♂️ ممشى محيطي' : '🚶‍♂️ Walkway';
+                ctx.save();
+                if (h > w * 2) {
+                    // Vertical text for narrow side setbacks
+                    ctx.translate(x + w / 2, y + h / 2);
+                    ctx.rotate(-Math.PI / 2);
+                    ctx.font = 'bold 7px Cairo, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+                    ctx.lineWidth = 2.0;
+                    ctx.strokeText(label, 0, 0);
+                    ctx.fillStyle = '#334155';
+                    ctx.fillText(label, 0, 0);
+                } else {
+                    ctx.font = 'bold 7.5px Cairo, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+                    ctx.lineWidth = 2.0;
+                    ctx.strokeText(label, x + w / 2, y + h / 2);
+                    ctx.fillStyle = '#334155';
+                    ctx.fillText(label, x + w / 2, y + h / 2);
+                }
+                ctx.restore();
+            }
+
+        } else if (z.type === 'garage') {
+            // 3. Garage & Driveway Base
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(x, y, w, h);
+        }
+    });
+}
+
 function renderOrthogonalMode() {
-    const { rooms, ramp, accessibleParking, entranceGate, garageBounds, plotBounds, doors, windows } = state.currentLayout;
+    const { rooms, ramp, accessibleParking, entranceGate, garageBounds, outdoorZones, plotBounds, doors, windows } = state.currentLayout;
 
     // 1. Draw Architectural Drafting Paper Grid Base
     drawDraftingGrid(plotBounds);
 
-    // 2. Draw Front / Corner Garage & Parking Base (#1e293b)
-    ctx.fillStyle = '#1e293b';
-    ctx.fillRect(plotBounds.minX, plotBounds.minY, plotBounds.plotW, plotBounds.plotH);
+    // 2. Draw Structured Outdoor Zones (Landscaped Gardens, Perimeter Walkways & Garage)
+    if (outdoorZones && outdoorZones.length) {
+        drawOutdoorZonesAndGardens(ctx, outdoorZones, plotBounds);
+    } else {
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(plotBounds.minX, plotBounds.minY, plotBounds.plotW, plotBounds.plotH);
+    }
 
     // 2.B. Draw Accessible Parking Stall & Driver Transfer Aisle & Approach Trajectory
     if (accessibleParking) {
@@ -5376,7 +5622,7 @@ function drawLabels() {
 
         let labelName = isAr ? r.name_ar : r.name_en;
         if (r.key === 'court_garden') {
-            labelName = isAr ? 'منور تهوية' : 'Vent Shaft';
+            labelName = isAr ? 'منور إنارة وتهوية' : 'Light & Vent Shaft';
         } else if (r.key === 'corridors') {
             labelName = isAr ? 'الموزع المركزي' : 'Central Spine';
         } else if (r.key === 'disabled_bathroom') {
