@@ -600,10 +600,13 @@ function setupEventListeners() {
     });
 
     document.querySelectorAll('.view-tab').forEach(tab => {
+        if (tab.id === 'toggleMaxCanvasBtn') return;
         tab.addEventListener('click', () => {
-            document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.view-tab').forEach(t => {
+                if (t.id !== 'toggleMaxCanvasBtn') t.classList.remove('active');
+            });
             tab.classList.add('active');
-            state.currentMode = tab.dataset.mode;
+            state.currentMode = tab.dataset.mode || 'orthogonal';
             renderCanvas();
         });
     });
@@ -651,13 +654,13 @@ function setupEventListeners() {
 
     const selectDoorWidth = document.getElementById('selectDoorWidth');
     const rangeDoorPosition = document.getElementById('rangeDoorPosition');
-    const valDoorPosition = document.getElementById('valDoorPosition');
+    const valDoorPosition = document.getElementById('valDoorPos') || document.getElementById('valDoorPosition');
     const btnFlipDoorSwing = document.getElementById('btnFlipDoorSwing');
 
     const checkWindowEnabled = document.getElementById('checkWindowEnabled');
     const selectWindowWidth = document.getElementById('selectWindowWidth');
     const rangeWindowPosition = document.getElementById('rangeWindowPosition');
-    const valWindowPosition = document.getElementById('valWindowPosition');
+    const valWindowPosition = document.getElementById('valWindowPos') || document.getElementById('valWindowPosition');
 
     const btnResetRoomDefaults = document.getElementById('btnResetRoomDefaults');
 
