@@ -1908,12 +1908,11 @@ function synthesizeLayout(boundary, variant, typology) {
         ];
 
         doors = [
-            { id: "d_main", name: "مدخل المعيشة المهيأ من المنحدر", x: x0 + cornerOffsetPx, y: y_front_end, w: doorClearW, orientation: "horizontal", widthM: 1.00, dir: 1, hingeAtEnd: false },
             { id: "d_guest_ext", name: "مدخل الضيوف المستقل", x: x_guest_start + cornerOffsetPx, y: y0, w: doorClearW, orientation: "horizontal", widthM: 1.00, dir: 1, hingeAtEnd: false },
-            { id: "d_guest_int", name: "باب غرفة الضيوف من المعيشة", x: x_guest_start + cornerOffsetPx, y: y_front_end, w: doorClearW, orientation: "horizontal", widthM: 1.00, dir: -1, hingeAtEnd: false },
-            { id: "d_guest_bath", name: "باب حمام الضيوف", x: x_gbath_start + cornerOffsetPx, y: y0 + minGuestBathHPx, w: singleDoorW, orientation: "horizontal", widthM: 1.00, dir: 1, hingeAtEnd: false },
             { id: "d_kitchen_ext", name: "مدخل المطبخ من الحديقة والواجهة", x: x0 + cornerOffsetPx, y: y0, w: doorClearW, orientation: "horizontal", widthM: 1.00, dir: 1, hingeAtEnd: false },
-            { id: "d_kitchen_int", name: "باب المطبخ الداخلي من المعيشة", x: x_gbath_start - doorClearW - cornerOffsetPx, y: y_front_end, w: doorClearW, orientation: "horizontal", widthM: 1.00, dir: -1, hingeAtEnd: true },
+            { id: "d_guest_bath", name: "باب حمام الضيوف", x: x_gbath_start + cornerOffsetPx, y: y0 + minGuestBathHPx, w: singleDoorW, orientation: "horizontal", widthM: 1.00, dir: 1, hingeAtEnd: false },
+            { id: "d_guest_int", name: "باب غرفة الضيوف من المعيشة", x: x_guest_start + cornerOffsetPx, y: y_front_end, w: doorClearW, orientation: "horizontal", widthM: 1.00, dir: -1, hingeAtEnd: false },
+            { id: "d_kitchen_int", name: "باب المطبخ الداخلي من المعيشة", x: x0 + cornerOffsetPx, y: y_front_end, w: doorClearW, orientation: "horizontal", widthM: 1.00, dir: -1, hingeAtEnd: false },
             { id: "d_living_corr", name: "باب المعيشة للموزع المركزي", x: x0 + cornerOffsetPx, y: y_living_end, w: 26, orientation: "horizontal", widthM: 1.15, dir: 1, hingeAtEnd: false },
             { id: "d_dis_bed", name: "باب جناح ذوي الاحتياجات من الموزع", x: x0 + cornerOffsetPx, y: y_priv_start, w: doorClearW, orientation: "horizontal", widthM: 1.00, dir: 1, hingeAtEnd: false },
             { id: "d_dis_bath", name: "باب الحمام المهيأ (En-Suite)", x: x_dis_end, y: y_priv_start + cornerOffsetPx, w: doorClearW, orientation: "vertical", widthM: 1.00, dir: 1, hingeAtEnd: false },
