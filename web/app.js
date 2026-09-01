@@ -480,17 +480,58 @@ function setupZoomAndPan() {
 }
 
 function setupEventListeners() {
+    document.querySelectorAll('.typology-option').forEach(option => {
+        option.addEventListener('click', (e) => {
+            const radio = option.querySelector('input[name="plotTypology"]');
+            if (radio) {
+                radio.checked = true;
+                state.plotTypology = radio.value;
+                document.querySelectorAll('.typology-option').forEach(opt => opt.classList.remove('active'));
+                option.classList.add('active');
+
+                const cornerSel = document.getElementById('cornerEntrySelector');
+                if (cornerSel) {
+                    cornerSel.style.display = (state.plotTypology === 'corner_plot') ? 'flex' : 'none';
+                }
+                if (state.currentPreset === 'dimensions') {
+                    state.boundaryPoints = computeBoundaryFromDimensions(state.plotLengthM, state.plotWidthM);
+                }
+                generateFloorplan();
+            }
+        });
+    });
+
     document.querySelectorAll('input[name="plotTypology"]').forEach(radio => {
         radio.addEventListener('change', (e) => {
             state.plotTypology = e.target.value;
             document.querySelectorAll('.typology-option').forEach(opt => opt.classList.remove('active'));
-            e.target.closest('.typology-option').classList.add('active');
+            const parentOpt = radio.closest('.typology-option');
+            if (parentOpt) parentOpt.classList.add('active');
 
             const cornerSel = document.getElementById('cornerEntrySelector');
             if (cornerSel) {
                 cornerSel.style.display = (state.plotTypology === 'corner_plot') ? 'flex' : 'none';
             }
+            if (state.currentPreset === 'dimensions') {
+                state.boundaryPoints = computeBoundaryFromDimensions(state.plotLengthM, state.plotWidthM);
+            }
             generateFloorplan();
+        });
+    });
+
+    document.querySelectorAll('.corner-entry-opt').forEach(option => {
+        option.addEventListener('click', (e) => {
+            const radio = option.querySelector('input[name="cornerEntrySide"]');
+            if (radio) {
+                radio.checked = true;
+                state.cornerGarageEntry = radio.value;
+                document.querySelectorAll('.corner-entry-opt').forEach(opt => opt.classList.remove('active'));
+                option.classList.add('active');
+                if (state.currentPreset === 'dimensions') {
+                    state.boundaryPoints = computeBoundaryFromDimensions(state.plotLengthM, state.plotWidthM);
+                }
+                generateFloorplan();
+            }
         });
     });
 
@@ -498,7 +539,11 @@ function setupEventListeners() {
         radio.addEventListener('change', (e) => {
             state.cornerGarageEntry = e.target.value;
             document.querySelectorAll('.corner-entry-opt').forEach(opt => opt.classList.remove('active'));
-            e.target.closest('.corner-entry-opt').classList.add('active');
+            const parentOpt = radio.closest('.corner-entry-opt');
+            if (parentOpt) parentOpt.classList.add('active');
+            if (state.currentPreset === 'dimensions') {
+                state.boundaryPoints = computeBoundaryFromDimensions(state.plotLengthM, state.plotWidthM);
+            }
             generateFloorplan();
         });
     });
@@ -1711,7 +1756,10 @@ function synthesizeLayout(boundary, variant, typology) {
 
         } else {
             // Vertical Stacking along depth (For Narrow/Deep Plots):
-            let y2 = snap(y_corr_bot + privH * 0.50);
+            const shaftW = Math.max(Math.round(1.30 * pxPerMeter), Math.min(Math.round(1.50 * pxPerMeter), Math.round(eastAvailW * 0.18)));
+            const x4 = x5 - shaftW;
+
+            let y2 = snap(y_corr_bot + privH * 0.48);
             if (y2 - y_corr_bot < minKitchHPx) y2 = y_corr_bot + minKitchHPx;
             if (y4 - y2 < minBedHPx) y2 = y4 - minBedHPx;
 
@@ -1984,7 +2032,10 @@ function synthesizeLayout(boundary, variant, typology) {
 
         } else {
             // Vertical Stacking along depth:
-            let y2 = snap(y_corr_bot + privH * 0.50);
+            const shaftW = Math.max(Math.round(1.30 * pxPerMeter), Math.min(Math.round(1.50 * pxPerMeter), Math.round(westAvailW * 0.18)));
+            const x1 = x0 + shaftW;
+
+            let y2 = snap(y_corr_bot + privH * 0.48);
             if (y2 - y_corr_bot < minKitchHPx) y2 = y_corr_bot + minKitchHPx;
             if (y4 - y2 < minBedHPx) y2 = y4 - minBedHPx;
 
@@ -2027,8 +2078,8 @@ function synthesizeLayout(boundary, variant, typology) {
                 { id: "w_living", name: "نافذة المعيشة", x: Math.round(x0 + 32 + ((x2 - (x0 + 32)) - 44) / 2), y: y0, len: 44, orientation: "horizontal" },
                 { id: "w_kitchen", name: "نافذة المطبخ على المنور الغربي", x: x1, y: Math.round(y_corr_bot + ((y2 - y_corr_bot) - 30) / 2), len: 30, orientation: "vertical" },
                 { id: "w_bed", name: "نافذة غرفة النوم على المنور الغربي", x: x1, y: Math.round(y2 + ((y4 - y2) - 34) / 2), len: 34, orientation: "vertical" },
-                { id: "w_dis_bed", name: "نافذة جناح الاحتياجات على المنور الشرقي", x: x_dis_start3 + min3mPx, y: Math.round(y_corr_bot + ((y_ada_end3 - y_corr_bot) - 24) / 2), len: 24, orientation: "vertical" },
-                { id: "w_dis_bath", name: "نافذة الحمام المهيأ على المنور", x: Math.round(x_dis_start3 + min3mPx + ((x5 - (x_dis_start3 + min3mPx)) - 20) / 2), y: y_corr_bot, len: 20, orientation: "horizontal" }
+                { id: "w_dis_bed", name: "نافذة جناح الاحتياجات على المنور الشرقي", x: x_dis_start3 + minDisBathWPx, y: Math.round(y_corr_bot + ((y_ada_end3 - y_corr_bot) - 24) / 2), len: 24, orientation: "vertical" },
+                { id: "w_dis_bath", name: "نافذة الحمام المهيأ على المنور", x: Math.round(x_dis_start3 + minDisBathWPx + ((x5 - (x_dis_start3 + minDisBathWPx)) - 20) / 2), y: y_corr_bot, len: 20, orientation: "horizontal" }
             ];
         }
     }
