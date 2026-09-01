@@ -848,35 +848,39 @@ body {
 }
 
 .corner-entry-options {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
+    flex-direction: column;
     gap: 6px;
+    width: 100%;
 }
 
 .corner-entry-opt {
     display: flex;
     align-items: center;
-    justify-content: center;
-    padding: 6px 4px;
+    justify-content: flex-start;
+    padding: 8px 12px;
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-sm);
-    font-size: 0.70rem;
+    font-size: 0.78rem;
     font-weight: 600;
     color: var(--text-secondary);
     cursor: pointer;
     transition: all 0.2s;
-    text-align: center;
-    white-space: nowrap;
+    text-align: right;
+    gap: 8px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .corner-entry-opt:hover {
     border-color: #38bdf8;
     color: var(--text-primary);
+    background: rgba(56, 189, 248, 0.08);
 }
 
 .corner-entry-opt.active {
-    background: rgba(56, 189, 248, 0.2);
+    background: rgba(56, 189, 248, 0.18);
     border-color: #38bdf8;
     color: #38bdf8;
     font-weight: 700;
@@ -884,6 +888,11 @@ body {
 
 .corner-entry-opt input {
     display: none;
+}
+
+html[lang="en"] .corner-entry-opt,
+html[dir="ltr"] .corner-entry-opt {
+    text-align: left;
 }
 
 .option-content {
