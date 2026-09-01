@@ -210,6 +210,7 @@ const state = {
     lang: 'ar',
     theme: 'dark',
     showTags: true,
+    showFurniture: true,
     currentLayout: null,
     
     // Probabilistic & Stochastic Synthesis State
@@ -604,6 +605,14 @@ function setupEventListeners() {
     if (toggleTagsCheckbox) {
         toggleTagsCheckbox.addEventListener('change', (e) => {
             state.showTags = e.target.checked;
+            renderCanvas();
+        });
+    }
+
+    const toggleFurnitureCheckbox = document.getElementById('toggleFurnitureCheckbox');
+    if (toggleFurnitureCheckbox) {
+        toggleFurnitureCheckbox.addEventListener('change', (e) => {
+            state.showFurniture = e.target.checked;
             renderCanvas();
         });
     }
@@ -1128,6 +1137,7 @@ const I18N = {
         tabRaw: "المخرج الخام للشبكة التوليدية (Raw AI cGAN)",
         tabMaxCanvas: "توسيع الشاشة",
         toggleTagsText: "🏷️ تسميات الفضاءات (Tags)",
+        toggleFurnitureText: "🛋️ إظهار الأثاث (Furniture)",
         toggleSunOverlayText: "☀️ مسار الشمس والرياح",
         scaleInfo: "المقياس: 1m = 23px • تغطية البناء 65% - 75%",
         loadingText: "جاري المعالجة المسبقة، الاستدلال التوليدي والتعامد الهندسي...",
@@ -1232,6 +1242,7 @@ const I18N = {
         tabRaw: "Generative cGAN Raw Output",
         tabMaxCanvas: "Max Canvas",
         toggleTagsText: "🏷️ Space Tags",
+        toggleFurnitureText: "🛋️ Show Furniture",
         toggleSunOverlayText: "☀️ Sun Path & Winds",
         scaleInfo: "Scale: 1m = 23px • Building Coverage 65% - 75%",
         loadingText: "Preprocessing, Generative Inference, and Orthogonalization in progress...",
@@ -1470,9 +1481,12 @@ function updateUIForLang() {
     const tabMaxCanvasText = document.getElementById('tabMaxCanvasText');
     if (tabMaxCanvasText) tabMaxCanvasText.textContent = t.tabMaxCanvas;
 
-    const chkTexts = document.querySelectorAll('.checkbox-text');
-    if (chkTexts[0]) chkTexts[0].textContent = t.toggleTagsText;
-    if (chkTexts[1]) chkTexts[1].textContent = t.toggleSunOverlayText;
+    const toggleTagsText = document.getElementById('toggleTagsText');
+    if (toggleTagsText) toggleTagsText.textContent = t.toggleTagsText;
+    const toggleFurnitureText = document.getElementById('toggleFurnitureText');
+    if (toggleFurnitureText) toggleFurnitureText.textContent = t.toggleFurnitureText;
+    const toggleSunOverlayText = document.getElementById('toggleSunOverlayText');
+    if (toggleSunOverlayText) toggleSunOverlayText.textContent = t.toggleSunOverlayText;
 
     const scaleInfoEl = document.querySelector('.canvas-scale-info span');
     if (scaleInfoEl) scaleInfoEl.textContent = t.scaleInfo;
@@ -3900,6 +3914,7 @@ function drawDraftingGrid(plotBounds) {
  * Renders Architectural CAD Furniture Silhouettes, Fixtures & Surface Finishes
  */
 function drawArchitecturalDetails(rooms, doors, windows) {
+    if (state.showFurniture === false) return;
     const isAr = state.lang === 'ar';
 
     rooms.forEach(r => {
