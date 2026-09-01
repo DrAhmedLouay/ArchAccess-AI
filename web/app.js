@@ -307,6 +307,49 @@ function initApp() {
     updateBioclimaticUI();
     loadPreset('dimensions');
     
+    // 1. Immediate Next Frame render to guarantee canvas is drawn
+    requestAnimationFrame(() => {
+        resizeCanvas();
+        if (state.currentPreset === 'dimensions') {
+            state.boundaryPoints = computeBoundaryFromDimensions(state.plotLengthM, state.plotWidthM);
+        }
+        generateFloorplan();
+    });
+
+    // 2. Timeout refreshes to catch full CSS layout resolution & flexbox expansion
+    setTimeout(() => {
+        resizeCanvas();
+        if (state.currentPreset === 'dimensions') {
+            state.boundaryPoints = computeBoundaryFromDimensions(state.plotLengthM, state.plotWidthM);
+        }
+        generateFloorplan();
+    }, 50);
+
+    setTimeout(() => {
+        resizeCanvas();
+        if (state.currentPreset === 'dimensions') {
+            state.boundaryPoints = computeBoundaryFromDimensions(state.plotLengthM, state.plotWidthM);
+        }
+        generateFloorplan();
+    }, 200);
+
+    // 3. Complete window load
+    window.addEventListener('load', () => {
+        resizeCanvas();
+        if (state.currentPreset === 'dimensions') {
+            state.boundaryPoints = computeBoundaryFromDimensions(state.plotLengthM, state.plotWidthM);
+        }
+        generateFloorplan();
+    });
+
+    // 4. Web Fonts ready
+    if (document.fonts) {
+        document.fonts.ready.then(() => {
+            renderCanvas();
+        });
+    }
+
+    // 5. Window resize
     window.addEventListener('resize', () => {
         resizeCanvas();
         if (state.currentPreset === 'dimensions') {
@@ -314,7 +357,7 @@ function initApp() {
         } else if (state.currentPreset !== 'custom') {
             loadPreset(state.currentPreset);
         }
-        renderCanvas();
+        generateFloorplan();
     });
 }
 
