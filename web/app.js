@@ -3444,6 +3444,11 @@ function renderCanvas() {
     }
 
     ctx.restore();
+
+    // 6. Draw Fixed Screen-Space CAD Title Block Stamp (Impervious to Zoom & Pan distortion)
+    if (state.currentLayout && state.currentMode === 'orthogonal') {
+        drawArchitecturalTitleBlock();
+    }
 }
 
 function getDirectionLabel(angle) {
@@ -3968,18 +3973,23 @@ function drawGrid() {
     ctx.lineWidth = 1 / state.zoom;
     const step = 23;
 
-    const minX = -canvas.width * 3;
-    const maxX = canvas.width * 4;
-    const minY = -canvas.height * 3;
-    const maxY = canvas.height * 4;
+    const visibleLeft = -state.panX / state.zoom;
+    const visibleTop = -state.panY / state.zoom;
+    const visibleRight = (canvas.width - state.panX) / state.zoom;
+    const visibleBottom = (canvas.height - state.panY) / state.zoom;
 
-    for (let x = minX; x < maxX; x += step) {
+    const minX = Math.floor(visibleLeft / step) * step - step;
+    const maxX = Math.ceil(visibleRight / step) * step + step;
+    const minY = Math.floor(visibleTop / step) * step - step;
+    const maxY = Math.ceil(visibleBottom / step) * step + step;
+
+    for (let x = minX; x <= maxX; x += step) {
         ctx.beginPath();
         ctx.moveTo(x, minY);
         ctx.lineTo(x, maxY);
         ctx.stroke();
     }
-    for (let y = minY; y < maxY; y += step) {
+    for (let y = minY; y <= maxY; y += step) {
         ctx.beginPath();
         ctx.moveTo(minX, y);
         ctx.lineTo(maxX, y);
@@ -6395,9 +6405,6 @@ function renderOrthogonalMode() {
     drawPerimeterDimensions(plotBounds, rooms);
     drawNorthCompass(plotBounds);
     drawGraphicScaleBar(plotBounds);
-
-    // 11. Draw Architectural Title Block Stamp
-    drawArchitecturalTitleBlock(plotBounds);
 }
 
 function renderRawAIMode() {
