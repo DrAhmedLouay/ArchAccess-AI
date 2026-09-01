@@ -272,10 +272,7 @@ class ArchAccessLayoutGenerator:
             x_hbath_end = x_dis_bath_end + hbath_w
             bed_w = max(min_bed_w, bldg_max_x - x_hbath_end)
             
-            y_dis_bath_end = y_corr_bot + min_dis_bath_h
-            y_hbath_end = y_corr_bot + min_hbath_h
-            
-            court_key = "court_garden" if style_variant == 2 else "court_garden"
+            y_bath_end = y_corr_bot + min_hbath_h
 
             rooms_specs = [
                 # 1. Guest Room (>= 5.0m x 3.9m)
@@ -323,25 +320,19 @@ class ArchAccessLayoutGenerator:
                 {
                     "key": "disabled_bathroom",
                     "poly": [(x_dis_end, y_corr_bot), (x_dis_bath_end, y_corr_bot),
-                             (x_dis_bath_end, y_dis_bath_end), (x_dis_end, y_dis_bath_end)]
-                },
-                # West Shaft
-                {
-                    "key": court_key,
-                    "poly": [(x_dis_end, y_dis_bath_end), (x_dis_bath_end, y_dis_bath_end),
-                             (x_dis_bath_end, bldg_max_y), (x_dis_end, bldg_max_y)]
+                             (x_dis_bath_end, y_bath_end), (x_dis_end, y_bath_end)]
                 },
                 # 8. House Bathroom (>= 2.4m x 2.7m)
                 {
                     "key": "bathroom",
                     "poly": [(x_dis_bath_end, y_corr_bot), (x_hbath_end, y_corr_bot),
-                             (x_hbath_end, y_hbath_end), (x_dis_bath_end, y_hbath_end)]
+                             (x_hbath_end, y_bath_end), (x_dis_bath_end, y_bath_end)]
                 },
-                # Mid Shaft
+                # Unified Merged Light Shaft (عرض 5.17م مدمج بدون جدار فاصل)
                 {
                     "key": "court_garden",
-                    "poly": [(x_dis_bath_end, y_hbath_end), (x_hbath_end, y_hbath_end),
-                             (x_hbath_end, bldg_max_y), (x_dis_bath_end, bldg_max_y)]
+                    "poly": [(x_dis_end, y_bath_end), (x_hbath_end, y_bath_end),
+                             (x_hbath_end, bldg_max_y), (x_dis_end, bldg_max_y)]
                 },
                 # 9. Standard Bedroom (>= 3.9m x 3.9m)
                 {
@@ -366,8 +357,7 @@ class ArchAccessLayoutGenerator:
             x_hbath_end = x_bed_end + min_hbath_w
             x_dis_bath_end = x_hbath_end + min_dis_bath_w
             
-            y_dis_bath_end = y_corr_bot + min_dis_bath_h
-            y_hbath_end = y_corr_bot + min_hbath_h
+            y_bath_end = y_corr_bot + min_hbath_h
 
             rooms_specs = [
                 # 1. Living Room (>= 4.0m x 3.9m)
@@ -415,25 +405,19 @@ class ArchAccessLayoutGenerator:
                 {
                     "key": "bathroom",
                     "poly": [(x_bed_end, y_corr_bot), (x_hbath_end, y_corr_bot),
-                             (x_hbath_end, y_hbath_end), (x_bed_end, y_hbath_end)]
-                },
-                # Mid Shaft
-                {
-                    "key": "court_garden",
-                    "poly": [(x_bed_end, y_hbath_end), (x_hbath_end, y_hbath_end),
-                             (x_hbath_end, bldg_max_y), (x_bed_end, bldg_max_y)]
+                             (x_hbath_end, y_bath_end), (x_bed_end, y_bath_end)]
                 },
                 # 8. Disabled Bathroom (>= 2.7m x 2.2m)
                 {
                     "key": "disabled_bathroom",
                     "poly": [(x_hbath_end, y_corr_bot), (x_dis_bath_end, y_corr_bot),
-                             (x_dis_bath_end, y_dis_bath_end), (x_hbath_end, y_dis_bath_end)]
+                             (x_dis_bath_end, y_bath_end), (x_hbath_end, y_bath_end)]
                 },
-                # East Shaft
+                # Unified Merged Light Shaft (عرض 5.17م مدمج بدون جدار فاصل)
                 {
                     "key": "court_garden",
-                    "poly": [(x_hbath_end, y_dis_bath_end), (x_dis_bath_end, y_dis_bath_end),
-                             (x_dis_bath_end, bldg_max_y), (x_hbath_end, bldg_max_y)]
+                    "poly": [(x_bed_end, y_bath_end), (x_dis_bath_end, y_bath_end),
+                             (x_dis_bath_end, bldg_max_y), (x_bed_end, bldg_max_y)]
                 },
                 # 9. Disabled Bedroom (>= 4.8m x 4.0m)
                 {
