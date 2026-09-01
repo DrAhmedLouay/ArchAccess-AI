@@ -598,53 +598,86 @@ body {
     overflow: auto;
 }
 
-.viewport-toolbar {
+/* ==========================================================================
+   2-Tier Architectural Viewport Header
+   ========================================================================== */
+.viewport-header {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
+    flex-direction: column;
+    gap: 6px;
     width: 100%;
     min-width: 0;
     box-sizing: border-box;
+    margin-bottom: 2px;
 }
 
+/* Tier 1: View Mode Tabs */
 .view-mode-tabs {
     display: flex;
-    gap: 6px;
+    align-items: center;
+    gap: 4px;
     background-color: var(--bg-card);
-    padding: 4px;
+    padding: 3px 6px;
     border-radius: var(--radius-md);
     border: 1px solid var(--border-color);
-    flex-shrink: 0;
-    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.view-mode-tabs::-webkit-scrollbar {
+    display: none;
 }
 
 .view-tab {
     background: transparent;
-    border: none;
+    border: 1px solid transparent;
     color: var(--text-secondary);
-    padding: 6px 12px;
+    padding: 5px 12px;
+    height: 30px;
     border-radius: var(--radius-sm);
     font-family: inherit;
     font-size: 0.78rem;
     font-weight: 600;
     cursor: pointer;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 6px;
     transition: all 0.2s;
-    white-space: nowrap;
+    white-space: nowrap !important;
+    flex-shrink: 0;
+    box-sizing: border-box;
+}
+
+.view-tab:hover {
+    color: var(--text-primary);
+    background-color: rgba(255, 255, 255, 0.04);
 }
 
 .view-tab.active {
     background-color: var(--bg-subtle);
     color: var(--text-primary);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.btn-max-canvas {
+    margin-inline-start: auto;
+    border: 1px solid rgba(56, 189, 248, 0.3) !important;
+    color: #38bdf8 !important;
+    background: rgba(56, 189, 248, 0.06) !important;
+}
+
+.btn-max-canvas:hover {
+    background: rgba(56, 189, 248, 0.15) !important;
 }
 
 .dot {
-    width: 8px;
-    height: 8px;
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
+    flex-shrink: 0;
 }
 
 .dot-ortho { background-color: var(--accent-cyan); }
@@ -653,28 +686,53 @@ body {
 .dot-heatmap { background-color: var(--accent-green); }
 .dot-raw { background-color: var(--accent-gold); }
 
-.viewport-options {
+/* Tier 2: Viewport Options & Furniture Studio Ribbon */
+.viewport-options-ribbon {
     display: flex;
     align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(180deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.8) 100%);
+    border: 1px solid var(--border-color);
+    padding: 4px 8px;
+    border-radius: var(--radius-md);
     gap: 8px;
-    flex-shrink: 0;
+    box-sizing: border-box;
+    width: 100%;
     min-width: 0;
+}
+
+.options-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.options-divider {
+    width: 1px;
+    height: 18px;
+    background-color: var(--border-color);
+    margin: 0 2px;
+    flex-shrink: 0;
 }
 
 .tags-checkbox-label {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     background-color: var(--bg-card);
     border: 1px solid var(--border-color);
-    padding: 5px 12px;
-    border-radius: var(--radius-md);
+    padding: 3px 10px;
+    height: 28px;
+    border-radius: var(--radius-sm);
     cursor: pointer;
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     font-weight: 600;
     color: var(--text-primary);
     user-select: none;
     transition: all 0.2s ease;
+    white-space: nowrap !important;
+    box-sizing: border-box;
 }
 
 .tags-checkbox-label:hover {
@@ -683,14 +741,23 @@ body {
     transform: translateY(-1px);
 }
 
+.tags-checkbox-label input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+    accent-color: var(--accent-cyan);
+    margin: 0;
+}
+
 .btn-viewport-action {
     display: inline-flex;
     align-items: center;
     gap: 6px;
     background-color: var(--bg-card);
     border: 1px solid var(--border-color);
-    padding: 5px 12px;
-    border-radius: var(--radius-md);
+    padding: 3px 10px;
+    height: 28px;
+    border-radius: var(--radius-sm);
     cursor: pointer;
     font-size: 0.78rem;
     font-weight: 600;
@@ -698,6 +765,8 @@ body {
     user-select: none;
     transition: all 0.2s ease;
     font-family: inherit;
+    white-space: nowrap !important;
+    box-sizing: border-box;
 }
 
 .btn-viewport-action:hover {
@@ -785,18 +854,17 @@ body {
     font-weight: 700;
 }
 
-.tags-checkbox-label input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
-    cursor: pointer;
-    accent-color: var(--accent-cyan);
-    margin: 0;
-}
-
 .canvas-scale-info {
     font-family: var(--font-mono);
-    font-size: 0.75rem;
+    font-size: 0.74rem;
     color: var(--text-muted);
+    white-space: nowrap !important;
+    flex-shrink: 0;
+    margin-inline-start: auto;
+    background: rgba(0, 0, 0, 0.25);
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .canvas-card {
