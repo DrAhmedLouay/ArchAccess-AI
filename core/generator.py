@@ -238,21 +238,21 @@ class ArchAccessLayoutGenerator:
         min_4_5m_px = round(4.50 * 23.0)
         
         if style_variant == 1:
-            # Variant 1: Dedicated Disabled Suite (#e801f7) + Uncompressed Kitchen & Bedroom
+            # Variant 1: Dedicated Disabled Suite (#e801f7) + Central Light Shaft + Uncompressed Spaces
             dis_bed_w = max(min_4_5m_px, min(round(bw * 0.36), round(5.00 * 23.0)))
             corr_w = round(1.50 * 23.0)
             x_corr_end = bldg_min_x + dis_bed_w + corr_w
             east_avail = bldg_max_x - x_corr_end
-            shaft_w = max(round(1.20 * 23.0), round(east_avail * 0.12))
-            x4 = bldg_max_x - shaft_w
-            rem_east = x4 - x_corr_end
+            shaft_w = max(round(1.30 * 23.0), min(round(1.50 * 23.0), round(east_avail * 0.16)))
+            rem_east = east_avail - shaft_w
             
             y_front_end = bldg_min_y + max(min_4m_px, round(bh * 0.35))
             y_corr_bot = y_front_end + corr_w
             priv_h = bldg_max_y - y_corr_bot
             
-            x_mid_east = x_corr_end + round(rem_east * 0.50) if rem_east >= round(5.80 * 23.0) else x4
-            y_mid_east = y_corr_bot + round(priv_h * 0.50) if rem_east < round(5.80 * 23.0) else bldg_max_y
+            kitch_w = round(rem_east * 0.50)
+            x_kitch_end = x_corr_end + kitch_w
+            x_shaft_end = x_kitch_end + shaft_w
 
             rooms_specs = [
                 # Front Public Zone (Facing Street & Front Yard)
@@ -284,25 +284,23 @@ class ArchAccessLayoutGenerator:
                     "poly": [(bldg_min_x + dis_bed_w - min_3m_px, y_corr_bot), (bldg_min_x + dis_bed_w, y_corr_bot),
                              (bldg_min_x + dis_bed_w, y_corr_bot + min_3m_px), (bldg_min_x + dis_bed_w - min_3m_px, y_corr_bot + min_3m_px)]
                 },
-                # Kitchen (Uncompressed >= 3.0m x 3.0m)
+                # Kitchen (Uncompressed >= 3.4m x 4.8m)
                 {
                     "key": "kitchen", # #FFB8D8
-                    "poly": [(x_corr_end, y_corr_bot), (x_mid_east, y_corr_bot),
-                             (x_mid_east, y_mid_east), (x_corr_end, y_mid_east)]
+                    "poly": [(x_corr_end, y_corr_bot), (x_kitch_end, y_corr_bot),
+                             (x_kitch_end, bldg_max_y), (x_corr_end, bldg_max_y)]
                 },
-                # Standard Bedroom (Uncompressed >= 3.0m x 3.0m)
-                {
-                    "key": "bedroom", # #fefe0a
-                    "poly": [(x_mid_east if rem_east >= round(5.80 * 23.0) else x_corr_end, y_mid_east if rem_east < round(5.80 * 23.0) else y_corr_bot),
-                             (x4, y_mid_east if rem_east < round(5.80 * 23.0) else y_corr_bot),
-                             (x4, bldg_max_y),
-                             (x_mid_east if rem_east >= round(5.80 * 23.0) else x_corr_end, bldg_max_y)]
-                },
-                # Ventilation Light Shaft on Right Neighbor Wall
+                # Central Light & Ventilation Shaft (#00ff01)
                 {
                     "key": "court_garden", # #00ff01
-                    "poly": [(x4, y_corr_bot), (bldg_max_x, y_corr_bot),
-                             (bldg_max_x, bldg_max_y), (x4, bldg_max_y)]
+                    "poly": [(x_kitch_end, y_corr_bot), (x_shaft_end, y_corr_bot),
+                             (x_shaft_end, bldg_max_y), (x_kitch_end, bldg_max_y)]
+                },
+                # Standard Bedroom (Uncompressed >= 3.4m x 4.8m)
+                {
+                    "key": "bedroom", # #fefe0a
+                    "poly": [(x_shaft_end, y_corr_bot), (bldg_max_x, y_corr_bot),
+                             (bldg_max_x, bldg_max_y), (x_shaft_end, bldg_max_y)]
                 }
             ]
         elif style_variant == 2:
@@ -311,10 +309,11 @@ class ArchAccessLayoutGenerator:
             corr_w = round(1.50 * 23.0)
             x_corr_end = bldg_min_x + dis_bed_w + corr_w
             east_avail = bldg_max_x - x_corr_end
-            court_w = max(round(2.00 * 23.0), round(east_avail * 0.22))
-            rem_east = east_avail - court_w
-            x_mid_east = x_corr_end + round(rem_east * 0.50)
-            x_court_start = x_corr_end + rem_east
+            shaft_w = max(round(1.30 * 23.0), min(round(1.50 * 23.0), round(east_avail * 0.16)))
+            rem_east = east_avail - shaft_w
+            kitch_w = round(rem_east * 0.50)
+            x_kitch_end = x_corr_end + kitch_w
+            x_shaft_end = x_kitch_end + shaft_w
 
             y_front_end = bldg_min_y + max(min_4m_px, round(bh * 0.35))
             y_corr_bot = y_front_end + corr_w
@@ -348,31 +347,32 @@ class ArchAccessLayoutGenerator:
                 },
                 {
                     "key": "kitchen", # #FFB8D8
-                    "poly": [(x_corr_end, y_corr_bot), (x_mid_east, y_corr_bot),
-                             (x_mid_east, bldg_max_y), (x_corr_end, bldg_max_y)]
+                    "poly": [(x_corr_end, y_corr_bot), (x_kitch_end, y_corr_bot),
+                             (x_kitch_end, bldg_max_y), (x_corr_end, bldg_max_y)]
+                },
+                {
+                    "key": "court_garden", # #00ff01 (Central Shaft)
+                    "poly": [(x_kitch_end, y_corr_bot), (x_shaft_end, y_corr_bot),
+                             (x_shaft_end, bldg_max_y), (x_kitch_end, bldg_max_y)]
                 },
                 {
                     "key": "bedroom", # #fefe0a
-                    "poly": [(x_mid_east, y_corr_bot), (x_court_start, y_corr_bot),
-                             (x_court_start, bldg_max_y), (x_mid_east, bldg_max_y)]
-                },
-                {
-                    "key": "court_garden", # #00ff01 (Central Patio)
-                    "poly": [(x_court_start, y_corr_bot), (bldg_max_x, y_corr_bot),
-                             (bldg_max_x, bldg_max_y), (x_court_start, bldg_max_y)]
+                    "poly": [(x_shaft_end, y_corr_bot), (bldg_max_x, y_corr_bot),
+                             (bldg_max_x, bldg_max_y), (x_shaft_end, bldg_max_y)]
                 }
             ]
         else:
-            # Variant 3: Mirrored Accessible Suite with Uncompressed Spaces
+            # Variant 3: Mirrored Accessible Suite with Central West Shaft
             dis_bed_w = max(min_4_5m_px, min(round(bw * 0.36), round(5.00 * 23.0)))
             corr_w = round(1.50 * 23.0)
             x_dis_start = bldg_max_x - dis_bed_w
             x3 = x_dis_start - corr_w
             west_avail = x3 - bldg_min_x
-            shaft_w = max(round(1.20 * 23.0), round(west_avail * 0.12))
-            x1 = bldg_min_x + shaft_w
-            rem_west = x3 - x1
-            x_mid_west = x1 + round(rem_west * 0.50)
+            shaft_w = max(round(1.30 * 23.0), min(round(1.50 * 23.0), round(west_avail * 0.16)))
+            rem_west = west_avail - shaft_w
+            kitch_w = round(rem_west * 0.50)
+            x_kitch_end = bldg_min_x + kitch_w
+            x_shaft_end = x_kitch_end + shaft_w
 
             y_front_end = bldg_min_y + max(min_4m_px, round(bh * 0.35))
             y_corr_bot = y_front_end + corr_w
@@ -394,19 +394,19 @@ class ArchAccessLayoutGenerator:
                              (bldg_max_x, y_corr_bot), (bldg_min_x, y_corr_bot)]
                 },
                 {
-                    "key": "court_garden", # #00ff01 (West Shaft)
-                    "poly": [(bldg_min_x, y_corr_bot), (x1, y_corr_bot),
-                             (x1, bldg_max_y), (bldg_min_x, bldg_max_y)]
+                    "key": "kitchen", # #FFB8D8
+                    "poly": [(bldg_min_x, y_corr_bot), (x_kitch_end, y_corr_bot),
+                             (x_kitch_end, bldg_max_y), (bldg_min_x, bldg_max_y)]
                 },
                 {
-                    "key": "kitchen", # #FFB8D8
-                    "poly": [(x1, y_corr_bot), (x_mid_west, y_corr_bot),
-                             (x_mid_west, bldg_max_y), (x1, bldg_max_y)]
+                    "key": "court_garden", # #00ff01 (Central West Shaft)
+                    "poly": [(x_kitch_end, y_corr_bot), (x_shaft_end, y_corr_bot),
+                             (x_shaft_end, bldg_max_y), (x_kitch_end, bldg_max_y)]
                 },
                 {
                     "key": "bedroom", # #fefe0a
-                    "poly": [(x_mid_west, y_corr_bot), (x3, y_corr_bot),
-                             (x3, bldg_max_y), (x_mid_west, bldg_max_y)]
+                    "poly": [(x_shaft_end, y_corr_bot), (x3, y_corr_bot),
+                             (x3, bldg_max_y), (x_shaft_end, bldg_max_y)]
                 },
                 {
                     "key": "disabled_bedroom", # #e801f7 (Width >= 4.50m strictly)
