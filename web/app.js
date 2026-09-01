@@ -676,8 +676,101 @@ function setupEventListeners() {
         return (win.x >= x - margin && win.x <= x + w + margin && win.y >= y - margin && win.y <= y + h + margin);
     }
 
+    function getSelectedSpaceObject(activeKey) {
+        if (!state.currentLayout) return null;
+        const { rooms, outdoorZones, accessibleParking, garageBounds, ramp } = state.currentLayout;
+        
+        // 1. Search in indoor rooms and courtyards
+        if (rooms) {
+            const room = rooms.find(r => r.key === activeKey);
+            if (room) {
+                return {
+                    type: (room.key === 'court_garden' ? 'court' : 'room'),
+                    data: room,
+                    bounds: room.bounds,
+                    name_ar: room.name_ar,
+                    name_en: room.name_en,
+                    key: room.key,
+                    area_m2: room.area_m2
+                };
+            }
+        }
+        
+        // 2. Search in outdoor zones (garage, garden, walkway)
+        if (outdoorZones) {
+            const zone = outdoorZones.find(z => z.key === activeKey || 
+                (activeKey === 'garage_zone' && z.type === 'garage') || 
+                (activeKey === 'front_garden' && z.type === 'garden') || 
+                (activeKey === 'side_walkway' && (z.type === 'walkway' || z.key === 'side_walkway' || z.key === 'entrance_walkway')));
+            if (zone) {
+                return {
+                    type: 'outdoor',
+                    data: zone,
+                    bounds: zone.bounds,
+                    name_ar: zone.name_ar,
+                    name_en: zone.name_en,
+                    key: zone.key,
+                    area_m2: zone.area_m2
+                };
+            }
+        }
+
+        // 3. Accessible Parking / Garage
+        if (activeKey === 'garage_zone' || activeKey === 'accessible_parking') {
+            if (accessibleParking) {
+                const pxPerMeter = 23.0;
+                const aM2 = parseFloat(((accessibleParking.bounds.w / pxPerMeter) * (accessibleParking.bounds.h / pxPerMeter)).toFixed(1));
+                return {
+                    type: 'garage',
+                    data: accessibleParking,
+                    bounds: accessibleParking.bounds,
+                    name_ar: accessibleParking.name_ar || "كراج وموقف سيارة مهيأ",
+                    name_en: accessibleParking.name_en || "Accessible Parking & Garage",
+                    key: 'garage_zone',
+                    area_m2: aM2
+                };
+            } else if (garageBounds) {
+                const pxPerMeter = 23.0;
+                const aM2 = parseFloat(((garageBounds.w / pxPerMeter) * (garageBounds.h / pxPerMeter)).toFixed(1));
+                return {
+                    type: 'garage',
+                    data: garageBounds,
+                    bounds: garageBounds,
+                    name_ar: "كراج وموقف سيارة",
+                    name_en: "Garage & Parking",
+                    key: 'garage_zone',
+                    area_m2: aM2
+                };
+            }
+        }
+
+        // 4. ADA Ramp
+        if (activeKey === 'ramp' && ramp) {
+            return {
+                type: 'ramp',
+                data: ramp,
+                bounds: ramp.bounds,
+                name_ar: ramp.name_ar || "منحدر مهيأ 1:12",
+                name_en: ramp.name_en || "ADA Ramp 1:12",
+                key: 'ramp',
+                area_m2: 3.6
+            };
+        }
+
+        return null;
+    }
+
     function findRoomDoor(roomKey) {
-        if (!state.currentLayout || !state.currentLayout.doors) return null;
+        if (!state.currentLayout) return null;
+        if (roomKey === 'garage_zone' && state.currentLayout.entranceGate) {
+            const gate = state.currentLayout.entranceGate;
+            return {
+                w: gate.bounds.w > gate.bounds.h ? gate.bounds.w : gate.bounds.h,
+                offsetPct: 50,
+                isGate: true
+            };
+        }
+        if (!state.currentLayout.doors) return null;
         const room = state.currentLayout.rooms.find(r => r.key === roomKey);
         if (!room) return null;
         return state.currentLayout.doors.find(d => d.roomKey === roomKey || isDoorNearRoom(d, room));
@@ -722,35 +815,78 @@ function setupEventListeners() {
                 : `Style (${currentStyle})`;
         }
 
-        if (!state.currentLayout || !state.currentLayout.rooms) return;
+        // Dynamically update style options in furnitureStyleSelect based on selected space type
+        if (furnitureStyleSelect && furnitureStyleSelect.options.length >= 3) {
+            if (activeKey === 'court_garden') {
+                furnitureStyleSelect.options[0].text = isAr ? 'طراز 1: شجرة ظلية وأحواض حجرية' : 'Style 1: Shade Tree & Planters';
+                furnitureStyleSelect.options[1].text = isAr ? 'طراز 2: حديقة يابانية زن وحصى أبيض' : 'Style 2: Zen Gravel & Rock Garden';
+                furnitureStyleSelect.options[2].text = isAr ? 'طراز 3: نافورة مائية وشجيرات عطرية' : 'Style 3: Water Fountain & Botanical Shrubs';
+            } else if (activeKey === 'garage_zone' || activeKey === 'accessible_parking') {
+                furnitureStyleSelect.options[0].text = isAr ? 'طراز 1: سيارة صالون + مسار نقل ADA' : 'Style 1: Sedan Car + 1.80m ADA Aisle';
+                furnitureStyleSelect.options[1].text = isAr ? 'طراز 2: مركبة SUV دفع رباعي مهيأة' : 'Style 2: Accessible SUV & Transfer Hatch';
+                furnitureStyleSelect.options[2].text = isAr ? 'طراز 3: مظلة كراج عصرية + شاحن EV' : 'Style 3: Modern Carport & EV Station';
+            } else if (activeKey === 'front_garden') {
+                furnitureStyleSelect.options[0].text = isAr ? 'طراز 1: مسطح أخضر وأشجار فواكه' : 'Style 1: Lush Lawn & Perimeter Trees';
+                furnitureStyleSelect.options[1].text = isAr ? 'طراز 2: تراس مبلط ومظلة جلسة' : 'Style 2: Paved Terrace & Pergola Seating';
+                furnitureStyleSelect.options[2].text = isAr ? 'طراز 3: أحواض نباتية هندسية وإنارة' : 'Style 3: Modern Planters & Pathway Lights';
+            } else if (activeKey === 'side_walkway') {
+                furnitureStyleSelect.options[0].text = isAr ? 'طراز 1: بلاط متداخل وحزام شجيرات' : 'Style 1: Interlocking Pavers & Shrub Border';
+                furnitureStyleSelect.options[1].text = isAr ? 'طراز 2: ممشى خدمة مهيأ مع درابزين' : 'Style 2: Accessible Service Walkway';
+                furnitureStyleSelect.options[2].text = isAr ? 'طراز 3: حديقة خطية ومصائد إنارة' : 'Style 3: Linear Garden & Ground Spotlights';
+            } else {
+                furnitureStyleSelect.options[0].text = isAr ? 'طراز 1: التوزيع الأساسي الملكي' : 'Style 1: Master Arrangement';
+                furnitureStyleSelect.options[1].text = isAr ? 'طراز 2: التوزيع العربي المهيأ ADA' : 'Style 2: ADA Accessible Layout';
+                furnitureStyleSelect.options[2].text = isAr ? 'طراز 3: التوزيع المعاصر Contemporary' : 'Style 3: Contemporary Suite';
+            }
+        }
 
-        const room = state.currentLayout.rooms.find(r => r.key === activeKey);
-        if (!room) return;
+        if (!state.currentLayout) return;
+
+        const space = getSelectedSpaceObject(activeKey);
+        if (!space || !space.bounds) return;
 
         const pxPerMeter = 23.0;
-        const wM = (room.bounds.w / pxPerMeter);
-        const lM = (room.bounds.h / pxPerMeter);
+        const wM = (space.bounds.w / pxPerMeter);
+        const lM = (space.bounds.h / pxPerMeter);
         const areaM2 = (wM * lM).toFixed(2);
 
         // 1. Dimensions UI
         if (valRoomWidth) valRoomWidth.textContent = `${wM.toFixed(2)} ${isAr ? 'م' : 'm'}`;
         if (rangeRoomWidth) {
-            rangeRoomWidth.value = wM.toFixed(1);
+            rangeRoomWidth.value = Math.max(1.0, Math.min(15.0, wM)).toFixed(1);
         }
         if (valRoomLength) valRoomLength.textContent = `${lM.toFixed(2)} ${isAr ? 'م' : 'm'}`;
         if (rangeRoomLength) {
-            rangeRoomLength.value = lM.toFixed(1);
+            rangeRoomLength.value = Math.max(1.0, Math.min(15.0, lM)).toFixed(1);
         }
         if (valRoomArea) valRoomArea.textContent = `${areaM2} ${isAr ? 'م²' : 'm²'}`;
 
         // 2. ADA Status Badge
         if (inspectorAdaBadge) {
-            const minW = room.key === 'disabled_bedroom' ? 4.4 : (room.key === 'disabled_bathroom' ? 2.8 : 1.8);
-            const isAdaPass = wM >= minW && lM >= 1.8;
+            let isAdaPass = true;
+            let badgeText = isAr ? 'ADA مطابق ✅' : 'ADA PASS ✅';
+
+            if (space.key === 'disabled_bedroom') {
+                isAdaPass = (wM >= 4.4 && lM >= 3.8);
+                badgeText = isAdaPass ? (isAr ? 'ADA جناح نوم مطابق ✅' : 'ADA Suite Pass ✅') : (isAr ? 'تنبيه: أبعاد ضيقة ⚠️' : 'Dimensions Warning ⚠️');
+            } else if (space.key === 'disabled_bathroom') {
+                isAdaPass = (wM >= 2.5 && lM >= 2.0);
+                badgeText = isAdaPass ? (isAr ? 'ADA حمام مهيأ Ø 1.50م ✅' : 'ADA Bath Pass ✅') : (isAr ? 'تنبيه: مساحة غير كافية ⚠️' : 'Space Warning ⚠️');
+            } else if (space.key === 'court_garden') {
+                isAdaPass = (wM >= 1.2 && lM >= 1.2);
+                badgeText = isAdaPass ? (isAr ? 'مطابق لتهوية وإنارة البيئة ✅' : 'Bioclimatic Daylight Pass ✅') : (isAr ? 'منور ضيق ⚠️' : 'Narrow Shaft ⚠️');
+            } else if (space.key === 'garage_zone' || space.key === 'accessible_parking') {
+                isAdaPass = (wM >= 4.0 || lM >= 4.0);
+                badgeText = isAdaPass ? (isAr ? 'ADA موقف مهيأ 1.80م ✅' : 'ADA Parking Pass ✅') : (isAr ? 'موقف ضيق ⚠️' : 'Tight Parking ⚠️');
+            } else if (space.key === 'front_garden' || space.key === 'side_walkway') {
+                isAdaPass = (wM >= 1.2 || lM >= 1.2);
+                badgeText = isAdaPass ? (isAr ? 'فناء وممشى مهيأ للوصول ✅' : 'Accessible Yard Pass ✅') : (isAr ? 'ممشى ضيق ⚠️' : 'Narrow Walkway ⚠️');
+            } else {
+                isAdaPass = (wM >= 1.8 && lM >= 1.8);
+            }
+
             inspectorAdaBadge.className = isAdaPass ? 'badge-ada-status pass' : 'badge-ada-status warn';
-            inspectorAdaBadge.textContent = isAdaPass 
-                ? (isAr ? 'ADA مطابق ✅' : 'ADA PASS ✅') 
-                : (isAr ? 'تنبيه: أبعاد ضيقة ⚠️' : 'ADA Warning ⚠️');
+            inspectorAdaBadge.textContent = badgeText;
         }
 
         // 3. Doors UI
@@ -786,9 +922,9 @@ function setupEventListeners() {
     }
 
     function updateParametricRoomDimension(roomKey, dimType, valM) {
-        if (!state.currentLayout || !state.currentLayout.rooms) return;
-        const room = state.currentLayout.rooms.find(r => r.key === roomKey);
-        if (!room) return;
+        if (!state.currentLayout) return;
+        const space = getSelectedSpaceObject(roomKey);
+        if (!space || !space.bounds) return;
 
         const pxPerMeter = 23.0;
         const newPx = Math.round(valM * pxPerMeter);
@@ -796,42 +932,48 @@ function setupEventListeners() {
         // Snapshot original if not already saved
         if (!baselineRoomSnapshots[roomKey]) {
             baselineRoomSnapshots[roomKey] = {
-                bounds: { ...room.bounds },
-                area_m2: room.area_m2
+                bounds: { ...space.bounds },
+                area_m2: space.area_m2
             };
         }
 
         if (dimType === 'width') {
-            const oldW = room.bounds.w;
+            const oldW = space.bounds.w;
             const deltaW = newPx - oldW;
-            room.bounds.w = newPx;
+            space.bounds.w = newPx;
             
             // Adjust touching neighbor rooms to preserve orthogonal wall alignment
-            state.currentLayout.rooms.forEach(other => {
-                if (other.key === roomKey) return;
-                if (Math.abs(other.bounds.x - (room.bounds.x + oldW)) < 4) {
-                    other.bounds.x += deltaW;
-                }
-            });
+            if (state.currentLayout.rooms) {
+                state.currentLayout.rooms.forEach(other => {
+                    if (other.key === roomKey) return;
+                    if (Math.abs(other.bounds.x - (space.bounds.x + oldW)) < 4) {
+                        other.bounds.x += deltaW;
+                    }
+                });
+            }
         } else if (dimType === 'length') {
-            const oldH = room.bounds.h;
+            const oldH = space.bounds.h;
             const deltaH = newPx - oldH;
-            room.bounds.h = newPx;
+            space.bounds.h = newPx;
 
             // Adjust touching neighbor rooms
-            state.currentLayout.rooms.forEach(other => {
-                if (other.key === roomKey) return;
-                if (Math.abs(other.bounds.y - (room.bounds.y + oldH)) < 4) {
-                    other.bounds.y += deltaH;
-                }
-            });
+            if (state.currentLayout.rooms) {
+                state.currentLayout.rooms.forEach(other => {
+                    if (other.key === roomKey) return;
+                    if (Math.abs(other.bounds.y - (space.bounds.y + oldH)) < 4) {
+                        other.bounds.y += deltaH;
+                    }
+                });
+            }
         }
 
-        room.area_m2 = parseFloat(((room.bounds.w * room.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
-        if (valRoomArea) valRoomArea.textContent = `${(room.bounds.w * room.bounds.h / (pxPerMeter * pxPerMeter)).toFixed(2)} ${state.lang === 'ar' ? 'م²' : 'm²'}`;
+        space.area_m2 = parseFloat(((space.bounds.w * space.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
+        if (valRoomArea) valRoomArea.textContent = `${(space.bounds.w * space.bounds.h / (pxPerMeter * pxPerMeter)).toFixed(2)} ${state.lang === 'ar' ? 'م²' : 'm²'}`;
 
         // Recompute doors & windows positioning along the updated room walls
-        realignRoomDoorsAndWindows(room);
+        if (space.type === 'room' || space.type === 'court') {
+            realignRoomDoorsAndWindows(space.data);
+        }
 
         // Update Analytics HUD & Canvas
         updateAnalyticsHUD(state.currentLayout);
@@ -1276,14 +1418,56 @@ function setupEventListeners() {
             return;
         }
 
-        // Interactive Click on Room to Select & Customize!
-        if (state.currentLayout && state.currentLayout.rooms) {
-            const hitRoom = state.currentLayout.rooms.find(r => {
-                const b = r.bounds;
-                return worldX >= b.x && worldX <= b.x + b.w && worldY >= b.y && worldY <= b.y + b.h;
-            });
-            if (hitRoom) {
-                state.selectedRoomKey = hitRoom.key;
+        // Interactive Click on Space (Indoor Rooms, Courtyards, Garage, Garden, Walkways & Ramp) to Select & Customize!
+        if (state.currentLayout) {
+            const { rooms, outdoorZones, accessibleParking, garageBounds, ramp } = state.currentLayout;
+            let hitKey = null;
+
+            // 1. Check Ramp
+            if (ramp && ramp.bounds) {
+                const b = ramp.bounds;
+                if (worldX >= b.x && worldX <= b.x + b.w && worldY >= b.y && worldY <= b.y + b.h) {
+                    hitKey = 'ramp';
+                }
+            }
+
+            // 2. Check Garage / Accessible Parking
+            if (!hitKey) {
+                if (accessibleParking && accessibleParking.bounds) {
+                    const b = accessibleParking.bounds;
+                    if (worldX >= b.x && worldX <= b.x + b.w && worldY >= b.y && worldY <= b.y + b.h) {
+                        hitKey = 'garage_zone';
+                    }
+                } else if (garageBounds) {
+                    const b = garageBounds;
+                    if (worldX >= b.x && worldX <= b.x + b.w && worldY >= b.y && worldY <= b.y + b.h) {
+                        hitKey = 'garage_zone';
+                    }
+                }
+            }
+
+            // 3. Check Indoor Rooms & Courtyards
+            if (!hitKey && rooms) {
+                const hitRoom = rooms.find(r => {
+                    const b = r.bounds;
+                    return worldX >= b.x && worldX <= b.x + b.w && worldY >= b.y && worldY <= b.y + b.h;
+                });
+                if (hitRoom) hitKey = hitRoom.key;
+            }
+
+            // 4. Check Outdoor Zones (Front Garden, Side Walkway, etc.)
+            if (!hitKey && outdoorZones) {
+                const hitZone = outdoorZones.find(z => {
+                    const b = z.bounds;
+                    return worldX >= b.x && worldX <= b.x + b.w && worldY >= b.y && worldY <= b.y + b.h;
+                });
+                if (hitZone) {
+                    hitKey = (hitZone.type === 'garage') ? 'garage_zone' : ((hitZone.type === 'garden') ? 'front_garden' : 'side_walkway');
+                }
+            }
+
+            if (hitKey) {
+                state.selectedRoomKey = hitKey;
                 syncFurnitureControls();
                 renderCanvas();
             }
@@ -6056,11 +6240,11 @@ function renderOrthogonalMode() {
         drawLabels();
     }
 
-    // 9.5 Draw Active Room Selection CAD Grip Handles & Highlight
-    if (state.selectedRoomKey && rooms) {
-        const selectedRoom = rooms.find(r => r.key === state.selectedRoomKey);
-        if (selectedRoom) {
-            const { x, y, w, h } = selectedRoom.bounds;
+    // 9.5 Draw Active Room / Space Selection CAD Grip Handles & Highlight
+    if (state.selectedRoomKey) {
+        const space = getSelectedSpaceObject(state.selectedRoomKey);
+        if (space && space.bounds) {
+            const { x, y, w, h } = space.bounds;
             ctx.save();
             ctx.strokeStyle = '#38bdf8';
             ctx.fillStyle = 'rgba(56, 189, 248, 0.08)';
@@ -6085,23 +6269,24 @@ function renderOrthogonalMode() {
 
             // Selected Room Badge in corner
             const isAr = state.lang === 'ar';
-            const badgeW = isAr ? 56 : 62;
-            const badgeH = 14;
+            const badgeW = isAr ? 68 : 74;
+            const badgeH = 15;
             const badgeX = x + w - badgeW - 3;
             const badgeY = y + 3;
-            if (w > badgeW + 6 && h > 26) {
-                ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+            if (w > badgeW + 6 && h > 20) {
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.90)';
                 ctx.strokeStyle = '#38bdf8';
                 ctx.lineWidth = 0.8;
                 ctx.beginPath();
-                ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 3);
+                if (ctx.roundRect) ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 3);
+                else ctx.rect(badgeX, badgeY, badgeW, badgeH);
                 ctx.fill();
                 ctx.stroke();
                 ctx.fillStyle = '#38bdf8';
-                ctx.font = 'bold 7px Cairo, sans-serif';
+                ctx.font = 'bold 7.2px Cairo, sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText(isAr ? '✨ محدد للتعديل' : '✨ Selected', badgeX + badgeW / 2, badgeY + badgeH / 2);
+                ctx.fillText(isAr ? '✨ محدد للتعديل' : '✨ Selected for Edit', badgeX + badgeW / 2, badgeY + badgeH / 2);
             }
             ctx.restore();
         }
