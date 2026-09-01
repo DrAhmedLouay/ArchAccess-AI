@@ -4091,6 +4091,346 @@ function drawDraftingGrid(plotBounds) {
 }
 
 /**
+ * Draws High-End Architectural Presentation Room Flooring & Surface Materials
+ */
+function drawArchitecturalRoomFlooring(rooms) {
+    if (!rooms || !rooms.length) return;
+
+    rooms.forEach(r => {
+        const { x, y, w, h } = r.bounds;
+        ctx.save();
+
+        if (r.key === 'living_room' || r.key === 'guest_room') {
+            // 1. Natural Warm Oak Parquet Floor (صالة المعيشة ومجلس الضيوف)
+            ctx.fillStyle = '#fdfbf7';
+            ctx.fillRect(x, y, w, h);
+
+            // Fine Parquet Wood Plank Strips
+            ctx.strokeStyle = 'rgba(180, 140, 100, 0.12)';
+            ctx.lineWidth = 0.6;
+            const plankH = 10;
+            for (let py = y + plankH; py < y + h; py += plankH) {
+                ctx.beginPath(); ctx.moveTo(x + 2, py); ctx.lineTo(x + w - 2, py); ctx.stroke();
+                const offsetX = (Math.floor(py / plankH) % 2 === 0) ? 0 : 16;
+                for (let px = x + 4 + offsetX; px < x + w - 4; px += 32) {
+                    ctx.beginPath(); ctx.moveTo(px, py - plankH); ctx.lineTo(px, py); ctx.stroke();
+                }
+            }
+
+            // Luxury Area Rug Under Seating Area
+            const rugMargin = 16;
+            if (w > rugMargin * 2 + 30 && h > rugMargin * 2 + 30) {
+                const rw = w - rugMargin * 2;
+                const rh = h - rugMargin * 2;
+                const rx = x + rugMargin;
+                const ry = y + rugMargin;
+                ctx.fillStyle = 'rgba(215, 200, 185, 0.30)';
+                ctx.strokeStyle = 'rgba(160, 140, 120, 0.35)';
+                ctx.lineWidth = 0.8;
+                ctx.beginPath();
+                ctx.roundRect(rx, ry, rw, rh, 4);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.strokeStyle = 'rgba(160, 140, 120, 0.20)';
+                ctx.strokeRect(rx + 3, ry + 3, rw - 6, rh - 6);
+            }
+
+        } else if (r.key === 'disabled_bedroom' || r.key === 'bedroom') {
+            // 2. Soft Nordic Timber Planks & Neutral Bedside Textile (غرف النوم)
+            ctx.fillStyle = '#faf8f5';
+            ctx.fillRect(x, y, w, h);
+
+            ctx.strokeStyle = 'rgba(150, 135, 120, 0.08)';
+            ctx.lineWidth = 0.5;
+            const plankH = 12;
+            for (let py = y + plankH; py < y + h; py += plankH) {
+                ctx.beginPath(); ctx.moveTo(x + 2, py); ctx.lineTo(x + w - 2, py); ctx.stroke();
+            }
+
+            // Cozy Bedside Rug
+            const rugW = Math.min(w * 0.70, 70);
+            const rugH = Math.min(h * 0.65, 65);
+            const rugX = x + (w - rugW) / 2;
+            const rugY = y + (h - rugH) / 2;
+            ctx.fillStyle = 'rgba(226, 232, 240, 0.35)';
+            ctx.strokeStyle = 'rgba(203, 213, 225, 0.5)';
+            ctx.lineWidth = 0.6;
+            ctx.beginPath();
+            ctx.roundRect(rugX, rugY, rugW, rugH, 4);
+            ctx.fill();
+            ctx.stroke();
+
+        } else if (r.key === 'kitchen') {
+            // 3. Polished Porcelain / Marble Tiles 60x60cm (المطبخ)
+            ctx.fillStyle = '#f8fafc';
+            ctx.fillRect(x, y, w, h);
+
+            ctx.strokeStyle = 'rgba(203, 213, 225, 0.55)';
+            ctx.lineWidth = 0.5;
+            const tileS = 14; // ~60cm
+            for (let tx = x; tx <= x + w; tx += tileS) {
+                ctx.beginPath(); ctx.moveTo(tx, y); ctx.lineTo(tx, y + h); ctx.stroke();
+            }
+            for (let ty = y; ty <= y + h; ty += tileS) {
+                ctx.beginPath(); ctx.moveTo(x, ty); ctx.lineTo(x + w, ty); ctx.stroke();
+            }
+
+        } else if (r.key === 'disabled_bathroom' || r.key === 'bathroom' || r.key === 'guest_bathroom') {
+            // 4. Non-Slip Ceramic & Terrazzo Floor 30x30cm (الحمامات)
+            ctx.fillStyle = '#f1f5f9';
+            ctx.fillRect(x, y, w, h);
+
+            ctx.strokeStyle = 'rgba(148, 163, 184, 0.40)';
+            ctx.lineWidth = 0.5;
+            const tileS = 8; // ~35cm
+            for (let tx = x; tx <= x + w; tx += tileS) {
+                ctx.beginPath(); ctx.moveTo(tx, y); ctx.lineTo(tx, y + h); ctx.stroke();
+            }
+            for (let ty = y; ty <= y + h; ty += tileS) {
+                ctx.beginPath(); ctx.moveTo(x, ty); ctx.lineTo(x + w, ty); ctx.stroke();
+            }
+
+        } else if (r.key === 'court_garden') {
+            // 5. Lush Courtyard Garden with Organic Flagstones (المنور والفناء الأخضر)
+            ctx.fillStyle = '#f0fdf4';
+            ctx.fillRect(x, y, w, h);
+
+            // Cross ventilation architectural lines
+            ctx.strokeStyle = '#16a34a';
+            ctx.lineWidth = 1.2;
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.moveTo(x, y); ctx.lineTo(x + w, y + h);
+            ctx.moveTo(x + w, y); ctx.lineTo(x, y + h);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Potted Botanical Greenery in Corners
+            const potR = 5;
+            [{ px: x + 8, py: y + 8 }, { px: x + w - 8, py: y + h - 8 }].forEach(pot => {
+                if (w > 25 && h > 25) {
+                    ctx.fillStyle = '#22c55e';
+                    ctx.strokeStyle = '#15803d';
+                    ctx.lineWidth = 0.8;
+                    ctx.beginPath(); ctx.arc(pot.px, pot.py, potR, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+                    ctx.fillStyle = '#86efac';
+                    ctx.beginPath(); ctx.arc(pot.px - 1, pot.py - 1, potR * 0.4, 0, Math.PI * 2); ctx.fill();
+                }
+            });
+
+        } else if (r.key === 'corridors') {
+            // 6. Polished Travertine / Terrazzo Corridor Spine (الموزع المركزي)
+            ctx.fillStyle = '#f8fafc';
+            ctx.fillRect(x, y, w, h);
+
+            // Subtle longitudinal joint lines
+            ctx.strokeStyle = 'rgba(203, 213, 225, 0.4)';
+            ctx.lineWidth = 0.5;
+            const stepY = 20;
+            for (let py = y + stepY; py < y + h; py += stepY) {
+                ctx.beginPath(); ctx.moveTo(x + 2, py); ctx.lineTo(x + w - 2, py); ctx.stroke();
+            }
+        } else {
+            // Fallback: Semantic Base
+            ctx.fillStyle = r.hex || '#f8fafc';
+            ctx.fillRect(x, y, w, h);
+        }
+
+        ctx.restore();
+    });
+}
+
+/**
+ * Renders Directional 2D Wall Drop Shadows (Ambient Occlusion for Spatial Realism)
+ */
+function drawArchitecturalWallShadows(rooms) {
+    if (!rooms || !rooms.length) return;
+    ctx.save();
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.09)';
+    const shadowD = 4.0; // 4px depth shadow
+
+    rooms.forEach(r => {
+        const { x, y, w, h } = r.bounds;
+        if (r.key === 'court_garden') return; // Open to sky
+
+        // Top Inner Wall Shadow
+        ctx.fillRect(x, y, w, shadowD);
+        // Left Inner Wall Shadow
+        ctx.fillRect(x, y, shadowD, h);
+    });
+    ctx.restore();
+}
+
+/**
+ * Draws Architectural Level Targets (±0.00, +0.15, +0.30, +0.45 F.F.L.)
+ */
+function drawArchitecturalLevelMarkers(plotBounds, ramp, garageBounds) {
+    ctx.save();
+    const isAr = state.lang === 'ar';
+    
+    function drawLevelTarget(cx, cy, levelStr, labelStr) {
+        ctx.save();
+        const r = 5.0;
+        ctx.strokeStyle = '#334155';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(cx - r - 2, cy); ctx.lineTo(cx + r + 2, cy);
+        ctx.moveTo(cx, cy - r - 2); ctx.lineTo(cx, cy + r + 2);
+        ctx.stroke();
+
+        // Fill 2 alternating quadrants
+        ctx.fillStyle = '#334155';
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, r, 0, Math.PI * 0.5);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, r, Math.PI, Math.PI * 1.5);
+        ctx.fill();
+
+        // Text Badge
+        ctx.font = 'bold 7px JetBrains Mono, Cairo';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.lineWidth = 2.0;
+        ctx.strokeText(`${levelStr} ${labelStr || ''}`, cx + r + 3, cy);
+        ctx.fillStyle = '#0f172a';
+        ctx.fillText(`${levelStr} ${labelStr || ''}`, cx + r + 3, cy);
+        ctx.restore();
+    }
+
+    // 1. Street Level Target: ±0.00m (at front sidewalk)
+    const streetX = plotBounds.minX + 25;
+    const streetY = plotBounds.minY - 8;
+    drawLevelTarget(streetX, streetY, '±0.00m', isAr ? 'الشارع' : 'Street');
+
+    // 2. Driveway Level Target: +0.05m
+    if (garageBounds && garageBounds.w > 30) {
+        drawLevelTarget(garageBounds.x + 12, garageBounds.y + 12, '+0.05m', isAr ? 'الموقف' : 'Drive');
+    }
+
+    // 3. Main Entrance Landing Target: +0.30m
+    if (ramp && ramp.topLanding) {
+        drawLevelTarget(ramp.topLanding.x + ramp.topLanding.w / 2 - 14, ramp.topLanding.y + ramp.topLanding.h / 2, '+0.30m', isAr ? 'البسطة' : 'Porch');
+    }
+
+    // 4. Finished Floor Level F.F.L Target: +0.45m (inside main corridor)
+    if (state.currentLayout && state.currentLayout.rooms) {
+        const corr = state.currentLayout.rooms.find(r => r.key === 'corridors');
+        if (corr && corr.bounds.w > 40 && corr.bounds.h > 40) {
+            drawLevelTarget(corr.bounds.x + 8, corr.bounds.y + corr.bounds.h * 0.20, '+0.45m', isAr ? 'F.F.L. الطابق' : 'F.F.L.');
+        }
+    }
+
+    ctx.restore();
+}
+
+/**
+ * Draws Professional Section Line A-A across the house with Direction Arrow Callouts
+ */
+function drawArchitecturalSectionLine(plotBounds, rooms) {
+    if (!state.currentLayout || !rooms || rooms.length === 0) return;
+    ctx.save();
+    const { minX, minY, plotW, plotH } = plotBounds;
+    const secY = minY + plotH * 0.52;
+
+    ctx.strokeStyle = '#0284c7';
+    ctx.lineWidth = 1.0;
+    ctx.setLineDash([14, 3, 2, 3]);
+    ctx.beginPath();
+    ctx.moveTo(minX - 16, secY);
+    ctx.lineTo(minX + plotW + 16, secY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    function drawSectionBubble(bx, by, label) {
+        ctx.save();
+        ctx.fillStyle = '#0284c7';
+        ctx.strokeStyle = '#0284c7';
+        ctx.lineWidth = 1.2;
+
+        ctx.beginPath();
+        ctx.arc(bx, by, 6.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+        ctx.stroke();
+
+        // Direction Pointer
+        ctx.fillStyle = '#0284c7';
+        ctx.beginPath();
+        ctx.moveTo(bx, by - 11);
+        ctx.lineTo(bx - 3.5, by - 6.5);
+        ctx.lineTo(bx + 3.5, by - 6.5);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.font = 'bold 7.5px Cairo, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, bx, by);
+        ctx.restore();
+    }
+
+    drawSectionBubble(minX - 16, secY, 'A');
+    drawSectionBubble(minX + plotW + 16, secY, 'A');
+
+    ctx.restore();
+}
+
+/**
+ * Draws CAD Title Block Stamp (خرطوشة التقديم المعماري)
+ */
+function drawArchitecturalTitleBlock(plotBounds) {
+    ctx.save();
+    const isAr = state.lang === 'ar';
+    const margin = 8;
+    const tbW = 210;
+    const tbH = 64;
+    const tbX = canvas.width - tbW - margin;
+    const tbY = canvas.height - tbH - margin;
+
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.94)';
+    ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(tbX, tbY, tbW, tbH, 4);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillRect(tbX, tbY, tbW, 2.5);
+
+    ctx.font = 'bold 7.8px Cairo, sans-serif';
+    ctx.fillStyle = '#38bdf8';
+    ctx.textAlign = isAr ? 'right' : 'left';
+    ctx.textBaseline = 'top';
+    const titleX = isAr ? tbX + tbW - 8 : tbX + 8;
+    
+    ctx.fillText(isAr ? 'مشروع: المخطط المعماري الشامل (ArchAccess AI)' : 'PROJECT: ArchAccess AI Universal Housing', titleX, tbY + 6);
+
+    ctx.font = '6.8px Cairo, sans-serif';
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillText(isAr ? 'اللوحة: مسقط الطابق الأرضي التنفيذي (Ground Floor Plan)' : 'SHEET: Ground Floor Architectural Plan (CAD)', titleX, tbY + 19);
+
+    ctx.font = '6.8px JetBrains Mono, monospace';
+    ctx.fillStyle = '#cbd5e1';
+    ctx.fillText(isAr ? 'المقياس: 1:100 @ A3 • معايير كود ADA العالمية' : 'SCALE: 1:100 @ A3 • Universal ADA Standards', titleX, tbY + 32);
+
+    ctx.font = 'bold 7.2px Cairo, sans-serif';
+    ctx.fillStyle = '#f59e0b';
+    ctx.fillText(isAr ? 'التطوير والتصميم: د. أحمد لؤي (Dr. Ahmed Louay)' : 'Designed & Developed by Dr. Ahmed Louay', titleX, tbY + 46);
+
+    ctx.restore();
+}
+
+/**
  * Renders Architectural CAD Furniture Silhouettes, Fixtures & Surface Finishes
  */
 function drawArchitecturalDetails(rooms, doors, windows) {
@@ -5172,32 +5512,17 @@ function renderOrthogonalMode() {
         }
     }
 
-    // 4. Draw Clean Room Semantic Fills
-    rooms.forEach(r => {
-        const { x, y, w, h } = r.bounds;
-        ctx.fillStyle = r.hex;
-        ctx.fillRect(x, y, w, h);
+    // 4. Draw High-End Architectural Room Flooring & Textures
+    drawArchitecturalRoomFlooring(rooms);
 
-        // Ventilation shaft cross lines
-        if (r.key === 'court_garden') {
-            ctx.fillStyle = 'rgba(0, 100, 0, 0.12)';
-            ctx.fillRect(x, y, w, h);
-            ctx.strokeStyle = '#008000';
-            ctx.lineWidth = 1.5;
-            ctx.setLineDash([3, 3]);
-            ctx.beginPath();
-            ctx.moveTo(x, y); ctx.lineTo(x + w, y + h);
-            ctx.moveTo(x + w, y); ctx.lineTo(x, y + h);
-            ctx.stroke();
-            ctx.setLineDash([]);
-        }
-    });
+    // 4.5. Draw Directional 2D Wall Drop Shadows (Ambient Occlusion Depth)
+    drawArchitecturalWallShadows(rooms);
 
     // 5. Draw Rich Architectural CAD Furniture & Sanitary Details
     drawArchitecturalDetails(rooms, doors, windows);
 
-    // 6. Draw Single Unified 25cm Wall Network Cut Cleanly Around Doors & Windows
-    ctx.strokeStyle = '#000000';
+    // 6. Draw Single Unified 25cm Wall Network Cut Cleanly Around Doors & Windows (Solid Poché Cut)
+    ctx.strokeStyle = '#1e293b';
     ctx.lineWidth = 5.75; // 25cm scale thickness
     ctx.lineCap = 'square';
     ctx.lineJoin = 'miter';
@@ -5216,6 +5541,12 @@ function renderOrthogonalMode() {
 
     // 8. Draw Architectural Windows on Facades & Ventilation Shafts
     drawWindows(windows);
+
+    // 8.5. Draw Architectural Level Target Markers (±0.00m, +0.05m, +0.30m, +0.45m F.F.L.)
+    drawArchitecturalLevelMarkers(plotBounds, ramp, garageBounds);
+
+    // 8.6. Draw Architectural Section Cut Line A-A
+    drawArchitecturalSectionLine(plotBounds, rooms);
 
     // 9. Draw Room Labels & Area Tags (Controlled by Tick Box)
     if (state.showTags) {
@@ -5277,6 +5608,9 @@ function renderOrthogonalMode() {
     drawPerimeterDimensions(plotBounds, rooms);
     drawNorthCompass(plotBounds);
     drawGraphicScaleBar(plotBounds);
+
+    // 11. Draw Architectural Title Block Stamp
+    drawArchitecturalTitleBlock(plotBounds);
 }
 
 function renderRawAIMode() {
