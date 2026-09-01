@@ -233,156 +233,190 @@ class ArchAccessLayoutGenerator:
         shaft_h = bh * 0.18
         
         rooms_specs = []
+        min_3m_px = round(3.00 * 23.0)
+        min_4m_px = round(4.00 * 23.0)
+        min_4_5m_px = round(4.50 * 23.0)
+        
         if style_variant == 1:
-            # Variant 1: Dedicated Disabled Bedroom (#e801f7) + Neighbor Light Shafts (#00ff01)
+            # Variant 1: Dedicated Disabled Suite (#e801f7) + Uncompressed Kitchen & Bedroom
+            dis_bed_w = max(min_4_5m_px, min(round(bw * 0.36), round(5.00 * 23.0)))
+            corr_w = round(1.50 * 23.0)
+            x_corr_end = bldg_min_x + dis_bed_w + corr_w
+            east_avail = bldg_max_x - x_corr_end
+            shaft_w = max(round(1.20 * 23.0), round(east_avail * 0.12))
+            x4 = bldg_max_x - shaft_w
+            rem_east = x4 - x_corr_end
+            
+            y_front_end = bldg_min_y + max(min_4m_px, round(bh * 0.35))
+            y_corr_bot = y_front_end + corr_w
+            priv_h = bldg_max_y - y_corr_bot
+            
+            x_mid_east = x_corr_end + round(rem_east * 0.50) if rem_east >= round(5.80 * 23.0) else x4
+            y_mid_east = y_corr_bot + round(priv_h * 0.50) if rem_east < round(5.80 * 23.0) else bldg_max_y
+
             rooms_specs = [
                 # Front Public Zone (Facing Street & Front Yard)
                 {
                     "key": "guest_room", # #019df2
-                    "poly": [(bldg_min_x, bldg_min_y), (bldg_min_x + bw * 0.48, bldg_min_y),
-                             (bldg_min_x + bw * 0.48, bldg_min_y + bh * 0.36), (bldg_min_x, bldg_min_y + bh * 0.36)]
+                    "poly": [(bldg_min_x, bldg_min_y), (bldg_min_x + round(bw * 0.38), bldg_min_y),
+                             (bldg_min_x + round(bw * 0.38), y_front_end), (bldg_min_x, y_front_end)]
                 },
                 {
                     "key": "living_room", # #01ffec
-                    "poly": [(bldg_min_x + bw * 0.50, bldg_min_y), (bldg_max_x, bldg_min_y),
-                             (bldg_max_x, bldg_min_y + bh * 0.40), (bldg_min_x + bw * 0.50, bldg_min_y + bh * 0.40)]
+                    "poly": [(bldg_min_x + round(bw * 0.40), bldg_min_y), (bldg_max_x, bldg_min_y),
+                             (bldg_max_x, y_front_end), (bldg_min_x + round(bw * 0.40), y_front_end)]
                 },
                 # Central Spine & Cross-Circulation
                 {
                     "key": "corridors", # #efde8e
-                    "poly": [(bldg_min_x, bldg_min_y + bh * 0.38), (bldg_max_x, bldg_min_y + bh * 0.38),
-                             (bldg_max_x, bldg_min_y + bh * 0.52), (bldg_min_x, bldg_min_y + bh * 0.52)]
-                },
-                # Ventilation Light Shaft on Right Neighbor Wall (منور إنارة وتهوية)
-                {
-                    "key": "court_garden", # #00ff01 (Ventilation Shaft)
-                    "poly": [(bldg_max_x - shaft_w, bldg_min_y + bh * 0.42), (bldg_max_x, bldg_min_y + bh * 0.42),
-                             (bldg_max_x, bldg_min_y + bh * 0.60), (bldg_max_x - shaft_w, bldg_min_y + bh * 0.60)]
-                },
-                # Kitchen (ventilated by the light shaft)
-                {
-                    "key": "kitchen", # #FFB8D8
-                    "poly": [(bldg_max_x - bw * 0.34, bldg_min_y + bh * 0.42), (bldg_max_x - shaft_w - 4, bldg_min_y + bh * 0.42),
-                             (bldg_max_x - shaft_w - 4, bldg_min_y + bh * 0.66), (bldg_max_x - bw * 0.34, bldg_min_y + bh * 0.66)]
+                    "poly": [(bldg_min_x, y_front_end), (bldg_max_x, y_front_end),
+                             (bldg_max_x, y_corr_bot), (bldg_min_x, y_corr_bot)]
                 },
                 # Disabled Bedroom (Master Accessible Wing strictly >= 4.50m width)
                 {
                     "key": "disabled_bedroom", # #e801f7
-                    "poly": [(bldg_min_x, bldg_min_y + bh * 0.54), (bldg_min_x + max(bw * 0.44, 4.50 * 23.0), bldg_min_y + bh * 0.54),
-                             (bldg_min_x + max(bw * 0.44, 4.50 * 23.0), bldg_max_y), (bldg_min_x, bldg_max_y)]
+                    "poly": [(bldg_min_x, y_corr_bot), (bldg_min_x + dis_bed_w, y_corr_bot),
+                             (bldg_min_x + dis_bed_w, bldg_max_y), (bldg_min_x, bldg_max_y)]
                 },
-                # Rear Ventilation Shaft on Left/Rear Neighbor Wall
-                {
-                    "key": "court_garden", # #00ff01 (Rear Shaft)
-                    "poly": [(bldg_min_x + max(bw * 0.44, 4.50 * 23.0) + 4, bldg_max_y - shaft_h), (bldg_min_x + max(bw * 0.44, 4.50 * 23.0) + shaft_w + 4, bldg_max_y - shaft_h),
-                             (bldg_min_x + max(bw * 0.44, 4.50 * 23.0) + shaft_w + 4, bldg_max_y), (bldg_min_x + max(bw * 0.44, 4.50 * 23.0) + 4, bldg_max_y)]
-                },
-                # Disabled Bathroom (ventilated by rear shaft)
+                # En-Suite ADA Bathroom (3.0m x 3.0m)
                 {
                     "key": "disabled_bathroom", # #ff3464
-                    "poly": [(bldg_min_x + max(bw * 0.44, 4.50 * 23.0) + 4, bldg_min_y + bh * 0.54), (bldg_min_x + max(bw * 0.44, 4.50 * 23.0) + bw * 0.24, bldg_min_y + bh * 0.54),
-                             (bldg_min_x + max(bw * 0.44, 4.50 * 23.0) + bw * 0.24, bldg_max_y - shaft_h - 4), (bldg_min_x + max(bw * 0.44, 4.50 * 23.0) + 4, bldg_max_y - shaft_h - 4)]
+                    "poly": [(bldg_min_x + dis_bed_w - min_3m_px, y_corr_bot), (bldg_min_x + dis_bed_w, y_corr_bot),
+                             (bldg_min_x + dis_bed_w, y_corr_bot + min_3m_px), (bldg_min_x + dis_bed_w - min_3m_px, y_corr_bot + min_3m_px)]
                 },
-                # Standard Bedroom
+                # Kitchen (Uncompressed >= 3.0m x 3.0m)
+                {
+                    "key": "kitchen", # #FFB8D8
+                    "poly": [(x_corr_end, y_corr_bot), (x_mid_east, y_corr_bot),
+                             (x_mid_east, y_mid_east), (x_corr_end, y_mid_east)]
+                },
+                # Standard Bedroom (Uncompressed >= 3.0m x 3.0m)
                 {
                     "key": "bedroom", # #fefe0a
-                    "poly": [(bldg_min_x + bw * 0.60, bldg_min_y + bh * 0.68), (bldg_max_x, bldg_min_y + bh * 0.68),
-                             (bldg_max_x, bldg_max_y), (bldg_min_x + bw * 0.60, bldg_max_y)]
+                    "poly": [(x_mid_east if rem_east >= round(5.80 * 23.0) else x_corr_end, y_mid_east if rem_east < round(5.80 * 23.0) else y_corr_bot),
+                             (x4, y_mid_east if rem_east < round(5.80 * 23.0) else y_corr_bot),
+                             (x4, bldg_max_y),
+                             (x_mid_east if rem_east >= round(5.80 * 23.0) else x_corr_end, bldg_max_y)]
+                },
+                # Ventilation Light Shaft on Right Neighbor Wall
+                {
+                    "key": "court_garden", # #00ff01
+                    "poly": [(x4, y_corr_bot), (bldg_max_x, y_corr_bot),
+                             (bldg_max_x, bldg_max_y), (x4, bldg_max_y)]
                 }
             ]
         elif style_variant == 2:
             # Variant 2: Central Open Courtyard / Shaft + Linear Accessible Plan
+            dis_bed_w = max(min_4_5m_px, min(round(bw * 0.36), round(5.00 * 23.0)))
+            corr_w = round(1.50 * 23.0)
+            x_corr_end = bldg_min_x + dis_bed_w + corr_w
+            east_avail = bldg_max_x - x_corr_end
+            court_w = max(round(2.00 * 23.0), round(east_avail * 0.22))
+            rem_east = east_avail - court_w
+            x_mid_east = x_corr_end + round(rem_east * 0.50)
+            x_court_start = x_corr_end + rem_east
+
+            y_front_end = bldg_min_y + max(min_4m_px, round(bh * 0.35))
+            y_corr_bot = y_front_end + corr_w
+            priv_h = bldg_max_y - y_corr_bot
+
             rooms_specs = [
                 {
                     "key": "guest_room", # #019df2
-                    "poly": [(bldg_min_x, bldg_min_y), (bldg_min_x + bw * 0.44, bldg_min_y),
-                             (bldg_min_x + bw * 0.44, bldg_min_y + bh * 0.40), (bldg_min_x, bldg_min_y + bh * 0.40)]
+                    "poly": [(bldg_min_x, bldg_min_y), (bldg_min_x + round(bw * 0.38), bldg_min_y),
+                             (bldg_min_x + round(bw * 0.38), y_front_end), (bldg_min_x, y_front_end)]
                 },
                 {
                     "key": "living_room", # #01ffec
-                    "poly": [(bldg_min_x + bw * 0.46, bldg_min_y), (bldg_max_x, bldg_min_y),
-                             (bldg_max_x, bldg_min_y + bh * 0.42), (bldg_min_x + bw * 0.46, bldg_min_y + bh * 0.42)]
-                },
-                # Central Shaft / Courtyard
-                {
-                    "key": "court_garden", # #00ff01
-                    "poly": [(bldg_min_x + bw * 0.38, bldg_min_y + bh * 0.42), (bldg_min_x + bw * 0.58, bldg_min_y + bh * 0.42),
-                             (bldg_min_x + bw * 0.58, bldg_min_y + bh * 0.58), (bldg_min_x + bw * 0.38, bldg_min_y + bh * 0.58)]
+                    "poly": [(bldg_min_x + round(bw * 0.40), bldg_min_y), (bldg_max_x, bldg_min_y),
+                             (bldg_max_x, y_front_end), (bldg_min_x + round(bw * 0.40), y_front_end)]
                 },
                 {
                     "key": "corridors", # #efde8e
-                    "poly": [(bldg_min_x, bldg_min_y + bh * 0.42), (bldg_min_x + bw * 0.36, bldg_min_y + bh * 0.42),
-                             (bldg_min_x + bw * 0.36, bldg_min_y + bh * 0.56), (bldg_min_x, bldg_min_y + bh * 0.56)]
+                    "poly": [(bldg_min_x, y_front_end), (bldg_max_x, y_front_end),
+                             (bldg_max_x, y_corr_bot), (bldg_min_x, y_corr_bot)]
                 },
                 {
                     "key": "disabled_bedroom", # #e801f7 (Width >= 4.50m strictly)
-                    "poly": [(bldg_min_x, bldg_min_y + bh * 0.58), (bldg_min_x + max(bw * 0.44, 4.50 * 23.0), bldg_min_y + bh * 0.58),
-                             (bldg_min_x + max(bw * 0.44, 4.50 * 23.0), bldg_max_y), (bldg_min_x, bldg_max_y)]
-                },
-                # Rear Shaft on Neighbor Wall
-                {
-                    "key": "court_garden", # #00ff01 (Rear Shaft)
-                    "poly": [(bldg_min_x + max(bw * 0.44, 4.50 * 23.0) + 4, bldg_max_y - shaft_h), (bldg_min_x + max(bw * 0.44, 4.50 * 23.0) + shaft_w + 4, bldg_max_y - shaft_h),
-                             (bldg_min_x + max(bw * 0.44, 4.50 * 23.0) + shaft_w + 4, bldg_max_y), (bldg_min_x + max(bw * 0.44, 4.50 * 23.0) + 4, bldg_max_y)]
+                    "poly": [(bldg_min_x, y_corr_bot), (bldg_min_x + dis_bed_w, y_corr_bot),
+                             (bldg_min_x + dis_bed_w, bldg_max_y), (bldg_min_x, bldg_max_y)]
                 },
                 {
                     "key": "disabled_bathroom", # #ff3464
-                    "poly": [(bldg_min_x + max(bw * 0.44, 4.50 * 23.0) + 4, bldg_min_y + bh * 0.60), (bldg_min_x + max(bw * 0.44, 4.50 * 23.0) + bw * 0.24, bldg_min_y + bh * 0.60),
-                             (bldg_min_x + max(bw * 0.44, 4.50 * 23.0) + bw * 0.24, bldg_max_y - shaft_h - 4), (bldg_min_x + max(bw * 0.44, 4.50 * 23.0) + 4, bldg_max_y - shaft_h - 4)]
+                    "poly": [(bldg_min_x + dis_bed_w - min_3m_px, y_corr_bot), (bldg_min_x + dis_bed_w, y_corr_bot),
+                             (bldg_min_x + dis_bed_w, y_corr_bot + min_3m_px), (bldg_min_x + dis_bed_w - min_3m_px, y_corr_bot + min_3m_px)]
                 },
                 {
                     "key": "kitchen", # #FFB8D8
-                    "poly": [(bldg_min_x + bw * 0.60, bldg_min_y + bh * 0.44), (bldg_max_x, bldg_min_y + bh * 0.44),
-                             (bldg_max_x, bldg_min_y + bh * 0.68), (bldg_min_x + bw * 0.60, bldg_min_y + bh * 0.68)]
+                    "poly": [(x_corr_end, y_corr_bot), (x_mid_east, y_corr_bot),
+                             (x_mid_east, bldg_max_y), (x_corr_end, bldg_max_y)]
                 },
                 {
                     "key": "bedroom", # #fefe0a
-                    "poly": [(bldg_min_x + bw * 0.72, bldg_min_y + bh * 0.70), (bldg_max_x, bldg_min_y + bh * 0.70),
-                             (bldg_max_x, bldg_max_y), (bldg_min_x + bw * 0.72, bldg_max_y)]
+                    "poly": [(x_mid_east, y_corr_bot), (x_court_start, y_corr_bot),
+                             (x_court_start, bldg_max_y), (x_mid_east, bldg_max_y)]
+                },
+                {
+                    "key": "court_garden", # #00ff01 (Central Patio)
+                    "poly": [(x_court_start, y_corr_bot), (bldg_max_x, y_corr_bot),
+                             (bldg_max_x, bldg_max_y), (x_court_start, bldg_max_y)]
                 }
             ]
         else:
-            # Variant 3: Corner Open Suite with Double Shaft Ventilation
+            # Variant 3: Mirrored Accessible Suite with Uncompressed Spaces
+            dis_bed_w = max(min_4_5m_px, min(round(bw * 0.36), round(5.00 * 23.0)))
+            corr_w = round(1.50 * 23.0)
+            x_dis_start = bldg_max_x - dis_bed_w
+            x3 = x_dis_start - corr_w
+            west_avail = x3 - bldg_min_x
+            shaft_w = max(round(1.20 * 23.0), round(west_avail * 0.12))
+            x1 = bldg_min_x + shaft_w
+            rem_west = x3 - x1
+            x_mid_west = x1 + round(rem_west * 0.50)
+
+            y_front_end = bldg_min_y + max(min_4m_px, round(bh * 0.35))
+            y_corr_bot = y_front_end + corr_w
+
             rooms_specs = [
                 {
-                    "key": "guest_room", # #019df2
-                    "poly": [(bldg_min_x, bldg_min_y), (bldg_min_x + bw * 0.50, bldg_min_y),
-                             (bldg_min_x + bw * 0.50, bldg_min_y + bh * 0.38), (bldg_min_x, bldg_min_y + bh * 0.38)]
+                    "key": "living_room", # #01ffec
+                    "poly": [(bldg_min_x, bldg_min_y), (bldg_min_x + round(bw * 0.60), bldg_min_y),
+                             (bldg_min_x + round(bw * 0.60), y_front_end), (bldg_min_x, y_front_end)]
                 },
                 {
-                    "key": "living_room", # #01ffec
-                    "poly": [(bldg_min_x + bw * 0.52, bldg_min_y), (bldg_max_x, bldg_min_y),
-                             (bldg_max_x, bldg_min_y + bh * 0.42), (bldg_min_x + bw * 0.52, bldg_min_y + bh * 0.42)]
+                    "key": "guest_room", # #019df2
+                    "poly": [(bldg_min_x + round(bw * 0.62), bldg_min_y), (bldg_max_x, bldg_min_y),
+                             (bldg_max_x, y_front_end), (bldg_min_x + round(bw * 0.62), y_front_end)]
                 },
                 {
                     "key": "corridors", # #efde8e
-                    "poly": [(bldg_min_x, bldg_min_y + bh * 0.40), (bldg_max_x, bldg_min_y + bh * 0.40),
-                             (bldg_max_x, bldg_min_y + bh * 0.54), (bldg_min_x, bldg_min_y + bh * 0.54)]
+                    "poly": [(bldg_min_x, y_front_end), (bldg_max_x, y_front_end),
+                             (bldg_max_x, y_corr_bot), (bldg_min_x, y_corr_bot)]
                 },
                 {
-                    "key": "disabled_bedroom", # #e801f7 (Width >= 4.50m strictly)
-                    "poly": [(bldg_min_x, bldg_min_y + bh * 0.56), (bldg_min_x + max(bw * 0.44, 4.50 * 23.0), bldg_min_y + bh * 0.56),
-                             (bldg_min_x + max(bw * 0.44, 4.50 * 23.0), bldg_max_y), (bldg_min_x, bldg_max_y)]
-                },
-                {
-                    "key": "court_garden", # #00ff01 (Ventilation Shaft)
-                    "poly": [(bldg_min_x + max(bw * 0.44, 4.50 * 23.0) + 4, bldg_max_y - shaft_h), (bldg_min_x + max(bw * 0.44, 4.50 * 23.0) + shaft_w + 4, bldg_max_y - shaft_h),
-                             (bldg_min_x + max(bw * 0.44, 4.50 * 23.0) + shaft_w + 4, bldg_max_y), (bldg_min_x + max(bw * 0.44, 4.50 * 23.0) + 4, bldg_max_y)]
-                },
-                {
-                    "key": "disabled_bathroom", # #ff3464
-                    "poly": [(bldg_min_x + max(bw * 0.44, 4.50 * 23.0) + 4, bldg_min_y + bh * 0.56), (bldg_min_x + max(bw * 0.44, 4.50 * 23.0) + bw * 0.24, bldg_min_y + bh * 0.56),
-                             (bldg_min_x + max(bw * 0.44, 4.50 * 23.0) + bw * 0.24, bldg_max_y - shaft_h - 4), (bldg_min_x + max(bw * 0.44, 4.50 * 23.0) + 4, bldg_max_y - shaft_h - 4)]
+                    "key": "court_garden", # #00ff01 (West Shaft)
+                    "poly": [(bldg_min_x, y_corr_bot), (x1, y_corr_bot),
+                             (x1, bldg_max_y), (bldg_min_x, bldg_max_y)]
                 },
                 {
                     "key": "kitchen", # #FFB8D8
-                    "poly": [(bldg_min_x + bw * 0.66, bldg_min_y + bh * 0.46), (bldg_max_x, bldg_min_y + bh * 0.46),
-                             (bldg_max_x, bldg_max_y - bh * 0.26), (bldg_min_x + bw * 0.66, bldg_max_y - bh * 0.26)]
+                    "poly": [(x1, y_corr_bot), (x_mid_west, y_corr_bot),
+                             (x_mid_west, bldg_max_y), (x1, bldg_max_y)]
                 },
                 {
                     "key": "bedroom", # #fefe0a
-                    "poly": [(bldg_min_x + bw * 0.56, bldg_max_y - bh * 0.24), (bldg_max_x, bldg_max_y - bh * 0.24),
-                             (bldg_max_x, bldg_max_y), (bldg_min_x + bw * 0.56, bldg_max_y)]
+                    "poly": [(x_mid_west, y_corr_bot), (x3, y_corr_bot),
+                             (x3, bldg_max_y), (x_mid_west, bldg_max_y)]
+                },
+                {
+                    "key": "disabled_bedroom", # #e801f7 (Width >= 4.50m strictly)
+                    "poly": [(x_dis_start, y_corr_bot), (bldg_max_x, y_corr_bot),
+                             (bldg_max_x, bldg_max_y), (x_dis_start, bldg_max_y)]
+                },
+                {
+                    "key": "disabled_bathroom", # #ff3464
+                    "poly": [(x_dis_start, y_corr_bot), (x_dis_start + min_3m_px, y_corr_bot),
+                             (x_dis_start + min_3m_px, y_corr_bot + min_3m_px), (x_dis_start, y_corr_bot + min_3m_px)]
                 }
             ]
 
