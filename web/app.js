@@ -199,8 +199,8 @@ const state = {
     plotTypology: 'back_to_back',
     cornerGarageEntry: 'side',
     boundaryPoints: [],
-    plotLengthM: 16.00,
-    plotWidthM: 14.50,
+    plotLengthM: 20.00,
+    plotWidthM: 10.00,
     maxCoverageRatio: 0.65,
     currentMode: 'orthogonal',
     currentVariant: 1,
@@ -348,15 +348,9 @@ function loadPreset(preset) {
             { x: Math.round(cx - halfW), y: Math.round(cy + halfH * 0.45) }
         ];
     } else if (preset === 'regular') {
-        const targetDim = Math.min(cw * 0.55, ch * 0.72, 420);
-        const halfW = targetDim / 2;
-        const halfH = targetDim / 2;
-        state.boundaryPoints = [
-            { x: Math.round(cx - halfW), y: Math.round(cy - halfH) },
-            { x: Math.round(cx + halfW), y: Math.round(cy - halfH) },
-            { x: Math.round(cx + halfW), y: Math.round(cy + halfH) },
-            { x: Math.round(cx - halfW), y: Math.round(cy + halfH) }
-        ];
+        state.plotLengthM = 20.00;
+        state.plotWidthM = 10.00;
+        state.boundaryPoints = computeBoundaryFromDimensions(20.00, 10.00);
     } else if (preset === 'dimensions') {
         state.boundaryPoints = computeBoundaryFromDimensions(state.plotLengthM, state.plotWidthM);
     }
@@ -387,8 +381,8 @@ function computeBoundaryFromDimensions(lengthM, widthM) {
 }
 
 function updateCalculatedPlotArea() {
-    const l = parseFloat(plotLengthInput.value) || 16.0;
-    const w = parseFloat(plotWidthInput.value) || 14.5;
+    const l = parseFloat(plotLengthInput.value) || 20.0;
+    const w = parseFloat(plotWidthInput.value) || 10.0;
     state.plotLengthM = l;
     state.plotWidthM = w;
     const area = (l * w).toFixed(2);
@@ -968,7 +962,7 @@ const I18N = {
         presetDimensions: "أبعاد بالمتر (L × W)",
         presetDimensionsTag: "طول وعرض مخصص",
         presetRegular: "أرض مستطيلة",
-        presetRegularTag: "16m × 16m",
+        presetRegularTag: "20m × 10m (200م²)",
         presetCustom: "رسم حر مخصص",
         presetCustomTag: "انقر لرسم مضلع",
 
@@ -1191,7 +1185,7 @@ const I18N = {
         presetDimensions: "Exact Dimensions (Meters)",
         presetDimensionsTag: "Custom length & width",
         presetRegular: "Rectangular Plot",
-        presetRegularTag: "16m × 16m standard",
+        presetRegularTag: "20m × 10m (200m²)",
         presetCustom: "Freeform CAD Drawing",
         presetCustomTag: "Click to add vertices",
 
