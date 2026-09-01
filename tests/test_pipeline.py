@@ -164,6 +164,33 @@ def test_9_space_strict_dimensions():
     print("  -> All 9 Spaces verified 100% compliant across all 3 variants and plot typologies!")
     print("  -> Passed!")
 
+def test_zero_plot_boundary_overflow():
+    print("Testing Strict Zero Plot Boundary Overflow Across All Dimensions...")
+    gen = ArchAccessLayoutGenerator()
+    test_plots = [
+        (9.8, 19.0), (10.0, 20.0), (12.5, 20.0), (12.586, 19.0), (14.0, 18.0),
+        (16.0, 16.0), (18.0, 20.0), (20.0, 20.0), (22.0, 25.0), (25.0, 20.0)
+    ]
+    for w_m, h_m in test_plots:
+        for variant in [1, 2, 3]:
+            for typology in ['back_to_back', 'corner_plot']:
+                layout = gen.generate_layout_from_dimensions(h_m, w_m, style_variant=variant, plot_type=typology)
+                plot_poly = layout["boundary"]
+                min_x = min(p[0] for p in plot_poly)
+                max_x = max(p[0] for p in plot_poly)
+                min_y = min(p[1] for p in plot_poly)
+                max_y = max(p[1] for p in plot_poly)
+                
+                for r in layout["rooms"]:
+                    k = r["key"]
+                    for px, py in r["polygon"]:
+                        assert px >= min_x - 0.01, f"Plot {w_m}x{h_m}m (Var {variant}, {typology}): {k} vertex X ({px:.1f}) < minX ({min_x:.1f})"
+                        assert px <= max_x + 0.01, f"Plot {w_m}x{h_m}m (Var {variant}, {typology}): {k} vertex X ({px:.1f}) > maxX ({max_x:.1f})"
+                        assert py >= min_y - 0.01, f"Plot {w_m}x{h_m}m (Var {variant}, {typology}): {k} vertex Y ({py:.1f}) < minY ({min_y:.1f})"
+                        assert py <= max_y + 0.01, f"Plot {w_m}x{h_m}m (Var {variant}, {typology}): {k} vertex Y ({py:.1f}) > maxY ({max_y:.1f})"
+    print("  -> 100% of rooms, polygons and elements verified strictly within plot boundaries!")
+    print("  -> Passed!")
+
 if __name__ == "__main__":
     test_semantic_palette()
     test_preprocessor()
@@ -173,4 +200,6 @@ if __name__ == "__main__":
     test_iraq_bioclimatic_and_privacy()
     test_probabilistic_spatial_synthesis()
     test_9_space_strict_dimensions()
-    print("\nALL 8 PIPELINE, BIOCLIMATIC & 9-SPACE ARCHITECTURAL TESTS PASSED SUCCESSFULLY! ✅")
+    test_zero_plot_boundary_overflow()
+    print("\nALL 9 PIPELINE, BIOCLIMATIC & STRICT BOUNDARY TESTS PASSED SUCCESSFULLY! ✅")
+
