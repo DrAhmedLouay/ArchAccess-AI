@@ -1701,16 +1701,21 @@ function synthesizeLayout(boundary, variant, typology) {
             const y_corr_bot = y1 + minCorrWPx;
             const privH = y4 - y_corr_bot;
 
-            const guestW = minGuestWPx;
+            const surplusFrontW = Math.max(0, bw - (minGuestWPx + minGuestBathWPx + minLivingWPx + minKitchWPx));
+            const guestExtra = surplusFrontW > 0 ? snap(surplusFrontW * (0.20 + 0.45 * r1)) : 0;
+            const kitchExtra = surplusFrontW > guestExtra ? snap((surplusFrontW - guestExtra) * (0.20 + 0.45 * r2)) : 0;
+            const guestW = minGuestWPx + guestExtra;
             const gbathW = minGuestBathWPx;
-            const kitchW = minKitchWPx;
+            const kitchW = minKitchWPx + kitchExtra;
             const livingW = bw - guestW - gbathW - kitchW;
 
             const x_gbath_start = x0 + guestW;
             const x_living_start = x_gbath_start + gbathW;
             const x_kitch_start = x_living_start + livingW;
 
-            const disBedW = minDisBedWPx;
+            const surplusRearW = Math.max(0, bw - (minDisBedWPx + minDisBathWPx + minHBathWPx + minBedWPx));
+            const disBedExtra = surplusRearW > 0 ? snap(surplusRearW * (0.30 + 0.40 * r3)) : 0;
+            const disBedW = minDisBedWPx + disBedExtra;
             const disBathW = minDisBathWPx;
             const hbathW = minHBathWPx;
 
@@ -1783,16 +1788,23 @@ function synthesizeLayout(boundary, variant, typology) {
             const y_corr_bot = y1 + minCorrWPx;
             const privH = y4 - y_corr_bot;
 
-            const kitchW = minKitchWPx;
+            const surplusFrontW = Math.max(0, bw - minGuestWPx - minGuestBathWPx - minLivingWPx - minKitchWPx);
+            const kitchExtra = surplusFrontW > 0 ? snap(surplusFrontW * (0.20 + 0.40 * r1)) : 0;
+            const guestExtra = surplusFrontW > kitchExtra ? snap((surplusFrontW - kitchExtra) * (0.25 + 0.45 * r2)) : 0;
+            const kitchW = minKitchWPx + kitchExtra;
             const gbathW = minGuestBathWPx;
-            const guestW = minGuestWPx;
+            const guestW = minGuestWPx + guestExtra;
             const livingW = bw - guestW - gbathW - kitchW;
 
             const x_living_end = x0 + livingW;
             const x_kitch_end = x_living_end + kitchW;
             const x_gbath_end = x_kitch_end + gbathW;
 
-            const bedW = bw - minHBathWPx - minDisBathWPx - minDisBedWPx;
+            const surplusRearW = Math.max(0, bw - minHBathWPx - minDisBathWPx - minDisBedWPx - minBedWPx);
+            const bedExtra = surplusRearW > 0 ? snap(surplusRearW * (0.25 + 0.40 * r3)) : 0;
+            const disBedExtra = surplusRearW > bedExtra ? snap((surplusRearW - bedExtra) * (0.30 + 0.45 * r4)) : 0;
+            const bedW = minBedWPx + bedExtra;
+            const disBedW = minDisBedWPx + disBedExtra;
             const x_bed_end = x0 + bedW;
             const x_hbath_end = x_bed_end + minHBathWPx;
             const x_dis_bath_end = x_hbath_end + minDisBathWPx;
@@ -1845,20 +1857,25 @@ function synthesizeLayout(boundary, variant, typology) {
         const x0 = bldgMinX;
         const x5 = bldgMaxX;
         const y0 = bldgMinY;
-        const y4 = bldgMaxY;
-
-        const kitchW = minKitchWPx;
+        const surplusFrontW = Math.max(0, bw - minKitchWPx - minGuestBathWPx - minGuestWPx);
+        const kitchExtra = surplusFrontW > 0 ? snap(surplusFrontW * (0.15 + 0.35 * r1)) : 0;
+        const kitchW = minKitchWPx + kitchExtra;
         const gbathW = minGuestBathWPx;
         const guestW = bw - kitchW - gbathW;
 
         const x_gbath_start = x0 + kitchW;
         const x_guest_start = x_gbath_start + gbathW;
 
-        const y_front_end = snap(y0 + Math.max(minKitchHPx, minGuestHPx));
-        const livingH = snap(Math.max(minLivingHPx, (bh - Math.max(minKitchHPx, minGuestHPx) - minDisBedHPx) * 0.48));
+        const minTotalH = Math.max(minKitchHPx, minGuestHPx) + minLivingHPx + minCorrWPx + minHBathHPx;
+        const surplusDepth = Math.max(0, bh - minTotalH);
+        const extraFrontH = snap(surplusDepth * (0.15 + 0.30 * r2));
+        const extraLivingH = snap((surplusDepth - extraFrontH) * (0.30 + 0.40 * r3));
+
+        const y_front_end = snap(y0 + Math.max(minKitchHPx, minGuestHPx) + extraFrontH);
+        const livingH = snap(minLivingHPx + extraLivingH);
         const y_living_end = y_front_end + livingH;
 
-        const shaftW = snap(Math.max(Math.ceil(1.50 * pxPerMeter), bw * 0.22));
+        const shaftW = snap(Math.max(Math.ceil(1.50 * pxPerMeter), bw * (0.18 + 0.08 * r4)));
         const livingW = bw - shaftW;
         const x_living_end = x0 + livingW;
 
@@ -1866,7 +1883,9 @@ function synthesizeLayout(boundary, variant, typology) {
         const y_priv_start = y_living_end + y_corr_h;
         const privH = y4 - y_priv_start;
 
-        const disBedW = minDisBedWPx;
+        const surplusRearW = Math.max(0, bw - minDisBedWPx - minDisBathWPx - minHBathWPx);
+        const disBedExtra = surplusRearW > 0 ? snap(surplusRearW * (0.25 + 0.45 * r5)) : 0;
+        const disBedW = minDisBedWPx + disBedExtra;
         const disBathW = minDisBathWPx;
         const hbathW = minHBathWPx;
 

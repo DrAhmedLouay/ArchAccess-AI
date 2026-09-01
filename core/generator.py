@@ -250,6 +250,10 @@ class ArchAccessLayoutGenerator:
 
         is_wide_frontage = (bw >= min_guest_w + min_gbath_w + min_living_w + min_kitch_w)
 
+        import random
+        rng = random.Random(stochastic_seed + style_variant * 997)
+        r1, r2, r3, r4, r5 = [rng.random() for _ in range(5)]
+
         if is_wide_frontage:
             y_front_end = bldg_min_y + max(min_guest_h, min_living_h, min_kitch_h)
             y_corr_bot = y_front_end + min_corr_w
@@ -257,16 +261,21 @@ class ArchAccessLayoutGenerator:
 
             if style_variant == 1 or style_variant == 2:
                 # Variant 1 & 2: Front West Guest + Living + East Kitchen, Rear West Disabled Suite + Bathrooms + East Bed
-                guest_w = min_guest_w
+                surplus_front_w = max(0, bw - (min_guest_w + min_gbath_w + min_living_w + min_kitch_w))
+                guest_extra = round(surplus_front_w * (0.20 + 0.45 * r1)) if surplus_front_w > 0 else 0
+                kitch_extra = round((surplus_front_w - guest_extra) * (0.20 + 0.45 * r2)) if surplus_front_w > guest_extra else 0
+                guest_w = min_guest_w + guest_extra
                 gbath_w = min_gbath_w
-                kitch_w = min_kitch_w
+                kitch_w = min_kitch_w + kitch_extra
                 living_w = bw - guest_w - gbath_w - kitch_w
                 
                 x_gbath_start = bldg_min_x + guest_w
                 x_living_start = x_gbath_start + gbath_w
                 x_kitch_start = x_living_start + living_w
                 
-                dis_bed_w = min_dis_bed_w
+                surplus_rear_w = max(0, bw - (min_dis_bed_w + min_dis_bath_w + min_hbath_w + min_bed_w))
+                dis_bed_extra = round(surplus_rear_w * (0.30 + 0.40 * r3)) if surplus_rear_w > 0 else 0
+                dis_bed_w = min_dis_bed_w + dis_bed_extra
                 dis_bath_w = min_dis_bath_w
                 hbath_w = min_hbath_w
                 
@@ -346,16 +355,23 @@ class ArchAccessLayoutGenerator:
                 ]
             else:
                 # Variant 3: Mirrored Accessible Suite with East Master Wing
-                kitch_w = min_kitch_w
+                surplus_front_w = max(0, bw - min_guest_w - min_gbath_w - min_living_w - min_kitch_w)
+                kitch_extra = round(surplus_front_w * (0.20 + 0.40 * r1)) if surplus_front_w > 0 else 0
+                guest_extra = round((surplus_front_w - kitch_extra) * (0.25 + 0.45 * r2)) if surplus_front_w > kitch_extra else 0
+                kitch_w = min_kitch_w + kitch_extra
                 gbath_w = min_gbath_w
-                guest_w = min_guest_w
+                guest_w = min_guest_w + guest_extra
                 living_w = bw - guest_w - gbath_w - kitch_w
                 
                 x_living_end = bldg_min_x + living_w
                 x_kitch_end = x_living_end + kitch_w
                 x_gbath_end = x_kitch_end + gbath_w
                 
-                bed_w = bw - min_hbath_w - min_dis_bath_w - min_dis_bed_w
+                surplus_rear_w = max(0, bw - min_hbath_w - min_dis_bath_w - min_dis_bed_w - min_bed_w)
+                bed_extra = round(surplus_rear_w * (0.25 + 0.40 * r3)) if surplus_rear_w > 0 else 0
+                dis_bed_extra = round((surplus_rear_w - bed_extra) * (0.30 + 0.45 * r4)) if surplus_rear_w > bed_extra else 0
+                bed_w = min_bed_w + bed_extra
+                dis_bed_w = min_dis_bed_w + dis_bed_extra
                 x_bed_end = bldg_min_x + bed_w
                 x_hbath_end = x_bed_end + min_hbath_w
                 x_dis_bath_end = x_hbath_end + min_dis_bath_w
@@ -431,18 +447,25 @@ class ArchAccessLayoutGenerator:
                 ]
         else:
             # Standard / Narrow Frontage (e.g. 10m, 12m, 12.5m Plots - Dr. Riad Prototype)
-            kitch_w = min_kitch_w
+            surplus_front_w = max(0, bw - min_kitch_w - min_gbath_w - min_guest_w)
+            kitch_extra = round(surplus_front_w * (0.15 + 0.35 * r1)) if surplus_front_w > 0 else 0
+            kitch_w = min_kitch_w + kitch_extra
             gbath_w = min_gbath_w
             guest_w = bw - kitch_w - gbath_w
 
             x_gbath_start = bldg_min_x + kitch_w
             x_guest_start = x_gbath_start + gbath_w
 
-            y_front_end = bldg_min_y + max(min_kitch_h, min_guest_h)
-            living_h = max(min_living_h, round((bh - max(min_kitch_h, min_guest_h) - min_dis_bed_h) * 0.48))
+            min_total_h = max(min_kitch_h, min_guest_h) + min_living_h + min_corr_w + min_hbath_h
+            surplus_depth = max(0, bh - min_total_h)
+            extra_front_h = round(surplus_depth * (0.15 + 0.30 * r2))
+            extra_living_h = round((surplus_depth - extra_front_h) * (0.30 + 0.40 * r3))
+
+            y_front_end = bldg_min_y + max(min_kitch_h, min_guest_h) + extra_front_h
+            living_h = min_living_h + extra_living_h
             y_living_end = y_front_end + living_h
 
-            shaft_w = max(math.ceil(1.50 * 23.0), round(bw * 0.22))
+            shaft_w = max(math.ceil(1.50 * 23.0), round(bw * (0.18 + 0.08 * r4)))
             living_w = bw - shaft_w
             x_living_end = bldg_min_x + living_w
 
@@ -450,7 +473,9 @@ class ArchAccessLayoutGenerator:
             y_priv_start = y_living_end + y_corr_h
             priv_h = bldg_max_y - y_priv_start
 
-            dis_bed_w = min_dis_bed_w
+            surplus_rear_w = max(0, bw - min_dis_bed_w - min_dis_bath_w - min_hbath_w)
+            dis_bed_extra = round(surplus_rear_w * (0.25 + 0.45 * r5)) if surplus_rear_w > 0 else 0
+            dis_bed_w = min_dis_bed_w + dis_bed_extra
             dis_bath_w = min_dis_bath_w
             hbath_w = min_hbath_w
 
