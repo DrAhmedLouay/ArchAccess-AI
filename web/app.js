@@ -197,6 +197,7 @@ const IRAQ_CLIMATE_DATA = {
 const state = {
     currentPreset: 'dimensions',
     plotTypology: 'back_to_back',
+    cornerGarageEntry: 'side',
     boundaryPoints: [],
     plotLengthM: 16.00,
     plotWidthM: 14.50,
@@ -484,6 +485,20 @@ function setupEventListeners() {
             state.plotTypology = e.target.value;
             document.querySelectorAll('.typology-option').forEach(opt => opt.classList.remove('active'));
             e.target.closest('.typology-option').classList.add('active');
+
+            const cornerSel = document.getElementById('cornerEntrySelector');
+            if (cornerSel) {
+                cornerSel.style.display = (state.plotTypology === 'corner_plot') ? 'flex' : 'none';
+            }
+            generateFloorplan();
+        });
+    });
+
+    document.querySelectorAll('input[name="cornerEntrySide"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            state.cornerGarageEntry = e.target.value;
+            document.querySelectorAll('.corner-entry-opt').forEach(opt => opt.classList.remove('active'));
+            e.target.closest('.corner-entry-opt').classList.add('active');
             generateFloorplan();
         });
     });
@@ -908,6 +923,9 @@ const I18N = {
         typeBackToBackDesc: "1 شارع (#0000fe) + 3 جيران (#fc0005)",
         typeCorner: "قطعة ركنية (Corner Plot)",
         typeCornerDesc: "2 شارع (#0000fe) + 2 جيران (#fc0005)",
+        cornerEntryTitle: "موضع مدخل الكراج في القطعة الركنية:",
+        entrySideStreet: "🚗 من الشارع الفرعي (الجانبي)",
+        entryFrontStreet: "🚗 من الشارع الرئيسي (الأمامي)",
 
         dimHeaderTitle: "أبعاد القطعة ونسبة التغطية:",
         plotLengthLabel: "الطول / العمق (متر):",
@@ -1020,6 +1038,9 @@ const I18N = {
         typeBackToBackDesc: "1 Street (#0000fe) + 3 Neighbors (#fc0005)",
         typeCorner: "Corner Plot (2 Streets)",
         typeCornerDesc: "2 Streets (#0000fe) + 2 Neighbors (#fc0005)",
+        cornerEntryTitle: "Corner Plot Garage Access:",
+        entrySideStreet: "🚗 Side Branch Street",
+        entryFrontStreet: "🚗 Front Main Street",
 
         dimHeaderTitle: "Site Dimensions & Coverage Limit:",
         plotLengthLabel: "Plot Depth / Length (m):",
@@ -1284,6 +1305,13 @@ function updateUIForLang() {
         crnOpt.querySelector('.opt-main').textContent = t.typeCorner;
         crnOpt.querySelector('.opt-desc').textContent = t.typeCornerDesc;
     }
+
+    const crnEntryTitle = document.querySelector('.corner-entry-title');
+    if (crnEntryTitle) crnEntryTitle.textContent = t.cornerEntryTitle;
+    const sideOpt = document.querySelector('#entrySideStreet span');
+    if (sideOpt) sideOpt.textContent = t.entrySideStreet;
+    const frontOpt = document.querySelector('#entryFrontStreet span');
+    if (frontOpt) frontOpt.textContent = t.entryFrontStreet;
 
     // Dimensions Card
     const dimTitle = document.querySelector('.dim-title');
@@ -1967,62 +1995,132 @@ function synthesizeLayout(boundary, variant, typology) {
     const stallDepthPx = carBodyLPx + clearance30cmPx * 2;   // 129px (5.60m: 0.30m gate gap + 5.00m car + 0.30m living gap)
     const totalParkingWidthPx = carStallWidthPx + aisleWidthPx; // 106px (4.60m)
 
-    // Position Parking Bay on the right side of the front driveway
-    const parkingX = Math.round(minX + plotW - totalParkingWidthPx - clearance30cmPx);
-    const parkingY = minY;
+    const isCornerSideEntry = (typology === 'corner_plot' && state.cornerGarageEntry === 'side');
 
-    const accessibleParking = {
-        key: 'accessible_parking',
-        bounds: { x: parkingX, y: parkingY, w: totalParkingWidthPx, h: stallDepthPx },
-        aisleBounds: { x: parkingX, y: parkingY, w: aisleWidthPx, h: stallDepthPx },
-        carBounds: { x: parkingX + aisleWidthPx, y: parkingY, w: carStallWidthPx, h: stallDepthPx },
-        carBodyBounds: {
-            x: parkingX + aisleWidthPx + Math.round((carStallWidthPx - carBodyWPx) / 2),
-            y: parkingY + clearance30cmPx, // Strictly 30cm from outer gate/wall
-            w: carBodyWPx, // 2.00m vehicle width
-            h: carBodyLPx  // 5.00m vehicle length
-        },
-        clearanceGatePx: clearance30cmPx,       // 30cm to outer gate/wall
-        clearanceLivingRoomPx: clearance30cmPx, // 30cm to living room facade
-        transferNode: {
-            x: parkingX + Math.round(aisleWidthPx / 2),
-            y: parkingY + Math.round(stallDepthPx * 0.45),
-            dia_m: 1.50
-        },
-        vehicleSpecs: {
-            width_m: carWidthM,
-            length_m: carLengthM,
-            clearance_gate_m: 0.30,
-            clearance_living_m: 0.30,
-            stall_width_m: 2.80,
-            aisle_width_m: 1.80,
-            total_bay_width_m: 4.60,
-            depth_m: 5.60
-        },
-        name_ar: "موقف سيارة مهيأ (أبعاد المركبة 2×5م مع خلوص 30سم للباب الخارجي و30سم للمعيشة)",
-        name_en: "ADA Accessible Parking (2x5m car with 30cm gate clearance & 30cm living room clearance)"
-    };
+    let parkingX, parkingY, accessibleParking, entranceGate;
 
-    // Outer Car Entrance Gate (#e2ac2e): 3.80m wide gate directly facing the vehicle approach lane
-    // Thickness strictly matches the 25cm exterior boundary wall (5.75px):
-    const gateWidthPx = Math.round(3.80 * pxPerMeter); // 88px (3.80m wide gate)
-    const gateX = Math.round(parkingX + aisleWidthPx * 0.35); // Center on car bay
-    const gateThicknessPx = 5.75; // Exact 25cm boundary wall thickness
-    const entranceGate = {
-        key: 'site_entrance',
-        bounds: {
-            x: Math.max(minX + 20, Math.min(maxX - gateWidthPx - 10, gateX)),
-            y: minY - gateThicknessPx / 2, // Centered on boundary wall line
-            w: gateWidthPx,
-            h: gateThicknessPx // 25cm thickness
-        },
-        thickness_cm: 25,
-        width_m: 3.80,
-        has_pedestrian_wicket: true,
-        name_ar: "بوابة كراج منزلقة وسياج الموقع (عرض 3.80م وسماكة 25 سم مع باب مشاة مدمج)",
-        name_en: "Sliding Garage Gate (3.80m Width, 25cm Wall Profile with Integrated Wicket Door)",
-        hex: "#e2ac2e"
-    };
+    if (isCornerSideEntry) {
+        // Vehicle entrance from the West side branch street (x = minX)
+        const gateThicknessPx = 5.75; // Exact 25cm boundary wall thickness
+        const gateWidthPx = Math.round(3.80 * pxPerMeter); // 88px (3.80m wide gate)
+        const gateY = Math.round(minY + clearance30cmPx + 8);
+
+        entranceGate = {
+            key: 'site_entrance',
+            bounds: {
+                x: minX - gateThicknessPx / 2,
+                y: gateY,
+                w: gateThicknessPx,
+                h: gateWidthPx
+            },
+            thickness_cm: 25,
+            width_m: 3.80,
+            orientation: "vertical",
+            has_pedestrian_wicket: true,
+            name_ar: "بوابة كراج منزلقة على الشارع الفرعي الجانبي (عرض 3.80م وسماكة 25 سم)",
+            name_en: "Side Branch Street Sliding Garage Gate (3.80m Width, 25cm Wall Profile)",
+            hex: "#e2ac2e"
+        };
+
+        const parkW = stallDepthPx;       // 5.60m depth from west boundary
+        const parkH = totalParkingWidthPx; // 4.60m width
+        parkingX = minX;
+        parkingY = minY;
+
+        accessibleParking = {
+            key: 'accessible_parking',
+            orientation: 'horizontal',
+            bounds: { x: parkingX, y: parkingY, w: parkW, h: parkH },
+            aisleBounds: { x: parkingX, y: parkingY, w: parkW, h: aisleWidthPx },
+            carBounds: { x: parkingX, y: parkingY + aisleWidthPx, w: parkW, h: carStallWidthPx },
+            carBodyBounds: {
+                x: parkingX + clearance30cmPx,
+                y: parkingY + aisleWidthPx + Math.round((carStallWidthPx - carBodyWPx) / 2),
+                w: carBodyLPx, // 5.00m vehicle length
+                h: carBodyWPx  // 2.00m vehicle width
+            },
+            clearanceGatePx: clearance30cmPx,
+            clearanceLivingRoomPx: clearance30cmPx,
+            transferNode: {
+                x: parkingX + Math.round(parkW * 0.45),
+                y: parkingY + Math.round(aisleWidthPx / 2),
+                dia_m: 1.50
+            },
+            vehicleSpecs: {
+                width_m: carWidthM,
+                length_m: carLengthM,
+                clearance_gate_m: 0.30,
+                clearance_living_m: 0.30,
+                stall_width_m: 2.80,
+                aisle_width_m: 1.80,
+                total_bay_width_m: 4.60,
+                depth_m: 5.60,
+                orientation: 'horizontal'
+            },
+            name_ar: "موقف سيارة مهيأ بمدخل فرعي (المركبة 2×5م مع خلوص 30سم للباب الخارجي و30سم للمبنى)",
+            name_en: "ADA Accessible Parking from Branch Street (2x5m vehicle with 30cm clearances)"
+        };
+    } else {
+        // Position Parking Bay on the right side of the front driveway
+        parkingX = Math.round(minX + plotW - totalParkingWidthPx - clearance30cmPx);
+        parkingY = minY;
+
+        accessibleParking = {
+            key: 'accessible_parking',
+            orientation: 'vertical',
+            bounds: { x: parkingX, y: parkingY, w: totalParkingWidthPx, h: stallDepthPx },
+            aisleBounds: { x: parkingX, y: parkingY, w: aisleWidthPx, h: stallDepthPx },
+            carBounds: { x: parkingX + aisleWidthPx, y: parkingY, w: carStallWidthPx, h: stallDepthPx },
+            carBodyBounds: {
+                x: parkingX + aisleWidthPx + Math.round((carStallWidthPx - carBodyWPx) / 2),
+                y: parkingY + clearance30cmPx, // Strictly 30cm from outer gate/wall
+                w: carBodyWPx, // 2.00m vehicle width
+                h: carBodyLPx  // 5.00m vehicle length
+            },
+            clearanceGatePx: clearance30cmPx,       // 30cm to outer gate/wall
+            clearanceLivingRoomPx: clearance30cmPx, // 30cm to living room facade
+            transferNode: {
+                x: parkingX + Math.round(aisleWidthPx / 2),
+                y: parkingY + Math.round(stallDepthPx * 0.45),
+                dia_m: 1.50
+            },
+            vehicleSpecs: {
+                width_m: carWidthM,
+                length_m: carLengthM,
+                clearance_gate_m: 0.30,
+                clearance_living_m: 0.30,
+                stall_width_m: 2.80,
+                aisle_width_m: 1.80,
+                total_bay_width_m: 4.60,
+                depth_m: 5.60,
+                orientation: 'vertical'
+            },
+            name_ar: "موقف سيارة مهيأ (أبعاد المركبة 2×5م مع خلوص 30سم للباب الخارجي و30سم للمعيشة)",
+            name_en: "ADA Accessible Parking (2x5m car with 30cm gate clearance & 30cm living room clearance)"
+        };
+
+        // Outer Car Entrance Gate (#e2ac2e): 3.80m wide gate directly facing the vehicle approach lane
+        // Thickness strictly matches the 25cm exterior boundary wall (5.75px):
+        const gateWidthPx = Math.round(3.80 * pxPerMeter); // 88px (3.80m wide gate)
+        const gateX = Math.round(parkingX + aisleWidthPx * 0.35); // Center on car bay
+        const gateThicknessPx = 5.75; // Exact 25cm boundary wall thickness
+        entranceGate = {
+            key: 'site_entrance',
+            bounds: {
+                x: Math.max(minX + 20, Math.min(maxX - gateWidthPx - 10, gateX)),
+                y: minY - gateThicknessPx / 2, // Centered on boundary wall line
+                w: gateWidthPx,
+                h: gateThicknessPx // 25cm thickness
+            },
+            thickness_cm: 25,
+            width_m: 3.80,
+            orientation: "horizontal",
+            has_pedestrian_wicket: true,
+            name_ar: "بوابة كراج منزلقة وسياج الموقع (عرض 3.80م وسماكة 25 سم مع باب مشاة مدمج)",
+            name_en: "Sliding Garage Gate (3.80m Width, 25cm Wall Profile with Integrated Wicket Door)",
+            hex: "#e2ac2e"
+        };
+    }
 
     const circulationNodes = [
         { x: Math.round(topLanding.x + topLanding.w / 2), y: Math.round(topLanding.y + topLanding.h / 2), dia_m: 1.50, compliant: true },
@@ -2976,6 +3074,23 @@ function drawDetailedEntranceGate(entranceGate) {
 
     ctx.save();
 
+    let drawX = gb.x;
+    let drawY = gb.y;
+    let drawW = gb.w;
+    let drawH = gb.h;
+
+    if (entranceGate.orientation === 'vertical') {
+        const cx = gb.x + gb.w / 2;
+        const cy = gb.y + gb.h / 2;
+        ctx.translate(cx, cy);
+        ctx.rotate(Math.PI / 2);
+        ctx.translate(-cx, -cy);
+        drawX = cx - gb.h / 2;
+        drawY = cy - gb.w / 2;
+        drawW = gb.h;
+        drawH = gb.w;
+    }
+
     // 1. Cut opening in wall and draw two structural reinforced gate pillars/posts (25cm x 25cm)
     const pillarW = 6;
     const pillarH = wallThick;
@@ -2984,41 +3099,41 @@ function drawDetailedEntranceGate(entranceGate) {
     ctx.fillStyle = '#0f172a';
     ctx.strokeStyle = '#000000';
     ctx.lineWidth = 1;
-    ctx.fillRect(gb.x - pillarW / 2, gb.y, pillarW, pillarH);
-    ctx.strokeRect(gb.x - pillarW / 2, gb.y, pillarW, pillarH);
+    ctx.fillRect(drawX - pillarW / 2, drawY, pillarW, pillarH);
+    ctx.strokeRect(drawX - pillarW / 2, drawY, pillarW, pillarH);
     // Concrete cross tick inside post
     ctx.strokeStyle = '#64748b';
     ctx.lineWidth = 0.6;
     ctx.beginPath();
-    ctx.moveTo(gb.x - pillarW / 2, gb.y); ctx.lineTo(gb.x + pillarW / 2, gb.y + pillarH);
-    ctx.moveTo(gb.x + pillarW / 2, gb.y); ctx.lineTo(gb.x - pillarW / 2, gb.y + pillarH);
+    ctx.moveTo(drawX - pillarW / 2, drawY); ctx.lineTo(drawX + pillarW / 2, drawY + pillarH);
+    ctx.moveTo(drawX + pillarW / 2, drawY); ctx.lineTo(drawX - pillarW / 2, drawY + pillarH);
     ctx.stroke();
 
     // Right Concrete Gate Post
     ctx.fillStyle = '#0f172a';
     ctx.strokeStyle = '#000000';
     ctx.lineWidth = 1;
-    ctx.fillRect(gb.x + gb.w - pillarW / 2, gb.y, pillarW, pillarH);
-    ctx.strokeRect(gb.x + gb.w - pillarW / 2, gb.y, pillarW, pillarH);
+    ctx.fillRect(drawX + drawW - pillarW / 2, drawY, pillarW, pillarH);
+    ctx.strokeRect(drawX + drawW - pillarW / 2, drawY, pillarW, pillarH);
     ctx.strokeStyle = '#64748b';
     ctx.lineWidth = 0.6;
     ctx.beginPath();
-    ctx.moveTo(gb.x + gb.w - pillarW / 2, gb.y); ctx.lineTo(gb.x + gb.w + pillarW / 2, gb.y + pillarH);
-    ctx.moveTo(gb.x + gb.w + pillarW / 2, gb.y); ctx.lineTo(gb.x + gb.w - pillarW / 2, gb.y + pillarH);
+    ctx.moveTo(drawX + drawW - pillarW / 2, drawY); ctx.lineTo(drawX + drawW + pillarW / 2, drawY + pillarH);
+    ctx.moveTo(drawX + drawW + pillarW / 2, drawY); ctx.lineTo(drawX + drawW - pillarW / 2, drawY + pillarH);
     ctx.stroke();
 
     // 2. Sliding Track / Guide Rails (Top and Bottom of 25cm gate zone)
     ctx.strokeStyle = '#475569';
     ctx.lineWidth = 0.8;
     ctx.beginPath();
-    ctx.moveTo(gb.x + pillarW / 2, gb.y); ctx.lineTo(gb.x + gb.w - pillarW / 2, gb.y);
-    ctx.moveTo(gb.x + pillarW / 2, gb.y + pillarH); ctx.lineTo(gb.x + gb.w - pillarW / 2, gb.y + pillarH);
+    ctx.moveTo(drawX + pillarW / 2, drawY); ctx.lineTo(drawX + drawW - pillarW / 2, drawY);
+    ctx.moveTo(drawX + pillarW / 2, drawY + pillarH); ctx.lineTo(drawX + drawW - pillarW / 2, drawY + pillarH);
     ctx.stroke();
 
     // 3. Main Gate Leaf Panels (#e2ac2e Semantic Color with Gradient & Frame)
-    const gatePanelX = gb.x + pillarW / 2;
-    const gatePanelW = gb.w - pillarW;
-    const gatePanelY = gb.y + 0.5;
+    const gatePanelX = drawX + pillarW / 2;
+    const gatePanelW = drawW - pillarW;
+    const gatePanelY = drawY + 0.5;
     const gatePanelH = pillarH - 1.0;
 
     // Rich metallic golden-amber gradient
@@ -3084,9 +3199,9 @@ function drawDetailedEntranceGate(entranceGate) {
         ctx.textBaseline = 'middle';
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
         ctx.lineWidth = 2.0;
-        ctx.strokeText(gateLabel, gb.x + gb.w / 2, gb.y + gb.h / 2);
+        ctx.strokeText(gateLabel, drawX + drawW / 2, drawY + drawH / 2);
         ctx.fillStyle = '#78350f';
-        ctx.fillText(gateLabel, gb.x + gb.w / 2, gb.y + gb.h / 2);
+        ctx.fillText(gateLabel, drawX + drawW / 2, drawY + drawH / 2);
     }
 
     ctx.restore();
@@ -3173,6 +3288,7 @@ function drawAccessibleParkingAndVehicularPath(ctx, parking, gate, ramp) {
     if (!parking) return;
     const isAr = state.lang === 'ar';
     const { bounds, aisleBounds, carBounds, carBodyBounds, transferNode } = parking;
+    const isHoriz = (parking.orientation === 'horizontal');
 
     ctx.save();
 
@@ -3188,20 +3304,34 @@ function drawAccessibleParkingAndVehicularPath(ctx, parking, gate, ramp) {
     ctx.fillRect(aisleBounds.x, aisleBounds.y, aisleBounds.w, aisleBounds.h);
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
     ctx.lineWidth = 1.5;
-    for (let py = aisleBounds.y + 10; py < aisleBounds.y + aisleBounds.h; py += 12) {
+
+    if (isHoriz) {
+        for (let px = aisleBounds.x + 10; px < aisleBounds.x + aisleBounds.w; px += 12) {
+            ctx.beginPath();
+            ctx.moveTo(px, aisleBounds.y + 4);
+            ctx.lineTo(px, aisleBounds.y + aisleBounds.h - 4);
+            ctx.stroke();
+        }
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(aisleBounds.x + 4, py);
-        ctx.lineTo(aisleBounds.x + aisleBounds.w - 4, py);
+        ctx.moveTo(carBounds.x, carBounds.y);
+        ctx.lineTo(carBounds.x + carBounds.w, carBounds.y);
+        ctx.stroke();
+    } else {
+        for (let py = aisleBounds.y + 10; py < aisleBounds.y + aisleBounds.h; py += 12) {
+            ctx.beginPath();
+            ctx.moveTo(aisleBounds.x + 4, py);
+            ctx.lineTo(aisleBounds.x + aisleBounds.w - 4, py);
+            ctx.stroke();
+        }
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(carBounds.x, carBounds.y);
+        ctx.lineTo(carBounds.x, carBounds.y + carBounds.h);
         ctx.stroke();
     }
-
-    // White Demarcation Line between Access Aisle & Car Stall
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(carBounds.x, carBounds.y);
-    ctx.lineTo(carBounds.x, carBounds.y + carBounds.h);
-    ctx.stroke();
 
     // 3. Driver Transfer Turning Circle (Ø 1.50m) in Aisle
     ctx.strokeStyle = '#10b981';
@@ -3224,17 +3354,26 @@ function drawAccessibleParkingAndVehicularPath(ctx, parking, gate, ramp) {
     const cb = carBodyBounds;
     const cx = cb.x + cb.w / 2;
     const cy = cb.y + cb.h / 2;
-    const w = cb.w;  // 46px = 2.00m
-    const l = cb.h;  // 115px = 5.00m
+
+    if (isHoriz) {
+        ctx.translate(cx, cy);
+        ctx.rotate(-Math.PI / 2); // Rotates car to face East (into driveway)
+        ctx.translate(-cx, -cy);
+    }
+
+    // Standard vehicle drawing bounding box
+    const w = isHoriz ? cb.h : cb.w; // 46px = 2.00m
+    const l = isHoriz ? cb.w : cb.h; // 115px = 5.00m
+    const carDrawX = Math.round(cx - w / 2);
+    const carDrawY = Math.round(cy - l / 2);
 
     // 4.1 Four Rubber Tires with Alloy Hubs
     const tireW = 5;
     const tireL = 16;
-    const frontTireY = cb.y + Math.round(l * 0.16);
-    const rearTireY = cb.y + Math.round(l * 0.74);
+    const frontTireY = carDrawY + Math.round(l * 0.16);
+    const rearTireY = carDrawY + Math.round(l * 0.74);
 
     const drawWheel = (wx, wy) => {
-        // Black tire tread
         ctx.fillStyle = '#020617';
         ctx.strokeStyle = '#334155';
         ctx.lineWidth = 1;
@@ -3243,41 +3382,39 @@ function drawAccessibleParkingAndVehicularPath(ctx, parking, gate, ramp) {
         else ctx.rect(wx, wy, tireW, tireL);
         ctx.fill();
         ctx.stroke();
-        // Alloy rim center highlight
         ctx.fillStyle = '#94a3b8';
         ctx.fillRect(wx + 1.5, wy + 4, tireW - 3, tireL - 8);
     };
 
-    drawWheel(cb.x - 2, frontTireY);
-    drawWheel(cb.x + w - tireW + 2, frontTireY);
-    drawWheel(cb.x - 2, rearTireY);
-    drawWheel(cb.x + w - tireW + 2, rearTireY);
+    drawWheel(carDrawX - 2, frontTireY);
+    drawWheel(carDrawX + w - tireW + 2, frontTireY);
+    drawWheel(carDrawX - 2, rearTireY);
+    drawWheel(carDrawX + w - tireW + 2, rearTireY);
 
     // 4.2 Aerodynamic Car Body Shell
     ctx.beginPath();
-    ctx.moveTo(cx, cb.y);
-    ctx.bezierCurveTo(cb.x + w - 4, cb.y, cb.x + w, cb.y + 6, cb.x + w, cb.y + 14);
-    ctx.lineTo(cb.x + w + 1, cb.y + 18);
-    ctx.lineTo(cb.x + w + 1, cb.y + 35);
-    ctx.lineTo(cb.x + w, cb.y + 39);
-    ctx.lineTo(cb.x + w - 1, cb.y + Math.round(l * 0.70));
-    ctx.lineTo(cb.x + w + 1, cb.y + Math.round(l * 0.74));
-    ctx.lineTo(cb.x + w + 1, cb.y + Math.round(l * 0.90));
-    ctx.lineTo(cb.x + w, cb.y + Math.round(l * 0.94));
-    ctx.bezierCurveTo(cb.x + w, cb.y + l - 3, cb.x + w - 4, cb.y + l, cx, cb.y + l);
-    ctx.bezierCurveTo(cb.x + 4, cb.y + l, cb.x, cb.y + l - 3, cb.x, cb.y + Math.round(l * 0.94));
-    ctx.lineTo(cb.x - 1, cb.y + Math.round(l * 0.90));
-    ctx.lineTo(cb.x - 1, cb.y + Math.round(l * 0.74));
-    ctx.lineTo(cb.x + 1, cb.y + Math.round(l * 0.70));
-    ctx.lineTo(cb.x, cb.y + 39);
-    ctx.lineTo(cb.x - 1, cb.y + 35);
-    ctx.lineTo(cb.x - 1, cb.y + 18);
-    ctx.lineTo(cb.x, cb.y + 14);
-    ctx.bezierCurveTo(cb.x, cb.y + 6, cb.x + 4, cb.y, cx, cb.y);
+    ctx.moveTo(cx, carDrawY);
+    ctx.bezierCurveTo(carDrawX + w - 4, carDrawY, carDrawX + w, carDrawY + 6, carDrawX + w, carDrawY + 14);
+    ctx.lineTo(carDrawX + w + 1, carDrawY + 18);
+    ctx.lineTo(carDrawX + w + 1, carDrawY + 35);
+    ctx.lineTo(carDrawX + w, carDrawY + 39);
+    ctx.lineTo(carDrawX + w - 1, carDrawY + Math.round(l * 0.70));
+    ctx.lineTo(carDrawX + w + 1, carDrawY + Math.round(l * 0.74));
+    ctx.lineTo(carDrawX + w + 1, carDrawY + Math.round(l * 0.90));
+    ctx.lineTo(carDrawX + w, carDrawY + Math.round(l * 0.94));
+    ctx.bezierCurveTo(carDrawX + w, carDrawY + l - 3, carDrawX + w - 4, carDrawY + l, cx, carDrawY + l);
+    ctx.bezierCurveTo(carDrawX + 4, carDrawY + l, carDrawX, carDrawY + l - 3, carDrawX, carDrawY + Math.round(l * 0.94));
+    ctx.lineTo(carDrawX - 1, carDrawY + Math.round(l * 0.90));
+    ctx.lineTo(carDrawX - 1, carDrawY + Math.round(l * 0.74));
+    ctx.lineTo(carDrawX + 1, carDrawY + Math.round(l * 0.70));
+    ctx.lineTo(carDrawX, carDrawY + 39);
+    ctx.lineTo(carDrawX - 1, carDrawY + 35);
+    ctx.lineTo(carDrawX - 1, carDrawY + 18);
+    ctx.lineTo(carDrawX, carDrawY + 14);
+    ctx.bezierCurveTo(carDrawX, carDrawY + 6, carDrawX + 4, carDrawY, cx, carDrawY);
     ctx.closePath();
 
-    // Metallic body paint gradient
-    const bodyGrad = ctx.createLinearGradient(cb.x, cb.y, cb.x + w, cb.y);
+    const bodyGrad = ctx.createLinearGradient(carDrawX, carDrawY, carDrawX + w, carDrawY);
     bodyGrad.addColorStop(0, '#1e293b');
     bodyGrad.addColorStop(0.3, '#334155');
     bodyGrad.addColorStop(0.5, '#475569');
@@ -3295,26 +3432,26 @@ function drawAccessibleParkingAndVehicularPath(ctx, parking, gate, ramp) {
     ctx.lineWidth = 1;
     // Left mirror
     ctx.beginPath();
-    ctx.ellipse(cb.x - 3.5, cb.y + 24, 3.5, 2, -Math.PI / 4, 0, Math.PI * 2);
+    ctx.ellipse(carDrawX - 3.5, carDrawY + 24, 3.5, 2, -Math.PI / 4, 0, Math.PI * 2);
     ctx.fill(); ctx.stroke();
     // Right mirror
     ctx.beginPath();
-    ctx.ellipse(cb.x + w + 3.5, cb.y + 24, 3.5, 2, Math.PI / 4, 0, Math.PI * 2);
+    ctx.ellipse(carDrawX + w + 3.5, carDrawY + 24, 3.5, 2, Math.PI / 4, 0, Math.PI * 2);
     ctx.fill(); ctx.stroke();
 
     // 4.4 Front Hood Crease Lines & Grille
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(cb.x + 9, cb.y + 4);
-    ctx.lineTo(cb.x + 11, cb.y + 22);
-    ctx.moveTo(cb.x + w - 9, cb.y + 4);
-    ctx.lineTo(cb.x + w - 11, cb.y + 22);
+    ctx.moveTo(carDrawX + 9, carDrawY + 4);
+    ctx.lineTo(carDrawX + 11, carDrawY + 22);
+    ctx.moveTo(carDrawX + w - 9, carDrawY + 4);
+    ctx.lineTo(carDrawX + w - 11, carDrawY + 22);
     ctx.stroke();
 
     // Front Grille
     ctx.fillStyle = '#090d16';
-    ctx.fillRect(cx - 10, cb.y + 1, 20, 3);
+    ctx.fillRect(cx - 10, carDrawY + 1, 20, 3);
 
     // 4.5 Modern LED Headlights
     ctx.fillStyle = '#fef08a';
@@ -3322,25 +3459,25 @@ function drawAccessibleParkingAndVehicularPath(ctx, parking, gate, ramp) {
     ctx.lineWidth = 0.8;
     // Left headlight
     ctx.beginPath();
-    ctx.moveTo(cb.x + 3, cb.y + 2);
-    ctx.lineTo(cb.x + 10, cb.y + 3);
-    ctx.lineTo(cb.x + 8, cb.y + 8);
-    ctx.lineTo(cb.x + 2, cb.y + 6);
+    ctx.moveTo(carDrawX + 3, carDrawY + 2);
+    ctx.lineTo(carDrawX + 10, carDrawY + 3);
+    ctx.lineTo(carDrawX + 8, carDrawY + 8);
+    ctx.lineTo(carDrawX + 2, carDrawY + 6);
     ctx.closePath();
     ctx.fill(); ctx.stroke();
     // Right headlight
     ctx.beginPath();
-    ctx.moveTo(cb.x + w - 3, cb.y + 2);
-    ctx.lineTo(cb.x + w - 10, cb.y + 3);
-    ctx.lineTo(cb.x + w - 8, cb.y + 8);
-    ctx.lineTo(cb.x + w - 2, cb.y + 6);
+    ctx.moveTo(carDrawX + w - 3, carDrawY + 2);
+    ctx.lineTo(carDrawX + w - 10, carDrawY + 3);
+    ctx.lineTo(carDrawX + w - 8, carDrawY + 8);
+    ctx.lineTo(carDrawX + w - 2, carDrawY + 6);
     ctx.closePath();
     ctx.fill(); ctx.stroke();
 
     // 4.6 Panoramic Windshield & Roof Glass (Greenhouse)
-    const cabinX = cb.x + 5;
+    const cabinX = carDrawX + 5;
     const cabinW = w - 10;
-    const cabinY = cb.y + 23;
+    const cabinY = carDrawY + 23;
     const cabinL = Math.round(l * 0.54);
 
     // Dark cabin interior base
@@ -3411,66 +3548,83 @@ function drawAccessibleParkingAndVehicularPath(ctx, parking, gate, ramp) {
     ctx.strokeStyle = '#b91c1c';
     ctx.lineWidth = 0.8;
     // Left Taillight
-    ctx.fillRect(cb.x + 3, cb.y + l - 4, 8, 3);
+    ctx.fillRect(carDrawX + 3, carDrawY + l - 4, 8, 3);
     // Right Taillight
-    ctx.fillRect(cb.x + w - 11, cb.y + l - 4, 8, 3);
+    ctx.fillRect(carDrawX + w - 11, carDrawY + l - 4, 8, 3);
     // Center Brake Light Strip
     ctx.fillStyle = '#dc2626';
-    ctx.fillRect(cx - 5, cb.y + l - 2, 10, 1.5);
+    ctx.fillRect(cx - 5, carDrawY + l - 2, 10, 1.5);
 
     // Driver-side Open Door Clearance Indicator (left side)
     ctx.strokeStyle = '#38bdf8';
     ctx.lineWidth = 1.8;
     ctx.beginPath();
-    ctx.moveTo(cb.x, cb.y + 20);
-    ctx.lineTo(cb.x - 12, cb.y + 34);
+    ctx.moveTo(carDrawX, carDrawY + 20);
+    ctx.lineTo(carDrawX - 12, carDrawY + 34);
     ctx.stroke();
-
-    // 4.B. Architectural Dimension Witness Lines (2.00m x 5.00m)
-    ctx.strokeStyle = '#38bdf8';
-    ctx.fillStyle = '#38bdf8';
-    ctx.lineWidth = 1.2;
-    ctx.font = 'bold 8px JetBrains Mono, Cairo';
 
     // Center Dimension Badge on Car Roof (2.00m x 5.00m)
     ctx.font = 'bold 7.5px JetBrains Mono, Cairo';
     ctx.strokeStyle = 'rgba(15, 23, 42, 0.85)';
     ctx.lineWidth = 2.0;
-    ctx.strokeText('2.00m × 5.00m', cb.x + cb.w / 2, cb.y + cb.h / 2);
+    ctx.strokeText('2.00m × 5.00m', cx, cy);
     ctx.fillStyle = '#f8fafc';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('2.00m × 5.00m', cb.x + cb.w / 2, cb.y + cb.h / 2);
+    ctx.fillText('2.00m × 5.00m', cx, cy);
 
-    // 4.C. Exact 30cm Clearance Dimension Markers (Front to Gate & Rear to Living Room)
+    ctx.restore(); // Restore car rotation context
+
+    // 4.C. Exact 30cm Clearance Dimension Markers
     ctx.strokeStyle = '#38bdf8';
     ctx.fillStyle = '#38bdf8';
     ctx.lineWidth = 1.0;
     ctx.font = 'bold 7.5px JetBrains Mono, Cairo';
 
-    // Front Clearance Marker: 30cm between Car and Outer Gate/Wall
-    const frontGapY = bounds.y + (cb.y - bounds.y) / 2;
-    ctx.beginPath();
-    ctx.moveTo(cb.x - 1, bounds.y); ctx.lineTo(cb.x - 1, cb.y);
-    ctx.moveTo(cb.x - 3, bounds.y); ctx.lineTo(cb.x + 1, bounds.y);
-    ctx.moveTo(cb.x - 3, cb.y); ctx.lineTo(cb.x + 1, cb.y);
-    ctx.stroke();
+    if (isHoriz) {
+        // Horizontal Parking: West 30cm to Gate & East 30cm to Living Room
+        const gapY = cb.y + cb.h / 2;
+        // West Gap (30cm)
+        ctx.beginPath();
+        ctx.moveTo(bounds.x, gapY - 4); ctx.lineTo(bounds.x, gapY + 4);
+        ctx.moveTo(cb.x, gapY - 4); ctx.lineTo(cb.x, gapY + 4);
+        ctx.moveTo(bounds.x, gapY); ctx.lineTo(cb.x, gapY);
+        ctx.stroke();
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText('30cm', bounds.x + (cb.x - bounds.x) / 2, gapY - 2);
 
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('30cm', cb.x - 5, frontGapY);
+        // East Gap (30cm)
+        const eastEdge = cb.x + cb.w;
+        const bldgEdge = bounds.x + bounds.w;
+        ctx.beginPath();
+        ctx.moveTo(eastEdge, gapY - 4); ctx.lineTo(eastEdge, gapY + 4);
+        ctx.moveTo(bldgEdge, gapY - 4); ctx.lineTo(bldgEdge, gapY + 4);
+        ctx.moveTo(eastEdge, gapY); ctx.lineTo(bldgEdge, gapY);
+        ctx.stroke();
+        ctx.fillText('30cm', eastEdge + (bldgEdge - eastEdge) / 2, gapY - 2);
+    } else {
+        // Vertical Parking: Front 30cm to Gate & Rear 30cm to Living Room
+        const frontGapY = bounds.y + (cb.y - bounds.y) / 2;
+        ctx.beginPath();
+        ctx.moveTo(cb.x - 1, bounds.y); ctx.lineTo(cb.x - 1, cb.y);
+        ctx.moveTo(cb.x - 3, bounds.y); ctx.lineTo(cb.x + 1, bounds.y);
+        ctx.moveTo(cb.x - 3, cb.y); ctx.lineTo(cb.x + 1, cb.y);
+        ctx.stroke();
 
-    // Rear Clearance Marker: 30cm between Car and Living Room Facade
-    const rearGapY = (cb.y + cb.h) + (bounds.y + bounds.h - (cb.y + cb.h)) / 2;
-    ctx.beginPath();
-    ctx.moveTo(cb.x - 1, cb.y + cb.h); ctx.lineTo(cb.x - 1, bounds.y + bounds.h);
-    ctx.moveTo(cb.x - 3, cb.y + cb.h); ctx.lineTo(cb.x + 1, cb.y + cb.h);
-    ctx.moveTo(cb.x - 3, bounds.y + bounds.h); ctx.lineTo(cb.x + 1, bounds.y + bounds.h);
-    ctx.stroke();
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('30cm', cb.x - 5, frontGapY);
 
-    ctx.fillText('30cm', cb.x - 5, rearGapY);
+        const rearGapY = (cb.y + cb.h) + (bounds.y + bounds.h - (cb.y + cb.h)) / 2;
+        ctx.beginPath();
+        ctx.moveTo(cb.x - 1, cb.y + cb.h); ctx.lineTo(cb.x - 1, bounds.y + bounds.h);
+        ctx.moveTo(cb.x - 3, cb.y + cb.h); ctx.lineTo(cb.x + 1, cb.y + cb.h);
+        ctx.moveTo(cb.x - 3, bounds.y + bounds.h); ctx.lineTo(cb.x + 1, bounds.y + bounds.h);
+        ctx.stroke();
 
-    ctx.restore();
+        ctx.fillText('30cm', cb.x - 5, rearGapY);
+    }
 
     // 5. Vehicular Approach Trajectory Arrow from Outer Gate directly into Stall
     if (gate) {
@@ -3478,21 +3632,40 @@ function drawAccessibleParkingAndVehicularPath(ctx, parking, gate, ramp) {
         ctx.strokeStyle = 'rgba(251, 191, 36, 0.85)';
         ctx.lineWidth = 2;
         ctx.setLineDash([4, 4]);
-        ctx.beginPath();
-        ctx.moveTo(gb.x + gb.w / 2, gb.y + gb.h);
-        ctx.lineTo(carBounds.x + carBounds.w / 2, carBounds.y);
-        ctx.stroke();
-        ctx.setLineDash([]);
 
-        const midY = (gb.y + gb.h + carBounds.y) / 2;
-        const midX = (gb.x + gb.w / 2 + carBounds.x + carBounds.w / 2) / 2;
-        ctx.fillStyle = '#fbbf24';
-        ctx.beginPath();
-        ctx.moveTo(midX, midY + 4);
-        ctx.lineTo(midX - 4, midY - 3);
-        ctx.lineTo(midX + 4, midY - 3);
-        ctx.closePath();
-        ctx.fill();
+        if (isHoriz) {
+            ctx.beginPath();
+            ctx.moveTo(gb.x + gb.w, gb.y + gb.h / 2);
+            ctx.lineTo(carBounds.x + 20, carBounds.y + carBounds.h / 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            const midX = (gb.x + gb.w + carBounds.x + 20) / 2;
+            const midY = (gb.y + gb.h / 2 + carBounds.y + carBounds.h / 2) / 2;
+            ctx.fillStyle = '#fbbf24';
+            ctx.beginPath();
+            ctx.moveTo(midX + 4, midY);
+            ctx.lineTo(midX - 3, midY - 4);
+            ctx.lineTo(midX - 3, midY + 4);
+            ctx.closePath();
+            ctx.fill();
+        } else {
+            ctx.beginPath();
+            ctx.moveTo(gb.x + gb.w / 2, gb.y + gb.h);
+            ctx.lineTo(carBounds.x + carBounds.w / 2, carBounds.y);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            const midY = (gb.y + gb.h + carBounds.y) / 2;
+            const midX = (gb.x + gb.w / 2 + carBounds.x + carBounds.w / 2) / 2;
+            ctx.fillStyle = '#fbbf24';
+            ctx.beginPath();
+            ctx.moveTo(midX, midY + 4);
+            ctx.lineTo(midX - 4, midY - 3);
+            ctx.lineTo(midX + 4, midY - 3);
+            ctx.closePath();
+            ctx.fill();
+        }
     }
 
     // 6. Continuous Dedicated Accessible Pathway (Zero Overlap with Vehicle)
@@ -3540,7 +3713,9 @@ function drawAccessibleParkingAndVehicularPath(ctx, parking, gate, ramp) {
         ctx.fillStyle = '#38bdf8';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(isAr ? '♿ مسار نقل السائق 1.80م' : '♿ ADA Transfer Aisle 1.80m', aisleBounds.x + aisleBounds.w / 2, aisleBounds.y + 16);
+        const aisleTagX = isHoriz ? aisleBounds.x + aisleBounds.w / 2 : aisleBounds.x + aisleBounds.w / 2;
+        const aisleTagY = isHoriz ? aisleBounds.y + aisleBounds.h / 2 : aisleBounds.y + 16;
+        ctx.fillText(isAr ? '♿ مسار نقل السائق 1.80م' : '♿ ADA Transfer Aisle 1.80m', aisleTagX, aisleTagY);
     }
 
     ctx.restore();

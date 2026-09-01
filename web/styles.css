@@ -827,6 +827,65 @@ body {
     accent-color: var(--accent-blue);
 }
 
+.corner-entry-selector {
+    margin-top: 8px;
+    padding: 8px 10px;
+    background: rgba(14, 165, 233, 0.08);
+    border: 1px dashed rgba(56, 189, 248, 0.4);
+    border-radius: var(--radius-sm);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.corner-entry-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #38bdf8;
+    line-height: 1.3;
+}
+
+.corner-entry-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+}
+
+.corner-entry-opt {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 4px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-size: 0.70rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.corner-entry-opt:hover {
+    border-color: #38bdf8;
+    color: var(--text-primary);
+}
+
+.corner-entry-opt.active {
+    background: rgba(56, 189, 248, 0.2);
+    border-color: #38bdf8;
+    color: #38bdf8;
+    font-weight: 700;
+}
+
+.corner-entry-opt input {
+    display: none;
+}
+
 .option-content {
     display: flex;
     flex-direction: column;
