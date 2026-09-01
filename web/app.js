@@ -211,6 +211,8 @@ const state = {
     theme: 'dark',
     showTags: true,
     showFurniture: true,
+    furnitureRotation: 0,
+    furnitureStyle: 1,
     currentLayout: null,
     
     // Probabilistic & Stochastic Synthesis State
@@ -607,6 +609,63 @@ function setupEventListeners() {
     if (toggleFurnitureCheckbox) {
         toggleFurnitureCheckbox.addEventListener('change', (e) => {
             state.showFurniture = e.target.checked;
+            renderCanvas();
+        });
+    }
+
+    // Furniture Studio Controls
+    const furnitureStyleSelect = document.getElementById('furnitureStyleSelect');
+    const rotateFurnitureBtn = document.getElementById('rotateFurnitureBtn');
+    const rotateFurnitureBtnText = document.getElementById('rotateFurnitureBtnText');
+    const changeFurnitureStyleBtn = document.getElementById('changeFurnitureStyleBtn');
+    const changeFurnitureStyleBtnText = document.getElementById('changeFurnitureStyleBtnText');
+
+    function syncFurnitureControls() {
+        if (furnitureStyleSelect) furnitureStyleSelect.value = state.furnitureStyle.toString();
+        document.querySelectorAll('.btn-furn-rot').forEach(b => {
+            b.classList.toggle('active', parseInt(b.dataset.rot) === state.furnitureRotation);
+        });
+        const isAr = state.lang === 'ar';
+        if (rotateFurnitureBtnText) {
+            rotateFurnitureBtnText.textContent = isAr 
+                ? `تدوير الأثاث (${state.furnitureRotation}°)` 
+                : `Rotate (${state.furnitureRotation}°)`;
+        }
+        if (changeFurnitureStyleBtnText) {
+            changeFurnitureStyleBtnText.textContent = isAr 
+                ? `طراز الأثاث (${state.furnitureStyle})` 
+                : `Style (${state.furnitureStyle})`;
+        }
+    }
+
+    if (furnitureStyleSelect) {
+        furnitureStyleSelect.addEventListener('change', (e) => {
+            state.furnitureStyle = parseInt(e.target.value) || 1;
+            syncFurnitureControls();
+            renderCanvas();
+        });
+    }
+
+    document.querySelectorAll('.btn-furn-rot').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            state.furnitureRotation = parseInt(e.currentTarget.dataset.rot) || 0;
+            syncFurnitureControls();
+            renderCanvas();
+        });
+    });
+
+    if (rotateFurnitureBtn) {
+        rotateFurnitureBtn.addEventListener('click', () => {
+            state.furnitureRotation = (state.furnitureRotation + 90) % 360;
+            syncFurnitureControls();
+            renderCanvas();
+        });
+    }
+
+    if (changeFurnitureStyleBtn) {
+        changeFurnitureStyleBtn.addEventListener('click', () => {
+            state.furnitureStyle = (state.furnitureStyle % 3) + 1;
+            syncFurnitureControls();
             renderCanvas();
         });
     }
@@ -1117,6 +1176,15 @@ const I18N = {
         entropyLabel: "الإنتروبيا المكانية:",
         diversityLabel: "مؤشر التنوع:",
 
+        furnControlTitle: "استوديو تأثيث وتدوير الفضاءات (Furniture Studio):",
+        furnStyleLabel: "نمط وفرش الفضاءات:",
+        furnRotationLabel: "تدوير اتجاه الأثاث:",
+        rotateFurnitureBtnText: "تدوير الأثاث",
+        changeFurnitureStyleBtnText: "طراز الأثاث",
+        furnStyleOpt1: "طراز 1: ركنة مودرن L-Sofa + مجلس ضيوف + سرير ملكي",
+        furnStyleOpt2: "طراز 2: مجلس عربي U-Majlis + جلسة عائلية + سرير مهيأ جانبي",
+        furnStyleOpt3: "طراز 3: صالون معاصر Contemporary + صالة مفتوحة + أسرة مزدوجة Twin",
+
         step3Title: "3. التصدير وحفظ المخططات (Export & Save)",
         exportImageBtn: "حفظ كصورة فائقة الدقة (Export 4K Ultra HD)",
         exportPdfBtn: "تصدير لوحة معمارية PDF (High-Res 4K Sheet)",
@@ -1221,6 +1289,15 @@ const I18N = {
         seedLabel: "Random Seed:",
         entropyLabel: "Spatial Entropy:",
         diversityLabel: "Diversity Index:",
+
+        furnControlTitle: "Interior Furniture & Rotation Studio:",
+        furnStyleLabel: "Furniture Layout Style:",
+        furnRotationLabel: "Rotate Furniture Orientation:",
+        rotateFurnitureBtnText: "Rotate Furniture",
+        changeFurnitureStyleBtnText: "Furniture Style",
+        furnStyleOpt1: "Style 1: Modern L-Sofa + Executive Majlis + Queen Bed",
+        furnStyleOpt2: "Style 2: U-Majlis Lounge + Accessible Lateral Bed",
+        furnStyleOpt3: "Style 3: Contemporary Salon + Open Living + Twin Beds",
 
         step3Title: "3. Export & BIM Integration",
         exportImageBtn: "Export 4K Ultra HD Image (PNG)",
@@ -1444,6 +1521,24 @@ function updateUIForLang() {
     if (entropyLabel) entropyLabel.textContent = t.entropyLabel;
     const diversityLabel = document.getElementById('diversityLabel');
     if (diversityLabel) diversityLabel.textContent = t.diversityLabel;
+
+    // Furniture Studio Translations
+    const furnControlTitle = document.getElementById('furnControlTitle');
+    if (furnControlTitle) furnControlTitle.textContent = t.furnControlTitle;
+    const furnStyleLabel = document.getElementById('furnStyleLabel');
+    if (furnStyleLabel) furnStyleLabel.textContent = t.furnStyleLabel;
+    const furnRotationLabel = document.getElementById('furnRotationLabel');
+    if (furnRotationLabel) furnRotationLabel.textContent = t.furnRotationLabel;
+    const furnStyleSelect = document.getElementById('furnitureStyleSelect');
+    if (furnStyleSelect && furnStyleSelect.options.length >= 3) {
+        furnStyleSelect.options[0].text = t.furnStyleOpt1;
+        furnStyleSelect.options[1].text = t.furnStyleOpt2;
+        furnStyleSelect.options[2].text = t.furnStyleOpt3;
+    }
+    const rotFurnBtnText = document.getElementById('rotateFurnitureBtnText');
+    if (rotFurnBtnText) rotFurnBtnText.textContent = `${t.rotateFurnitureBtnText} (${state.furnitureRotation}°)`;
+    const chgFurnStyleBtnText = document.getElementById('changeFurnitureStyleBtnText');
+    if (chgFurnStyleBtnText) chgFurnStyleBtnText.textContent = `${t.changeFurnitureStyleBtnText} (${state.furnitureStyle})`;
 
     const genBtnSpan = document.querySelector('#generateBtn span');
     if (genBtnSpan) genBtnSpan.textContent = t.generateBtn;
@@ -3932,11 +4027,15 @@ function drawDraftingGrid(plotBounds) {
 function drawArchitecturalDetails(rooms, doors, windows) {
     if (state.showFurniture === false) return;
     const isAr = state.lang === 'ar';
+    const rot = state.furnitureRotation || 0; // 0, 90, 180, 270 degrees
+    const style = state.furnitureStyle || 1;   // 1, 2, 3
 
     rooms.forEach(r => {
         const { x, y, w, h } = r.bounds;
 
-        // 1. KITCHEN (#FFB8D8): L-counter, Double Sink, Cooktop, Refrigerator (Zero Door Obstruction)
+        // =========================================================================
+        // 1. KITCHEN (#FFB8D8): L-Counter, Galley, or U-Island (Zero Door Obstruction)
+        // =========================================================================
         if (r.key === 'kitchen') {
             // Subtle 60x60cm floor tile grid
             ctx.strokeStyle = 'rgba(0, 0, 0, 0.05)';
@@ -3949,78 +4048,125 @@ function drawArchitecturalDetails(rooms, doors, windows) {
             }
 
             const counterD = 14; // 60cm depth
-            // L-Shaped Countertop along TOP wall and RIGHT wall
-            // Leaves the entire LEFT wall (where the entrance door is) 100% open and clear!
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
-            ctx.strokeStyle = '#475569';
-            ctx.lineWidth = 1;
-            // Top run (starts 28px away from left wall to give full clear door corridor)
-            ctx.fillRect(x + 28, y + 3, w - 31, counterD);
-            ctx.strokeRect(x + 28, y + 3, w - 31, counterD);
-            // Right run
-            ctx.fillRect(x + w - counterD - 3, y + 3, counterD, h - 6);
-            ctx.strokeRect(x + w - counterD - 3, y + 3, counterD, h - 6);
 
-            // Double Sink on Top Counter (away from left door)
-            const sinkX = x + 34;
-            const sinkY = y + 5;
-            const sinkW = 20;
-            const sinkH = 10;
-            ctx.fillStyle = '#e2e8f0';
-            ctx.strokeStyle = '#334155';
-            ctx.lineWidth = 0.8;
-            ctx.fillRect(sinkX, sinkY, sinkW, sinkH);
-            ctx.strokeRect(sinkX, sinkY, sinkW, sinkH);
-            // Dual basins
-            ctx.strokeRect(sinkX + 1.5, sinkY + 1.5, 7.5, sinkH - 3);
-            ctx.strokeRect(sinkX + 10.5, sinkY + 1.5, 7.5, sinkH - 3);
-            // Faucet
-            ctx.fillStyle = '#0284c7';
-            ctx.beginPath();
-            ctx.arc(sinkX + 9.5, sinkY + 2, 1.5, 0, Math.PI * 2);
-            ctx.fill();
+            if (style === 2) {
+                // Style 2: Parallel / Galley Kitchen (Dual Runs + Central 1.20m Aisle)
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.70)';
+                ctx.strokeStyle = '#475569';
+                ctx.lineWidth = 1;
+                // Top Counter Run (starts 28px away from left door)
+                ctx.fillRect(x + 28, y + 3, w - 31, counterD);
+                ctx.strokeRect(x + 28, y + 3, w - 31, counterD);
+                // Bottom Counter Run
+                ctx.fillRect(x + 28, y + h - counterD - 3, w - 31, counterD);
+                ctx.strokeRect(x + 28, y + h - counterD - 3, w - 31, counterD);
 
-            // 4-Burner Cooktop Stove on Right Counter (completely clear of door!)
-            const stoveX = x + w - counterD - 1;
-            const stoveY = y + counterD + 10;
-            const stoveW = 10;
-            const stoveH = 16;
-            ctx.fillStyle = '#334155';
-            ctx.strokeStyle = '#0f172a';
-            ctx.fillRect(stoveX, stoveY, stoveW, stoveH);
-            ctx.strokeRect(stoveX, stoveY, stoveW, stoveH);
-            // Burner rings
-            ctx.strokeStyle = '#94a3b8';
-            ctx.lineWidth = 0.7;
-            const bRadius = 1.8;
-            [
-                {bx: stoveX + 3, by: stoveY + 4},
-                {bx: stoveX + 7, by: stoveY + 4},
-                {bx: stoveX + 3, by: stoveY + 12},
-                {bx: stoveX + 7, by: stoveY + 12}
-            ].forEach(b => {
-                ctx.beginPath(); ctx.arc(b.bx, b.by, bRadius, 0, Math.PI * 2); ctx.stroke();
-            });
+                // Sink on Top Counter
+                const sinkX = x + 34; const sinkY = y + 5;
+                ctx.fillStyle = '#e2e8f0'; ctx.strokeStyle = '#334155'; ctx.lineWidth = 0.8;
+                ctx.fillRect(sinkX, sinkY, 20, 10); ctx.strokeRect(sinkX, sinkY, 20, 10);
+                ctx.strokeRect(sinkX + 1.5, sinkY + 1.5, 7.5, 7);
+                ctx.strokeRect(sinkX + 10.5, sinkY + 1.5, 7.5, 7);
+                ctx.fillStyle = '#0284c7';
+                ctx.beginPath(); ctx.arc(sinkX + 9.5, sinkY + 2, 1.5, 0, Math.PI * 2); ctx.fill();
 
-            // Refrigerator (Bottom-Right corner)
-            const refX = x + w - counterD - 3;
-            const refY = y + h - counterD - 6;
-            ctx.fillStyle = '#f1f5f9';
-            ctx.strokeStyle = '#334155';
-            ctx.lineWidth = 1;
-            ctx.fillRect(refX, refY, counterD, counterD);
-            ctx.strokeRect(refX, refY, counterD, counterD);
-            // Door line
-            ctx.beginPath(); ctx.moveTo(refX, refY + 4); ctx.lineTo(refX + counterD, refY + 4); ctx.stroke();
-            ctx.fillStyle = '#64748b';
-            ctx.font = 'bold 6px JetBrains Mono';
-            ctx.textAlign = 'center';
-            ctx.fillText('REF', refX + counterD / 2, refY + counterD / 2 + 3);
+                // Cooktop on Bottom Counter
+                const stoveX = x + 34; const stoveY = y + h - counterD - 1;
+                ctx.fillStyle = '#334155'; ctx.strokeStyle = '#0f172a';
+                ctx.fillRect(stoveX, stoveY, 18, 10); ctx.strokeRect(stoveX, stoveY, 18, 10);
+                ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 0.7;
+                [{bx: stoveX + 5, by: stoveY + 5}, {bx: stoveX + 13, by: stoveY + 5}].forEach(b => {
+                    ctx.beginPath(); ctx.arc(b.bx, b.by, 2, 0, Math.PI * 2); ctx.stroke();
+                });
+
+                // Refrigerator on Bottom Right
+                const refX = x + w - counterD - 3; const refY = y + h - counterD - 3;
+                ctx.fillStyle = '#f1f5f9'; ctx.strokeStyle = '#334155'; ctx.lineWidth = 1;
+                ctx.fillRect(refX, refY, counterD, counterD); ctx.strokeRect(refX, refY, counterD, counterD);
+                ctx.fillStyle = '#64748b'; ctx.font = 'bold 5.5px JetBrains Mono'; ctx.textAlign = 'center';
+                ctx.fillText('REF', refX + counterD / 2, refY + counterD / 2 + 2);
+
+            } else if (style === 3) {
+                // Style 3: U-Shaped Counter & Island Peninsula
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.70)';
+                ctx.strokeStyle = '#475569';
+                ctx.lineWidth = 1;
+                // Top run
+                ctx.fillRect(x + 28, y + 3, w - 31, counterD); ctx.strokeRect(x + 28, y + 3, w - 31, counterD);
+                // Right run
+                ctx.fillRect(x + w - counterD - 3, y + 3, counterD, h - 6); ctx.strokeRect(x + w - counterD - 3, y + 3, counterD, h - 6);
+                // Peninsula run
+                const penH = Math.min(18, h * 0.40);
+                ctx.fillRect(x + 28, y + h - penH - 3, counterD + 12, penH);
+                ctx.strokeRect(x + 28, y + h - penH - 3, counterD + 12, penH);
+
+                // Sink on Top
+                const sinkX = x + 34; const sinkY = y + 5;
+                ctx.fillStyle = '#e2e8f0'; ctx.strokeStyle = '#334155'; ctx.lineWidth = 0.8;
+                ctx.fillRect(sinkX, sinkY, 20, 10); ctx.strokeRect(sinkX, sinkY, 20, 10);
+                ctx.strokeRect(sinkX + 1.5, sinkY + 1.5, 7.5, 7); ctx.strokeRect(sinkX + 10.5, sinkY + 1.5, 7.5, 7);
+
+                // Cooktop on Right
+                const stoveX = x + w - counterD - 1; const stoveY = y + counterD + 10;
+                ctx.fillStyle = '#334155'; ctx.strokeStyle = '#0f172a';
+                ctx.fillRect(stoveX, stoveY, 10, 16); ctx.strokeRect(stoveX, stoveY, 10, 16);
+
+                // Stools by Peninsula
+                ctx.fillStyle = '#e2e8f0'; ctx.strokeStyle = '#64748b'; ctx.lineWidth = 0.8;
+                ctx.beginPath(); ctx.arc(x + 20, y + h - 10, 3.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+                ctx.beginPath(); ctx.arc(x + 20, y + h - 18, 3.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+                // Refrigerator
+                const refX = x + w - counterD - 3; const refY = y + h - counterD - 6;
+                ctx.fillStyle = '#f1f5f9'; ctx.strokeStyle = '#334155'; ctx.lineWidth = 1;
+                ctx.fillRect(refX, refY, counterD, counterD); ctx.strokeRect(refX, refY, counterD, counterD);
+                ctx.fillStyle = '#64748b'; ctx.font = 'bold 5.5px JetBrains Mono'; ctx.textAlign = 'center';
+                ctx.fillText('REF', refX + counterD / 2, refY + counterD / 2 + 2);
+
+            } else {
+                // Style 1 (Default L-Shaped Countertop)
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+                ctx.strokeStyle = '#475569';
+                ctx.lineWidth = 1;
+                // Top run (starts 28px away from left wall to give full clear door corridor)
+                ctx.fillRect(x + 28, y + 3, w - 31, counterD);
+                ctx.strokeRect(x + 28, y + 3, w - 31, counterD);
+                // Right run
+                ctx.fillRect(x + w - counterD - 3, y + 3, counterD, h - 6);
+                ctx.strokeRect(x + w - counterD - 3, y + 3, counterD, h - 6);
+
+                // Double Sink on Top Counter
+                const sinkX = x + 34; const sinkY = y + 5;
+                ctx.fillStyle = '#e2e8f0'; ctx.strokeStyle = '#334155'; ctx.lineWidth = 0.8;
+                ctx.fillRect(sinkX, sinkY, 20, 10); ctx.strokeRect(sinkX, sinkY, 20, 10);
+                ctx.strokeRect(sinkX + 1.5, sinkY + 1.5, 7.5, 7);
+                ctx.strokeRect(sinkX + 10.5, sinkY + 1.5, 7.5, 7);
+                ctx.fillStyle = '#0284c7';
+                ctx.beginPath(); ctx.arc(sinkX + 9.5, sinkY + 2, 1.5, 0, Math.PI * 2); ctx.fill();
+
+                // 4-Burner Cooktop Stove on Right Counter
+                const stoveX = x + w - counterD - 1; const stoveY = y + counterD + 10;
+                ctx.fillStyle = '#334155'; ctx.strokeStyle = '#0f172a';
+                ctx.fillRect(stoveX, stoveY, 10, 16); ctx.strokeRect(stoveX, stoveY, 10, 16);
+                ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 0.7;
+                [{bx: stoveX + 3, by: stoveY + 4}, {bx: stoveX + 7, by: stoveY + 4}, {bx: stoveX + 3, by: stoveY + 12}, {bx: stoveX + 7, by: stoveY + 12}].forEach(b => {
+                    ctx.beginPath(); ctx.arc(b.bx, b.by, 1.8, 0, Math.PI * 2); ctx.stroke();
+                });
+
+                // Refrigerator
+                const refX = x + w - counterD - 3; const refY = y + h - counterD - 6;
+                ctx.fillStyle = '#f1f5f9'; ctx.strokeStyle = '#334155'; ctx.lineWidth = 1;
+                ctx.fillRect(refX, refY, counterD, counterD); ctx.strokeRect(refX, refY, counterD, counterD);
+                ctx.beginPath(); ctx.moveTo(refX, refY + 4); ctx.lineTo(refX + counterD, refY + 4); ctx.stroke();
+                ctx.fillStyle = '#64748b'; ctx.font = 'bold 6px JetBrains Mono'; ctx.textAlign = 'center';
+                ctx.fillText('REF', refX + counterD / 2, refY + counterD / 2 + 3);
+            }
         }
 
-        // 2. BATHROOMS (#ff3464 Accessible ADA Bathroom & #6300fe General/Guest Bathroom)
+        // =========================================================================
+        // 2. ACCESSIBLE ADA BATHROOM (#ff3464)
+        // =========================================================================
         else if (r.key === 'disabled_bathroom') {
-            // Subtle porcelain tile grid (30cm x 30cm CAD scale)
             ctx.strokeStyle = 'rgba(0, 0, 0, 0.06)';
             ctx.lineWidth = 0.5;
             const tileStep = 10;
@@ -4031,17 +4177,9 @@ function drawArchitecturalDetails(rooms, doors, windows) {
                 ctx.beginPath(); ctx.moveTo(x + 2, gy); ctx.lineTo(x + w - 2, gy); ctx.stroke();
             }
 
-            // =============================================================
-            // ACCESSIBLE ADA BATHROOM (Door is at Top-Left: y = y, x+4 to x+27)
-            // =============================================================
-
-            // -------------------------------------------------------------
-            // A. Accessible Toilet Suite: Top-Right Wall (Away from door)
-            // -------------------------------------------------------------
-            const wcW = 14;
-            const wcH = 20;
-            const wcX = x + w - wcW - 6;
-            const wcY = y + 4;
+            // Accessible Toilet Suite: Top-Right Wall (Away from door)
+            const wcW = 14; const wcH = 20;
+            const wcX = x + w - wcW - 6; const wcY = y + 4;
 
             // Wheelchair Lateral Transfer Zone (1.50m x 1.40m)
             ctx.save();
@@ -4057,165 +4195,70 @@ function drawArchitecturalDetails(rooms, doors, windows) {
             ctx.restore();
 
             // Wall-Hung Concealed Tank & Actuator Plate
-            ctx.fillStyle = '#f8fafc';
-            ctx.strokeStyle = '#334155';
-            ctx.lineWidth = 1;
-            ctx.fillRect(wcX, wcY, wcW, 5);
-            ctx.strokeRect(wcX, wcY, wcW, 5);
-
-            // Chrome Flush Actuator Plate
-            ctx.fillStyle = '#0284c7';
-            ctx.fillRect(wcX + 4, wcY + 1.5, 6, 2);
+            ctx.fillStyle = '#f8fafc'; ctx.strokeStyle = '#334155'; ctx.lineWidth = 1;
+            ctx.fillRect(wcX, wcY, wcW, 5); ctx.strokeRect(wcX, wcY, wcW, 5);
+            ctx.fillStyle = '#0284c7'; ctx.fillRect(wcX + 4, wcY + 1.5, 6, 2);
 
             // Elongated Accessible Ceramic Bowl
             ctx.fillStyle = '#ffffff';
-            ctx.beginPath();
-            ctx.ellipse(wcX + wcW / 2, wcY + 12, 5.5, 7.5, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
+            ctx.beginPath(); ctx.ellipse(wcX + wcW / 2, wcY + 12, 5.5, 7.5, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
 
             // Inner Bowl & Seat Contour
-            ctx.strokeStyle = '#94a3b8';
-            ctx.lineWidth = 0.6;
-            ctx.beginPath();
-            ctx.ellipse(wcX + wcW / 2, wcY + 13, 3.5, 5.0, 0, 0, Math.PI * 2);
-            ctx.stroke();
+            ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 0.6;
+            ctx.beginPath(); ctx.ellipse(wcX + wcW / 2, wcY + 13, 3.5, 5.0, 0, 0, Math.PI * 2); ctx.stroke();
 
             // Rear Wall Grab Bar (36" = 90cm)
-            ctx.strokeStyle = '#0284c7';
-            ctx.lineWidth = 2.0;
-            ctx.beginPath();
-            ctx.moveTo(wcX - 4, wcY + 1);
-            ctx.lineTo(wcX + wcW + 4, wcY + 1);
-            ctx.stroke();
-            // Flanges
-            ctx.fillStyle = '#0284c7';
-            ctx.fillRect(wcX - 5, wcY, 2, 2);
-            ctx.fillRect(wcX + wcW + 3, wcY, 2, 2);
+            ctx.strokeStyle = '#0284c7'; ctx.lineWidth = 2.0;
+            ctx.beginPath(); ctx.moveTo(wcX - 4, wcY + 1); ctx.lineTo(wcX + wcW + 4, wcY + 1); ctx.stroke();
+            ctx.fillStyle = '#0284c7'; ctx.fillRect(wcX - 5, wcY, 2, 2); ctx.fillRect(wcX + wcW + 3, wcY, 2, 2);
 
-            // Side Wall Grab Bar (42" = 106cm)
-            ctx.beginPath();
-            ctx.moveTo(x + w - 2, wcY + 2);
-            ctx.lineTo(x + w - 2, wcY + wcH + 6);
-            ctx.stroke();
-            ctx.fillRect(x + w - 3, wcY + 1, 2, 2);
-            ctx.fillRect(x + w - 3, wcY + wcH + 5, 2, 2);
+            // Side Wall Grab Bar
+            ctx.beginPath(); ctx.moveTo(x + w - 2, wcY + 2); ctx.lineTo(x + w - 2, wcY + wcH + 6); ctx.stroke();
 
             // Folding Drop-Down Safety Arm Bar
-            ctx.strokeStyle = '#0284c7';
-            ctx.lineWidth = 2.0;
-            ctx.beginPath();
-            ctx.moveTo(wcX - 2, wcY + 2);
-            ctx.lineTo(wcX - 2, wcY + 16);
-            ctx.stroke();
-            ctx.fillStyle = '#0f172a';
-            ctx.fillRect(wcX - 3.5, wcY + 1, 3, 3);
-            ctx.fillStyle = '#38bdf8';
-            ctx.beginPath();
-            ctx.arc(wcX - 2, wcY + 16, 1.5, 0, Math.PI * 2);
-            ctx.fill();
+            ctx.beginPath(); ctx.moveTo(wcX - 2, wcY + 2); ctx.lineTo(wcX - 2, wcY + 16); ctx.stroke();
+            ctx.fillStyle = '#0f172a'; ctx.fillRect(wcX - 3.5, wcY + 1, 3, 3);
+            ctx.fillStyle = '#38bdf8'; ctx.beginPath(); ctx.arc(wcX - 2, wcY + 16, 1.5, 0, Math.PI * 2); ctx.fill();
 
-            // -------------------------------------------------------------
-            // B. Curbless Roll-in Accessible Shower Zone (Bottom-Right)
-            // -------------------------------------------------------------
+            // Curbless Roll-in Accessible Shower Zone (Bottom-Right)
             const shW = Math.max(28, Math.round(w * 0.42));
             const shH = Math.max(26, Math.round(h * 0.40));
-            const shX = x + w - shW - 4;
-            const shY = y + h - shH - 4;
+            const shX = x + w - shW - 4; const shY = y + h - shH - 4;
+            ctx.fillStyle = 'rgba(2, 132, 199, 0.08)'; ctx.fillRect(shX, shY, shW, shH);
+            ctx.strokeStyle = '#0284c7'; ctx.lineWidth = 1.0; ctx.setLineDash([3, 2]);
+            ctx.strokeRect(shX, shY, shW, shH); ctx.setLineDash([]);
 
-            ctx.fillStyle = 'rgba(2, 132, 199, 0.08)';
-            ctx.fillRect(shX, shY, shW, shH);
-            ctx.strokeStyle = '#0284c7';
-            ctx.lineWidth = 1.0;
-            ctx.setLineDash([3, 2]);
-            ctx.strokeRect(shX, shY, shW, shH);
-            ctx.setLineDash([]);
-
-            // Linear Stainless Steel Floor Drain
+            // Linear Drain & Teak Bench
             const drainW = Math.min(18, shW - 8);
-            const drainH = 3;
-            const drainX = shX + (shW - drainW) / 2;
-            const drainY = shY + shH - 5;
-            ctx.fillStyle = '#475569';
-            ctx.fillRect(drainX, drainY, drainW, drainH);
-            ctx.strokeStyle = '#0284c7';
-            ctx.lineWidth = 0.6;
-            ctx.strokeRect(drainX, drainY, drainW, drainH);
+            ctx.fillStyle = '#475569'; ctx.fillRect(shX + (shW - drainW) / 2, shY + shH - 5, drainW, 3);
+            const benchW = 10; const benchH = 18;
+            ctx.fillStyle = '#b45309'; ctx.strokeStyle = '#78350f'; ctx.lineWidth = 0.8;
+            ctx.fillRect(shX + shW - benchW - 1, shY + 4, benchW, benchH);
+            ctx.strokeRect(shX + shW - benchW - 1, shY + 4, benchW, benchH);
 
-            // Folding Teak Shower Bench
-            const benchW = 10;
-            const benchH = 18;
-            const benchX = shX + shW - benchW - 1;
-            const benchY = shY + 4;
-            ctx.fillStyle = '#b45309';
-            ctx.strokeStyle = '#78350f';
-            ctx.lineWidth = 0.8;
-            ctx.fillRect(benchX, benchY, benchW, benchH);
-            ctx.strokeRect(benchX, benchY, benchW, benchH);
+            // Vanity Washbasin (Left Wall BELOW door swing)
+            const sinkW = 18; const sinkH = 13;
+            const sinkX = x + 4; const sinkY = y + 36;
+            ctx.strokeStyle = 'rgba(2, 132, 199, 0.4)'; ctx.lineWidth = 0.75; ctx.setLineDash([2, 2]);
+            ctx.strokeRect(sinkX - 1, sinkY - 1, sinkW + 2, sinkH + 6); ctx.setLineDash([]);
+            ctx.fillStyle = '#f8fafc'; ctx.strokeStyle = '#334155'; ctx.lineWidth = 1;
+            ctx.fillRect(sinkX, sinkY, sinkW, sinkH); ctx.strokeRect(sinkX, sinkY, sinkW, sinkH);
+            ctx.fillStyle = '#ffffff'; ctx.beginPath();
+            ctx.ellipse(sinkX + sinkW / 2, sinkY + sinkH / 2 + 1, 6.5, 4.5, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = '#0284c7'; ctx.beginPath(); ctx.arc(sinkX + sinkW / 2, sinkY + 2.5, 1.5, 0, Math.PI * 2); ctx.fill();
 
-            // Shower Grab Bar
-            ctx.strokeStyle = '#0284c7';
-            ctx.lineWidth = 2.0;
-            ctx.beginPath();
-            ctx.moveTo(shX + 2, shY + 2);
-            ctx.lineTo(shX + shW - 2, shY + 2);
-            ctx.stroke();
-
-            // -------------------------------------------------------------
-            // C. Wheelchair Accessible Vanity Washbasin (Left Wall BELOW door swing)
-            // -------------------------------------------------------------
-            const sinkW = 18;
-            const sinkH = 13;
-            const sinkX = x + 4;
-            const sinkY = y + 36; // 1.40m below top wall, completely clear of top door!
-
-            // Knee Clearance Recess
-            ctx.strokeStyle = 'rgba(2, 132, 199, 0.4)';
-            ctx.lineWidth = 0.75;
-            ctx.setLineDash([2, 2]);
-            ctx.strokeRect(sinkX - 1, sinkY - 1, sinkW + 2, sinkH + 6);
-            ctx.setLineDash([]);
-
-            // Ergonomic Basin Counter
-            ctx.fillStyle = '#f8fafc';
-            ctx.strokeStyle = '#334155';
-            ctx.lineWidth = 1;
-            ctx.fillRect(sinkX, sinkY, sinkW, sinkH);
-            ctx.strokeRect(sinkX, sinkY, sinkW, sinkH);
-
-            // Front Concave Curve
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath();
-            ctx.ellipse(sinkX + sinkW / 2, sinkY + sinkH / 2 + 1, 6.5, 4.5, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-
-            // Faucet
-            ctx.fillStyle = '#0284c7';
-            ctx.beginPath(); ctx.arc(sinkX + sinkW / 2, sinkY + 2.5, 1.5, 0, Math.PI * 2); ctx.fill();
-
-            // -------------------------------------------------------------
-            // D. Central Wheelchair Clear Turning Circle (Ø 1.50m)
-            // -------------------------------------------------------------
-            const tcRadius = 17.25;
-            const tcX = x + w / 2;
-            const tcY = y + h / 2;
-
+            // Central Turning Circle (Ø 1.50m)
             ctx.save();
-            ctx.strokeStyle = 'rgba(2, 132, 199, 0.65)';
-            ctx.fillStyle = 'rgba(2, 132, 199, 0.05)';
-            ctx.lineWidth = 1.2;
-            ctx.setLineDash([4, 3]);
-            ctx.beginPath();
-            ctx.arc(tcX, tcY, tcRadius, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-            ctx.setLineDash([]);
+            ctx.strokeStyle = 'rgba(2, 132, 199, 0.65)'; ctx.fillStyle = 'rgba(2, 132, 199, 0.05)';
+            ctx.lineWidth = 1.2; ctx.setLineDash([4, 3]);
+            ctx.beginPath(); ctx.arc(x + w / 2, y + h / 2, 17.25, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
             ctx.restore();
         }
 
+        // =========================================================================
+        // 3. GENERAL / GUEST BATHROOM (#ff3464)
+        // =========================================================================
         else if (r.key === 'bathroom') {
-            // Subtle porcelain tile grid
             ctx.strokeStyle = 'rgba(0, 0, 0, 0.06)';
             ctx.lineWidth = 0.5;
             const tileStep = 10;
@@ -4226,424 +4269,376 @@ function drawArchitecturalDetails(rooms, doors, windows) {
                 ctx.beginPath(); ctx.moveTo(x + 2, gy); ctx.lineTo(x + w - 2, gy); ctx.stroke();
             }
 
-            // =============================================================
-            // GENERAL / GUEST BATHROOM (Zero Door Collision)
-            // Door is on the Left wall near top (y + 4 to y + 27).
-            // Place all fixtures on the RIGHT wall and BOTTOM wall!
-            // =============================================================
+            // Wall-Hung Toilet Tank & Bowl on Right Wall
+            const wcX = x + w - 15; const wcY = y + 4;
+            ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#334155'; ctx.lineWidth = 1;
+            ctx.fillRect(wcX, wcY, 11, 5); ctx.strokeRect(wcX, wcY, 11, 5);
+            ctx.beginPath(); ctx.ellipse(wcX + 5.5, wcY + 11, 4.5, 6, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
 
-            // Wall-Hung Toilet Tank & Bowl on Top-Right Wall (away from left door!)
-            const wcX = x + w - 15;
-            const wcY = y + 4;
-            ctx.fillStyle = '#ffffff';
-            ctx.strokeStyle = '#334155';
-            ctx.lineWidth = 1;
-            ctx.fillRect(wcX, wcY, 11, 5);
-            ctx.strokeRect(wcX, wcY, 11, 5);
-            ctx.beginPath();
-            ctx.ellipse(wcX + 5.5, wcY + 11, 4.5, 6, 0, 0, Math.PI * 2);
-            ctx.fill(); ctx.stroke();
+            // Vanity Washbasin
+            const sinkX = x + w - 15; const sinkY = y + 28;
+            ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#334155'; ctx.lineWidth = 1;
+            ctx.fillRect(sinkX, sinkY, 11, 10); ctx.strokeRect(sinkX, sinkY, 11, 10);
+            ctx.beginPath(); ctx.ellipse(sinkX + 5.5, sinkY + 5, 4, 3.5, 0, 0, Math.PI * 2); ctx.stroke();
 
-            // Grab bar
-            ctx.strokeStyle = '#0284c7';
-            ctx.lineWidth = 1.8;
-            ctx.beginPath();
-            ctx.moveTo(wcX - 3, wcY + 2); ctx.lineTo(wcX - 3, wcY + 18);
-            ctx.stroke();
-
-            // Vanity Washbasin on the RIGHT wall below toilet (COMPLETELY CLEAR OF LEFT DOOR!)
-            const sinkX = x + w - 15;
-            const sinkY = y + 28;
-            ctx.fillStyle = '#ffffff';
-            ctx.strokeStyle = '#334155';
-            ctx.lineWidth = 1;
-            ctx.fillRect(sinkX, sinkY, 11, 10);
-            ctx.strokeRect(sinkX, sinkY, 11, 10);
-            ctx.beginPath();
-            ctx.ellipse(sinkX + 5.5, sinkY + 5, 4, 3.5, 0, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.fillStyle = '#0284c7';
-            ctx.beginPath(); ctx.arc(sinkX + 5.5, sinkY + 2, 1, 0, Math.PI * 2); ctx.fill();
-
-            // Shower Zone at Bottom
+            // Shower Zone
             const shSize = Math.min(22, w - 8);
-            const shX = x + (w - shSize) / 2;
-            const shY = y + h - shSize - 4;
-            ctx.strokeStyle = '#0284c7';
-            ctx.lineWidth = 0.8;
-            ctx.setLineDash([2, 2]);
-            ctx.strokeRect(shX, shY, shSize, shSize);
-            ctx.setLineDash([]);
-
-            ctx.strokeStyle = '#64748b';
-            ctx.lineWidth = 0.8;
-            ctx.beginPath();
-            ctx.arc(shX + shSize / 2, shY + shSize / 2, 2.5, 0, Math.PI * 2);
-            ctx.stroke();
+            const shX = x + (w - shSize) / 2; const shY = y + h - shSize - 4;
+            ctx.strokeStyle = '#0284c7'; ctx.lineWidth = 0.8; ctx.setLineDash([2, 2]);
+            ctx.strokeRect(shX, shY, shSize, shSize); ctx.setLineDash([]);
+            ctx.strokeStyle = '#64748b'; ctx.lineWidth = 0.8;
+            ctx.beginPath(); ctx.arc(shX + shSize / 2, shY + shSize / 2, 2.5, 0, Math.PI * 2); ctx.stroke();
         }
 
-        // 3. BEDROOMS (#e801f7 Disabled Suite & #fefe0a Standard Bedroom): Queen Bed, Pillows, Nightstands, Wardrobe
+        // =========================================================================
+        // 4. BEDROOMS (#e801f7 Disabled Suite & #fefe0a Standard Bedroom)
+        // =========================================================================
         else if (r.key === 'disabled_bedroom' || r.key === 'bedroom') {
             // Parquet flooring lines
-            ctx.strokeStyle = 'rgba(0, 0, 0, 0.04)';
-            ctx.lineWidth = 0.6;
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.04)'; ctx.lineWidth = 0.6;
             for (let gy = y + 16; gy < y + h - 4; gy += 16) {
                 ctx.beginPath(); ctx.moveTo(x + 2, gy); ctx.lineTo(x + w - 2, gy); ctx.stroke();
             }
 
-            // Queen Bed Silhouette (Width = 36px / 1.60m, Length = 44px / 1.90m)
-            const bedW = 36;
-            const bedH = 42;
-            const bedX = Math.round(x + (w - bedW) / 2);
-            const bedY = y + 4; // Headboard against top wall
+            if (style === 3) {
+                // Style 3: Twin Accessible Single Beds (2 beds + shared central nightstand)
+                const singleW = 20; const singleH = 40;
+                const gap = 12;
+                const totalBedsW = singleW * 2 + gap;
+                const startBX = Math.round(x + (w - totalBedsW) / 2);
+                const bed1X = startBX; const bed2X = startBX + singleW + gap;
+                const bedY = y + 4;
 
-            // Headboard
-            ctx.fillStyle = '#334155';
-            ctx.fillRect(bedX - 2, bedY, bedW + 4, 3);
+                // Bed 1
+                ctx.fillStyle = '#334155'; ctx.fillRect(bed1X - 1, bedY, singleW + 2, 3);
+                ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#475569'; ctx.lineWidth = 1;
+                ctx.fillRect(bed1X, bedY + 3, singleW, singleH); ctx.strokeRect(bed1X, bedY + 3, singleW, singleH);
+                ctx.fillStyle = '#e2e8f0'; ctx.fillRect(bed1X + 2, bedY + 5, singleW - 4, 8);
+                ctx.strokeRect(bed1X + 2, bedY + 5, singleW - 4, 8);
 
-            // Bed Mattress Body
-            ctx.fillStyle = '#ffffff';
-            ctx.strokeStyle = '#475569';
-            ctx.lineWidth = 1;
-            ctx.fillRect(bedX, bedY + 3, bedW, bedH);
-            ctx.strokeRect(bedX, bedY + 3, bedW, bedH);
+                // Bed 2
+                ctx.fillStyle = '#334155'; ctx.fillRect(bed2X - 1, bedY, singleW + 2, 3);
+                ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#475569'; ctx.lineWidth = 1;
+                ctx.fillRect(bed2X, bedY + 3, singleW, singleH); ctx.strokeRect(bed2X, bedY + 3, singleW, singleH);
+                ctx.fillStyle = '#e2e8f0'; ctx.fillRect(bed2X + 2, bedY + 5, singleW - 4, 8);
+                ctx.strokeRect(bed2X + 2, bedY + 5, singleW - 4, 8);
 
-            // Pillows (Left & Right)
-            ctx.fillStyle = '#e2e8f0';
-            ctx.strokeStyle = '#64748b';
-            ctx.lineWidth = 0.8;
-            // Left pillow
-            ctx.fillRect(bedX + 3, bedY + 5, 12, 8);
-            ctx.strokeRect(bedX + 3, bedY + 5, 12, 8);
-            // Right pillow
-            ctx.fillRect(bedX + bedW - 15, bedY + 5, 12, 8);
-            ctx.strokeRect(bedX + bedW - 15, bedY + 5, 12, 8);
+                // Shared Central Nightstand
+                const nsX = bed1X + singleW + 2; const nsY = bedY + 3;
+                ctx.fillStyle = '#f1f5f9'; ctx.strokeStyle = '#475569'; ctx.lineWidth = 0.8;
+                ctx.fillRect(nsX, nsY, gap - 4, 9); ctx.strokeRect(nsX, nsY, gap - 4, 9);
+                ctx.fillStyle = '#eab308'; ctx.beginPath(); ctx.arc(nsX + (gap - 4) / 2, nsY + 4.5, 1.5, 0, Math.PI * 2); ctx.fill();
 
-            // Duvet Fold Line
-            ctx.strokeStyle = '#94a3b8';
-            ctx.lineWidth = 0.8;
-            ctx.beginPath();
-            ctx.moveTo(bedX + 2, bedY + 16);
-            ctx.lineTo(bedX + bedW - 2, bedY + 16);
-            ctx.stroke();
+                // Wardrobe
+                const wardW = 12; const wardH = Math.min(36, h - 20);
+                const wardX = x + w - wardW - 4; const wardY = y + h - wardH - 4;
+                ctx.fillStyle = '#f8fafc'; ctx.strokeStyle = '#475569'; ctx.lineWidth = 0.8;
+                ctx.fillRect(wardX, wardY, wardW, wardH); ctx.strokeRect(wardX, wardY, wardW, wardH);
+                ctx.fillStyle = '#64748b'; ctx.font = 'bold 5.5px Cairo, JetBrains Mono'; ctx.textAlign = 'center';
+                ctx.fillText(isAr ? 'خزانة' : 'CLOSET', wardX + wardW / 2, wardY + wardH / 2 + 2);
 
-            // Nightstands (Left & Right)
-            const nsSize = 9;
-            ctx.fillStyle = '#f1f5f9';
-            ctx.strokeStyle = '#475569';
-            ctx.lineWidth = 0.8;
-            // Left nightstand
-            ctx.fillRect(bedX - nsSize - 3, bedY + 3, nsSize, nsSize);
-            ctx.strokeRect(bedX - nsSize - 3, bedY + 3, nsSize, nsSize);
-            // Lamp dot
-            ctx.fillStyle = '#eab308';
-            ctx.beginPath(); ctx.arc(bedX - nsSize / 2 - 3, bedY + 3 + nsSize / 2, 1.5, 0, Math.PI * 2); ctx.fill();
-            // Right nightstand
-            ctx.fillRect(bedX + bedW + 3, bedY + 3, nsSize, nsSize);
-            ctx.strokeRect(bedX + bedW + 3, bedY + 3, nsSize, nsSize);
-            ctx.beginPath(); ctx.arc(bedX + bedW + 3 + nsSize / 2, bedY + 3 + nsSize / 2, 1.5, 0, Math.PI * 2); ctx.fill();
+            } else if (style === 2) {
+                // Style 2: Ergonomic Lateral Accessible Bed (Offset to provide 1.60m+ transfer zone)
+                const bedW = 36; const bedH = 42;
+                const bedX = x + 8; // Offset to left wall
+                const bedY = y + 4;
 
-            // Built-in Wardrobe / Closet along right or bottom wall
-            const wardW = 12;
-            const wardH = Math.min(36, h - 20);
-            const wardX = x + w - wardW - 4;
-            const wardY = y + h - wardH - 4;
-            ctx.fillStyle = '#f8fafc';
-            ctx.strokeStyle = '#475569';
-            ctx.lineWidth = 0.8;
-            ctx.fillRect(wardX, wardY, wardW, wardH);
-            ctx.strokeRect(wardX, wardY, wardW, wardH);
-            // Sliding door dividing line
-            ctx.beginPath(); ctx.moveTo(wardX, wardY + wardH / 2); ctx.lineTo(wardX + wardW, wardY + wardH / 2); ctx.stroke();
-            ctx.fillStyle = '#64748b';
-            ctx.font = 'bold 5.5px Cairo, JetBrains Mono';
-            ctx.textAlign = 'center';
-            ctx.fillText(isAr ? 'خزانة' : 'CLOSET', wardX + wardW / 2, wardY + wardH / 2 + 2);
-        }
+                // Headboard & Mattress
+                ctx.fillStyle = '#334155'; ctx.fillRect(bedX - 2, bedY, bedW + 4, 3);
+                ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#475569'; ctx.lineWidth = 1;
+                ctx.fillRect(bedX, bedY + 3, bedW, bedH); ctx.strokeRect(bedX, bedY + 3, bedW, bedH);
+                ctx.fillStyle = '#e2e8f0'; ctx.fillRect(bedX + 3, bedY + 5, 12, 8); ctx.strokeRect(bedX + 3, bedY + 5, 12, 8);
+                ctx.fillRect(bedX + bedW - 15, bedY + 5, 12, 8); ctx.strokeRect(bedX + bedW - 15, bedY + 5, 12, 8);
 
-        // 4. LIVING ROOM (#01ffec): Accessible Primary Circulation Spine & Ergonomic Family Seating
-        else if (r.key === 'living_room') {
-            // Elegant marble / porcelain floor texture lines
-            ctx.strokeStyle = 'rgba(0, 0, 0, 0.04)';
-            ctx.lineWidth = 0.6;
-            for (let gy = y + 16; gy < y + h - 4; gy += 16) {
-                ctx.beginPath(); ctx.moveTo(x + 2, gy); ctx.lineTo(x + w - 2, gy); ctx.stroke();
-            }
-
-            // Determine Primary Circulation Axis vs. Seating Zone
-            // If living room is in East half (Variants 1 & 2): Door is on West side (left)
-            // Seating Zone is placed on the East side (right) to maintain 100% clear 1.50m circulation spine
-            const isLeftOriented = (w > 100 && x < canvas.width * 0.35); // Variant 3 Left Salon
-
-            let seatX, seatY, seatW, seatH, tvX, tvY, tvW, tvH, pathStartX, pathStartY, pathEndX, pathEndY;
-
-            if (!isLeftOriented) {
-                // Variants 1 & 2: Entrance on Left (x + 2), Seating on Right (x + 36 to x + w)
-                const circW = Math.max(35, Math.round(1.50 * 23)); // 1.50m (35px) Clear ADA Spine
-                
-                // Clear Accessible Circulation Spine (Dashed Guideline)
-                pathStartX = x + 16; pathStartY = y + 4;
-                pathEndX = x + 16; pathEndY = y + h - 4;
-
+                // Transfer Guideline on Open Side
                 ctx.save();
-                ctx.strokeStyle = 'rgba(2, 132, 199, 0.25)';
-                ctx.lineWidth = 1.0;
-                ctx.setLineDash([4, 4]);
-                ctx.beginPath(); ctx.moveTo(pathStartX, pathStartY); ctx.lineTo(pathEndX, pathEndY); ctx.stroke();
+                ctx.strokeStyle = '#0284c7'; ctx.fillStyle = 'rgba(2, 132, 199, 0.06)';
+                ctx.lineWidth = 0.8; ctx.setLineDash([3, 2]);
+                ctx.fillRect(bedX + bedW + 4, bedY + 4, 30, 36);
+                ctx.strokeRect(bedX + bedW + 4, bedY + 4, 30, 36);
                 ctx.setLineDash([]);
-                
-                // ADA Maneuvering Turning Circle (Ø 1.50m) in Circulation Zone
-                ctx.strokeStyle = 'rgba(2, 132, 199, 0.35)';
-                ctx.fillStyle = 'rgba(2, 132, 199, 0.03)';
-                ctx.beginPath();
-                ctx.arc(x + 18, y + h / 2, 16, 0, Math.PI * 2);
-                ctx.fill(); ctx.stroke();
+                ctx.fillStyle = '#0284c7'; ctx.font = 'bold 6.5px Cairo, sans-serif'; ctx.textAlign = 'center';
+                ctx.fillText('♿ مسار نقل', bedX + bedW + 19, bedY + 22);
                 ctx.restore();
 
-                // Family Seating Lounge (Right Zone)
-                seatX = x + circW + 4;
-                seatY = y + 8;
-                seatW = Math.max(38, w - circW - 10);
-                seatH = Math.max(34, h - 16);
+                // Nightstand & Wardrobe
+                const nsSize = 9;
+                ctx.fillStyle = '#f1f5f9'; ctx.strokeStyle = '#475569'; ctx.lineWidth = 0.8;
+                ctx.fillRect(bedX + bedW + 4, bedY + 3, nsSize, nsSize); ctx.strokeRect(bedX + bedW + 4, bedY + 3, nsSize, nsSize);
 
-                // Luxury Area Rug
-                ctx.fillStyle = 'rgba(241, 245, 249, 0.4)';
-                ctx.strokeStyle = 'rgba(71, 85, 105, 0.25)';
-                ctx.lineWidth = 0.8;
-                ctx.setLineDash([3, 2]);
+                const wardW = 12; const wardH = Math.min(36, h - 20);
+                const wardX = x + w - wardW - 4; const wardY = y + h - wardH - 4;
+                ctx.fillStyle = '#f8fafc'; ctx.strokeStyle = '#475569'; ctx.lineWidth = 0.8;
+                ctx.fillRect(wardX, wardY, wardW, wardH); ctx.strokeRect(wardX, wardY, wardW, wardH);
+
+            } else {
+                // Style 1: Rotatable Queen Master Bed (0°, 90°, 180°, 270°)
+                const bedW = 36; const bedH = 42;
+                let bedX, bedY, bwR, bhR;
+
+                if (rot === 90) {
+                    // Headboard on Right Wall
+                    bwR = bedH; bhR = bedW;
+                    bedX = x + w - bwR - 4; bedY = Math.round(y + (h - bhR) / 2);
+                    ctx.fillStyle = '#334155'; ctx.fillRect(bedX + bwR - 3, bedY - 2, 3, bhR + 4);
+                    ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#475569'; ctx.lineWidth = 1;
+                    ctx.fillRect(bedX, bedY, bwR - 3, bhR); ctx.strokeRect(bedX, bedY, bwR - 3, bhR);
+                    // Pillows
+                    ctx.fillStyle = '#e2e8f0'; ctx.fillRect(bedX + bwR - 12, bedY + 3, 8, 12); ctx.strokeRect(bedX + bwR - 12, bedY + 3, 8, 12);
+                    ctx.fillRect(bedX + bwR - 12, bedY + bhR - 15, 8, 12); ctx.strokeRect(bedX + bwR - 12, bedY + bhR - 15, 8, 12);
+                } else if (rot === 180) {
+                    // Headboard on Bottom Wall
+                    bwR = bedW; bhR = bedH;
+                    bedX = Math.round(x + (w - bwR) / 2); bedY = y + h - bhR - 4;
+                    ctx.fillStyle = '#334155'; ctx.fillRect(bedX - 2, bedY + bhR - 3, bwR + 4, 3);
+                    ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#475569'; ctx.lineWidth = 1;
+                    ctx.fillRect(bedX, bedY, bwR, bhR - 3); ctx.strokeRect(bedX, bedY, bwR, bhR - 3);
+                    // Pillows
+                    ctx.fillStyle = '#e2e8f0'; ctx.fillRect(bedX + 3, bedY + bhR - 15, 12, 8); ctx.strokeRect(bedX + 3, bedY + bhR - 15, 12, 8);
+                    ctx.fillRect(bedX + bwR - 15, bedY + bhR - 15, 12, 8); ctx.strokeRect(bedX + bwR - 15, bedY + bhR - 15, 12, 8);
+                } else if (rot === 270) {
+                    // Headboard on Left Wall
+                    bwR = bedH; bhR = bedW;
+                    bedX = x + 4; bedY = Math.round(y + (h - bhR) / 2);
+                    ctx.fillStyle = '#334155'; ctx.fillRect(bedX, bedY - 2, 3, bhR + 4);
+                    ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#475569'; ctx.lineWidth = 1;
+                    ctx.fillRect(bedX + 3, bedY, bwR - 3, bhR); ctx.strokeRect(bedX + 3, bedY, bwR - 3, bhR);
+                    // Pillows
+                    ctx.fillStyle = '#e2e8f0'; ctx.fillRect(bedX + 5, bedY + 3, 8, 12); ctx.strokeRect(bedX + 5, bedY + 3, 8, 12);
+                    ctx.fillRect(bedX + 5, bedY + bhR - 15, 8, 12); ctx.strokeRect(bedX + 5, bedY + bhR - 15, 8, 12);
+                } else {
+                    // 0° (Headboard on Top Wall)
+                    bwR = bedW; bhR = bedH;
+                    bedX = Math.round(x + (w - bwR) / 2); bedY = y + 4;
+                    ctx.fillStyle = '#334155'; ctx.fillRect(bedX - 2, bedY, bwR + 4, 3);
+                    ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#475569'; ctx.lineWidth = 1;
+                    ctx.fillRect(bedX, bedY + 3, bwR, bhR); ctx.strokeRect(bedX, bedY + 3, bwR, bhR);
+                    // Pillows
+                    ctx.fillStyle = '#e2e8f0'; ctx.fillRect(bedX + 3, bedY + 5, 12, 8); ctx.strokeRect(bedX + 3, bedY + 5, 12, 8);
+                    ctx.fillRect(bedX + bwR - 15, bedY + 5, 12, 8); ctx.strokeRect(bedX + bwR - 15, bedY + 5, 12, 8);
+                }
+
+                // Wardrobe / Closet
+                const wardW = 12; const wardH = Math.min(36, h - 20);
+                const wardX = (rot === 90) ? x + 4 : x + w - wardW - 4;
+                const wardY = y + h - wardH - 4;
+                ctx.fillStyle = '#f8fafc'; ctx.strokeStyle = '#475569'; ctx.lineWidth = 0.8;
+                ctx.fillRect(wardX, wardY, wardW, wardH); ctx.strokeRect(wardX, wardY, wardW, wardH);
+                ctx.fillStyle = '#64748b'; ctx.font = 'bold 5.5px Cairo, JetBrains Mono'; ctx.textAlign = 'center';
+                ctx.fillText(isAr ? 'خزانة' : 'CLOSET', wardX + wardW / 2, wardY + wardH / 2 + 2);
+            }
+        }
+
+        // =========================================================================
+        // 5. LIVING ROOM (#01ffec): Accessible Spine, L-Sofa, U-Majlis, Contemporary
+        // =========================================================================
+        else if (r.key === 'living_room') {
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.04)'; ctx.lineWidth = 0.6;
+            for (let gy = y + 16; gy < y + h - 4; gy += 16) {
+                ctx.beginPath(); ctx.moveTo(x + 2, gy); ctx.lineTo(x + w - 2, gy); ctx.stroke();
+            }
+
+            const isLeftOriented = (w > 100 && x < canvas.width * 0.35);
+            const circW = 35; // 1.50m ADA Spine
+
+            if (style === 2) {
+                // Style 2: Arabesque U-Majlis Family Lounge
+                const seatX = x + circW + 4; const seatY = y + 8;
+                const seatW = Math.max(38, w - circW - 10); const seatH = Math.max(34, h - 16);
+                const sofaD = 10;
+
+                // Luxury Woven Rug
+                ctx.fillStyle = 'rgba(2, 132, 199, 0.06)'; ctx.strokeStyle = 'rgba(2, 132, 199, 0.25)';
+                ctx.lineWidth = 0.8; ctx.setLineDash([3, 2]);
                 ctx.fillRect(seatX + 2, seatY + 2, seatW - 4, seatH - 4);
                 ctx.strokeRect(seatX + 2, seatY + 2, seatW - 4, seatH - 4);
                 ctx.setLineDash([]);
 
-                // L-Shaped Sectional Sofa against right and bottom walls
+                // 3-Sided U-Sofa
+                ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#334155'; ctx.lineWidth = 1;
+                ctx.fillRect(seatX + 2, seatY + 4, sofaD, seatH - 8); ctx.strokeRect(seatX + 2, seatY + 4, sofaD, seatH - 8);
+                ctx.fillRect(seatX + seatW - sofaD - 2, seatY + 4, sofaD, seatH - 8); ctx.strokeRect(seatX + seatW - sofaD - 2, seatY + 4, sofaD, seatH - 8);
+                ctx.fillRect(seatX + 2, seatY + seatH - sofaD - 2, seatW - 4, sofaD); ctx.strokeRect(seatX + 2, seatY + seatH - sofaD - 2, seatW - 4, sofaD);
+
+                // Central Coffee Table
+                const ctW = Math.min(20, seatW - sofaD * 2 - 8); const ctH = 12;
+                ctx.fillStyle = '#f8fafc'; ctx.strokeStyle = '#475569'; ctx.lineWidth = 0.8;
+                ctx.fillRect(seatX + (seatW - ctW) / 2, seatY + (seatH - ctH) / 2 - 2, ctW, ctH);
+                ctx.strokeRect(seatX + (seatW - ctW) / 2, seatY + (seatH - ctH) / 2 - 2, ctW, ctH);
+
+                // TV Credenza on Top
+                const tvW = Math.min(32, seatW - 12);
+                ctx.fillStyle = '#1e293b'; ctx.fillRect(seatX + (seatW - tvW) / 2, y + 3, tvW, 5);
+
+            } else if (style === 3) {
+                // Style 3: Contemporary Salon with Twin Accent Chairs & Linear Sofa
+                const seatX = x + circW + 4; const seatY = y + 8;
+                const seatW = Math.max(38, w - circW - 10); const seatH = Math.max(34, h - 16);
                 const sofaD = 11;
-                ctx.fillStyle = '#ffffff';
-                ctx.strokeStyle = '#334155';
-                ctx.lineWidth = 1;
-                // Main Run (Right Wall)
-                ctx.fillRect(seatX + seatW - sofaD, seatY + 4, sofaD, seatH - 6);
-                ctx.strokeRect(seatX + seatW - sofaD, seatY + 4, sofaD, seatH - 6);
-                // Return Chaise (Bottom Wall)
-                ctx.fillRect(seatX + 14, seatY + seatH - sofaD - 2, seatW - 14, sofaD);
-                ctx.strokeRect(seatX + 14, seatY + seatH - sofaD - 2, seatW - 14, sofaD);
 
-                // Coffee Table (Centered in conversation group)
-                const ctW = 16;
-                const ctH = 10;
-                const ctX = seatX + (seatW - sofaD - ctW) / 2 + 4;
-                const ctY = seatY + (seatH - sofaD - ctH) / 2 + 2;
-                ctx.fillStyle = '#f8fafc';
-                ctx.strokeStyle = '#475569';
-                ctx.lineWidth = 0.8;
-                ctx.beginPath();
-                ctx.roundRect(ctX, ctY, ctW, ctH, 2);
-                ctx.fill(); ctx.stroke();
+                // Linear Deep Sofa against Right Wall
+                ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#334155'; ctx.lineWidth = 1;
+                ctx.fillRect(seatX + seatW - sofaD - 2, seatY + 6, sofaD, seatH - 12);
+                ctx.strokeRect(seatX + seatW - sofaD - 2, seatY + 6, sofaD, seatH - 12);
 
-                // TV Media Unit (Top Wall)
-                tvW = Math.min(32, seatW - 12);
-                tvH = 5;
-                tvX = seatX + (seatW - tvW) / 2 - 4;
-                tvY = y + 3;
-                ctx.fillStyle = '#1e293b';
-                ctx.fillRect(tvX, tvY, tvW, tvH);
-                ctx.strokeStyle = '#0f172a';
-                ctx.strokeRect(tvX, tvY, tvW, tvH);
-                ctx.fillStyle = '#38bdf8';
-                ctx.font = 'bold 5px Cairo, JetBrains Mono';
-                ctx.textAlign = 'center';
-                ctx.fillText('TV UNIT', tvX + tvW / 2, tvY + tvH / 2 + 1.5);
+                // Twin Accent Swivel Armchairs
+                ctx.fillStyle = '#f1f5f9'; ctx.strokeStyle = '#0284c7'; ctx.lineWidth = 0.9;
+                ctx.beginPath(); ctx.arc(seatX + 10, seatY + 12, 5.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+                ctx.beginPath(); ctx.arc(seatX + 10, seatY + seatH - 12, 5.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
 
-                // Integrated Wheelchair Social Space (♿ Beside the couch)
-                const wcSpX = seatX + 2;
-                const wcSpY = seatY + 6;
-                ctx.save();
-                ctx.strokeStyle = '#0284c7';
-                ctx.fillStyle = 'rgba(2, 132, 199, 0.12)';
-                ctx.lineWidth = 0.8;
-                ctx.setLineDash([2, 2]);
-                ctx.strokeRect(wcSpX, wcSpY, 11, 14);
-                ctx.fillRect(wcSpX, wcSpY, 11, 14);
-                ctx.setLineDash([]);
-                ctx.fillStyle = '#0284c7';
-                ctx.font = 'bold 6.5px Cairo, sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText('♿', wcSpX + 5.5, wcSpY + 9);
-                ctx.restore();
-
-            } else {
-                // Variant 3: Left Salon (Seating on Left, Circulation on Right to Spine)
-                const circW = 35;
-                seatX = x + 6;
-                seatY = y + 8;
-                seatW = Math.max(38, w - circW - 10);
-                seatH = Math.max(34, h - 16);
-
-                // L-Sofa on Left Wall & Bottom
-                const sofaD = 11;
-                ctx.fillStyle = '#ffffff';
-                ctx.strokeStyle = '#334155';
-                ctx.lineWidth = 1;
-                ctx.fillRect(seatX, seatY + 4, sofaD, seatH - 6);
-                ctx.strokeRect(seatX, seatY + 4, sofaD, seatH - 6);
-                ctx.fillRect(seatX, seatY + seatH - sofaD - 2, seatW - 6, sofaD);
-                ctx.strokeRect(seatX, seatY + seatH - sofaD - 2, seatW - 6, sofaD);
-
-                // Coffee Table
-                const ctW = 16;
-                const ctH = 10;
-                const ctX = seatX + sofaD + 4;
-                const ctY = seatY + 12;
-                ctx.fillStyle = '#f8fafc';
-                ctx.strokeStyle = '#475569';
-                ctx.lineWidth = 0.8;
-                ctx.beginPath();
-                ctx.roundRect(ctX, ctY, ctW, ctH, 2);
-                ctx.fill(); ctx.stroke();
+                // Oval Coffee Table
+                ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#334155'; ctx.lineWidth = 0.8;
+                ctx.beginPath(); ctx.ellipse(seatX + (seatW - sofaD) / 2 + 2, seatY + seatH / 2, 9, 6, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
 
                 // TV Unit on Top Wall
-                tvW = Math.min(32, seatW - 12);
-                tvH = 5;
-                tvX = seatX + 8;
-                tvY = y + 3;
-                ctx.fillStyle = '#1e293b';
-                ctx.fillRect(tvX, tvY, tvW, tvH);
-                ctx.strokeStyle = '#0f172a';
-                ctx.strokeRect(tvX, tvY, tvW, tvH);
-                ctx.fillStyle = '#38bdf8';
-                ctx.font = 'bold 5px Cairo, JetBrains Mono';
-                ctx.textAlign = 'center';
-                ctx.fillText('TV UNIT', tvX + tvW / 2, tvY + tvH / 2 + 1.5);
+                const tvW = Math.min(32, seatW - 12);
+                ctx.fillStyle = '#1e293b'; ctx.fillRect(seatX + (seatW - tvW) / 2, y + 3, tvW, 5);
+
+            } else {
+                // Style 1 (Default Modern L-Sectional)
+                const seatX = !isLeftOriented ? x + circW + 4 : x + 6;
+                const seatY = y + 8;
+                const seatW = Math.max(38, w - circW - 10); const seatH = Math.max(34, h - 16);
+                const sofaD = 11;
+
+                // Luxury Area Rug
+                ctx.fillStyle = 'rgba(241, 245, 249, 0.4)'; ctx.strokeStyle = 'rgba(71, 85, 105, 0.25)';
+                ctx.lineWidth = 0.8; ctx.setLineDash([3, 2]);
+                ctx.fillRect(seatX + 2, seatY + 2, seatW - 4, seatH - 4); ctx.strokeRect(seatX + 2, seatY + 2, seatW - 4, seatH - 4);
+                ctx.setLineDash([]);
+
+                // L-Sofa (Rotates based on rot)
+                ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#334155'; ctx.lineWidth = 1;
+                if (rot === 90 || rot === 180) {
+                    ctx.fillRect(seatX + 2, seatY + 4, sofaD, seatH - 6); ctx.strokeRect(seatX + 2, seatY + 4, sofaD, seatH - 6);
+                    ctx.fillRect(seatX + 2, seatY + 4, seatW - 6, sofaD); ctx.strokeRect(seatX + 2, seatY + 4, seatW - 6, sofaD);
+                } else {
+                    ctx.fillRect(seatX + seatW - sofaD, seatY + 4, sofaD, seatH - 6); ctx.strokeRect(seatX + seatW - sofaD, seatY + 4, sofaD, seatH - 6);
+                    ctx.fillRect(seatX + 14, seatY + seatH - sofaD - 2, seatW - 14, sofaD); ctx.strokeRect(seatX + 14, seatY + seatH - sofaD - 2, seatW - 14, sofaD);
+                }
+
+                // Coffee Table
+                const ctW = 16; const ctH = 10;
+                ctx.fillStyle = '#f8fafc'; ctx.strokeStyle = '#475569'; ctx.lineWidth = 0.8;
+                ctx.fillRect(seatX + (seatW - ctW) / 2, seatY + (seatH - ctH) / 2, ctW, ctH);
+                ctx.strokeRect(seatX + (seatW - ctW) / 2, seatY + (seatH - ctH) / 2, ctW, ctH);
+
+                // TV Media Unit
+                const tvW = Math.min(32, seatW - 12);
+                ctx.fillStyle = '#1e293b'; ctx.fillRect(seatX + (seatW - tvW) / 2, y + 3, tvW, 5);
+
+                // Integrated Wheelchair Social Space (♿)
+                const wcSpX = seatX + 2; const wcSpY = seatY + 6;
+                ctx.save();
+                ctx.strokeStyle = '#0284c7'; ctx.fillStyle = 'rgba(2, 132, 199, 0.12)';
+                ctx.lineWidth = 0.8; ctx.setLineDash([2, 2]);
+                ctx.strokeRect(wcSpX, wcSpY, 11, 14); ctx.fillRect(wcSpX, wcSpY, 11, 14); ctx.setLineDash([]);
+                ctx.fillStyle = '#0284c7'; ctx.font = 'bold 6.5px Cairo, sans-serif'; ctx.textAlign = 'center';
+                ctx.fillText('♿', wcSpX + 5.5, wcSpY + 9);
+                ctx.restore();
             }
         }
 
-        // 5. GUEST ROOM (#019df2): Formal Seating with 100% Clear Door Swings & Walkway
+        // =========================================================================
+        // 6. GUEST RECEPTION / SALON (#019df2): U-Majlis, Royal Salon, Diplomatic
+        // =========================================================================
         else if (r.key === 'guest_room') {
-            // Elegant Marble Tile Floor Lines
-            ctx.strokeStyle = 'rgba(0, 0, 0, 0.04)';
-            ctx.lineWidth = 0.6;
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.04)'; ctx.lineWidth = 0.6;
             for (let gx = x + 16; gx < x + w - 4; gx += 16) {
                 ctx.beginPath(); ctx.moveTo(gx, y + 2); ctx.lineTo(gx, y + h - 2); ctx.stroke();
             }
 
-            // Door Clearance Threshold: Ensure 1.15m (26px) clearance from top wall for front door swing & bath path
-            const doorClearanceY = 26; // 1.15m clearance from top wall
-            const sofaD = 11; // 48cm depth
-            const majlisX = x + 6;
-            const majlisY = y + doorClearanceY;
-            const majlisW = Math.max(34, w - 18);
-            const majlisH = Math.max(30, h - doorClearanceY - 6);
+            const doorClearanceY = 26;
+            const sofaD = 11;
+            const majlisX = x + 6; const majlisY = y + doorClearanceY;
+            const majlisW = Math.max(34, w - 18); const majlisH = Math.max(30, h - doorClearanceY - 6);
 
-            // Area Rug under seating group
-            ctx.fillStyle = 'rgba(1, 157, 242, 0.04)';
-            ctx.strokeStyle = 'rgba(1, 157, 242, 0.25)';
-            ctx.lineWidth = 0.8;
-            ctx.setLineDash([3, 2]);
-            ctx.fillRect(majlisX, majlisY, majlisW, majlisH);
-            ctx.strokeRect(majlisX, majlisY, majlisW, majlisH);
+            // Area Rug
+            ctx.fillStyle = 'rgba(1, 157, 242, 0.04)'; ctx.strokeStyle = 'rgba(1, 157, 242, 0.25)';
+            ctx.lineWidth = 0.8; ctx.setLineDash([3, 2]);
+            ctx.fillRect(majlisX, majlisY, majlisW, majlisH); ctx.strokeRect(majlisX, majlisY, majlisW, majlisH);
             ctx.setLineDash([]);
 
-            // U-Shaped / L-Shaped Formal Guest Sofas
-            ctx.fillStyle = '#ffffff';
-            ctx.strokeStyle = '#334155';
-            ctx.lineWidth = 1;
+            if (style === 2) {
+                // Style 2: Royal Reception Salon (3-seater + 2 wingback armchairs + marble table)
+                ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#334155'; ctx.lineWidth = 1;
+                // Bottom 3-seater
+                ctx.fillRect(majlisX + 6, majlisY + majlisH - sofaD, majlisW - 12, sofaD);
+                ctx.strokeRect(majlisX + 6, majlisY + majlisH - sofaD, majlisW - 12, sofaD);
+                // Left & Right Royal Armchairs
+                ctx.fillRect(majlisX + 2, majlisY + 4, 12, 12); ctx.strokeRect(majlisX + 2, majlisY + 4, 12, 12);
+                ctx.fillRect(majlisX + majlisW - 14, majlisY + 4, 12, 12); ctx.strokeRect(majlisX + majlisW - 14, majlisY + 4, 12, 12);
 
-            // Left Wall Sofa Run (Below the front door swing)
-            ctx.fillRect(majlisX, majlisY, sofaD, majlisH);
-            ctx.strokeRect(majlisX, majlisY, sofaD, majlisH);
+                // Central Marble Table
+                const ctW = Math.min(22, majlisW - 28); const ctH = 12;
+                ctx.fillStyle = '#f8fafc'; ctx.strokeStyle = '#0284c7'; ctx.lineWidth = 0.8;
+                ctx.fillRect(majlisX + (majlisW - ctW) / 2, majlisY + (majlisH - ctH) / 2 - 2, ctW, ctH);
+                ctx.strokeRect(majlisX + (majlisW - ctW) / 2, majlisY + (majlisH - ctH) / 2 - 2, ctW, ctH);
 
-            // Bottom Wall Sofa Run
-            ctx.fillRect(majlisX, majlisY + majlisH - sofaD, majlisW, sofaD);
-            ctx.strokeRect(majlisX, majlisY + majlisH - sofaD, majlisW, sofaD);
+            } else if (style === 3) {
+                // Style 3: Diplomatic Twin Conversation Group (Dual Facing 2-seaters)
+                ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#334155'; ctx.lineWidth = 1;
+                // Left 2-seater
+                ctx.fillRect(majlisX + 2, majlisY + 4, sofaD, majlisH - 8); ctx.strokeRect(majlisX + 2, majlisY + 4, sofaD, majlisH - 8);
+                // Right 2-seater
+                ctx.fillRect(majlisX + majlisW - sofaD - 2, majlisY + 4, sofaD, majlisH - 8); ctx.strokeRect(majlisX + majlisW - sofaD - 2, majlisY + 4, sofaD, majlisH - 8);
 
-            // Luxury Hospitality Armchair on Right Wing
-            const armW = 11;
-            const armH = 11;
-            const armX = majlisX + majlisW - armW;
-            const armY = majlisY + 2;
-            ctx.fillRect(armX, armY, armW, armH);
-            ctx.strokeRect(armX, armY, armW, armH);
+                // Central Coffee Table
+                const ctW = Math.min(18, majlisW - sofaD * 2 - 8); const ctH = 14;
+                ctx.fillStyle = '#f8fafc'; ctx.strokeStyle = '#0284c7'; ctx.lineWidth = 0.8;
+                ctx.fillRect(majlisX + (majlisW - ctW) / 2, majlisY + (majlisH - ctH) / 2, ctW, ctH);
+                ctx.strokeRect(majlisX + (majlisW - ctW) / 2, majlisY + (majlisH - ctH) / 2, ctW, ctH);
 
-            // Central Hospitality Coffee Table
-            const ctW = Math.min(18, majlisW - sofaD - armW - 4);
-            const ctH = 11;
-            const ctX = majlisX + sofaD + 3;
-            const ctY = majlisY + (majlisH - sofaD - ctH) / 2 + 1;
-            if (ctW > 8) {
-                ctx.fillStyle = '#f8fafc';
-                ctx.strokeStyle = '#0284c7';
-                ctx.lineWidth = 0.8;
-                ctx.beginPath();
-                ctx.roundRect(ctX, ctY, ctW, ctH, 2);
-                ctx.fill(); ctx.stroke();
+            } else {
+                // Style 1 (U-Shaped Arabic Hospitality Majlis)
+                ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#334155'; ctx.lineWidth = 1;
+                // Left Run
+                ctx.fillRect(majlisX, majlisY, sofaD, majlisH); ctx.strokeRect(majlisX, majlisY, sofaD, majlisH);
+                // Bottom Run
+                ctx.fillRect(majlisX, majlisY + majlisH - sofaD, majlisW, sofaD); ctx.strokeRect(majlisX, majlisY + majlisH - sofaD, majlisW, sofaD);
+                // Right Armchair
+                const armW = 11; const armH = 11;
+                ctx.fillRect(majlisX + majlisW - armW, majlisY + 2, armW, armH); ctx.strokeRect(majlisX + majlisW - armW, majlisY + 2, armW, armH);
 
-                // Decorative Tea / Coffee Service Tray Icon
-                ctx.fillStyle = '#d97706';
-                ctx.beginPath();
-                ctx.arc(ctX + ctW / 2, ctY + ctH / 2, 2.2, 0, Math.PI * 2);
-                ctx.fill();
+                // Coffee Table & Tea Tray
+                const ctW = Math.min(18, majlisW - sofaD - armW - 4); const ctH = 11;
+                const ctX = majlisX + sofaD + 3; const ctY = majlisY + (majlisH - sofaD - ctH) / 2 + 1;
+                if (ctW > 8) {
+                    ctx.fillStyle = '#f8fafc'; ctx.strokeStyle = '#0284c7'; ctx.lineWidth = 0.8;
+                    ctx.beginPath(); ctx.roundRect(ctX, ctY, ctW, ctH, 2); ctx.fill(); ctx.stroke();
+                    ctx.fillStyle = '#d97706'; ctx.beginPath(); ctx.arc(ctX + ctW / 2, ctY + ctH / 2, 2.2, 0, Math.PI * 2); ctx.fill();
+                }
             }
 
-            // Clear Walkway Corridor Line to Guest Bathroom (Dashed Guideline along top wall)
+            // Walkway Corridor Line
             ctx.save();
-            ctx.strokeStyle = 'rgba(1, 157, 242, 0.35)';
-            ctx.lineWidth = 0.8;
-            ctx.setLineDash([3, 3]);
-            ctx.beginPath();
-            ctx.moveTo(x + 14, y + 6);
-            ctx.lineTo(x + w - 10, y + 6);
-            ctx.lineTo(x + w - 10, y + 18);
-            ctx.stroke();
-            ctx.setLineDash([]);
-            ctx.restore();
+            ctx.strokeStyle = 'rgba(1, 157, 242, 0.35)'; ctx.lineWidth = 0.8; ctx.setLineDash([3, 3]);
+            ctx.beginPath(); ctx.moveTo(x + 14, y + 6); ctx.lineTo(x + w - 10, y + 6); ctx.lineTo(x + w - 10, y + 18);
+            ctx.stroke(); ctx.setLineDash([]); ctx.restore();
         }
 
-        // 5. VENTILATION SHAFTS / COURTYARDS (#00ff01): Organic Landscaping, Pavers & Foliage
+        // =========================================================================
+        // 7. COURTYARDS / SHAFTS (#00ff01): Stepping Stones & Architectural Tree
+        // =========================================================================
         else if (r.key === 'court_garden') {
-            // Stepping Stone Pavers
-            ctx.fillStyle = '#cbd5e1';
-            ctx.strokeStyle = '#94a3b8';
-            ctx.lineWidth = 0.8;
+            ctx.fillStyle = '#cbd5e1'; ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 0.8;
             const pSize = 7;
-            [
-                {px: x + 6, py: y + 8},
-                {px: x + w - 12, py: y + 14},
-                {px: x + 8, py: y + h - 14},
-                {px: x + w - 14, py: y + h - 10}
-            ].forEach(p => {
+            [{px: x + 6, py: y + 8}, {px: x + w - 12, py: y + 14}, {px: x + 8, py: y + h - 14}, {px: x + w - 14, py: y + h - 10}].forEach(p => {
                 if (p.px + pSize < x + w && p.py + pSize < y + h) {
-                    ctx.fillRect(p.px, p.py, pSize, pSize);
-                    ctx.strokeRect(p.px, p.py, pSize, pSize);
+                    ctx.fillRect(p.px, p.py, pSize, pSize); ctx.strokeRect(p.px, p.py, pSize, pSize);
                 }
             });
 
-            // Lush Green Architectural Plant/Tree Symbol in Center
-            const treeX = x + w / 2;
-            const treeY = y + h / 2;
+            const treeX = x + w / 2; const treeY = y + h / 2;
             const treeR = Math.min(10, Math.min(w, h) * 0.28);
             if (treeR > 4) {
-                // Outer foliage circles
-                ctx.fillStyle = '#22c55e';
-                ctx.strokeStyle = '#15803d';
-                ctx.lineWidth = 0.9;
-                ctx.beginPath();
-                ctx.arc(treeX, treeY, treeR, 0, Math.PI * 2);
-                ctx.fill(); ctx.stroke();
-
-                // Leaf petal spokes
-                ctx.strokeStyle = '#166534';
-                ctx.lineWidth = 0.7;
+                ctx.fillStyle = '#22c55e'; ctx.strokeStyle = '#15803d'; ctx.lineWidth = 0.9;
+                ctx.beginPath(); ctx.arc(treeX, treeY, treeR, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+                ctx.strokeStyle = '#166534'; ctx.lineWidth = 0.7;
                 for (let a = 0; a < Math.PI * 2; a += Math.PI / 3) {
-                    ctx.beginPath();
-                    ctx.moveTo(treeX, treeY);
-                    ctx.lineTo(treeX + Math.cos(a) * treeR, treeY + Math.sin(a) * treeR);
-                    ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(treeX, treeY); ctx.lineTo(treeX + Math.cos(a) * treeR, treeY + Math.sin(a) * treeR); ctx.stroke();
                 }
-
-                // Trunk center dot
-                ctx.fillStyle = '#78350f';
-                ctx.beginPath();
-                ctx.arc(treeX, treeY, 1.5, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.fillStyle = '#78350f'; ctx.beginPath(); ctx.arc(treeX, treeY, 1.5, 0, Math.PI * 2); ctx.fill();
             }
         }
     });

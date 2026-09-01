@@ -293,6 +293,31 @@
                         </div>
                     </div>
 
+                    <!-- Furniture Customization & Rotation Card -->
+                    <div class="furniture-control-card" id="furnitureControlCard">
+                        <div class="furn-header">
+                            <span class="furn-icon">🛋️</span>
+                            <span class="furn-title" id="furnControlTitle">استوديو تأثيث وتدوير الفضاءات (Furniture Studio):</span>
+                        </div>
+                        <div class="furn-row">
+                            <label for="furnitureStyleSelect" id="furnStyleLabel">نمط وفرش الفضاءات:</label>
+                            <select id="furnitureStyleSelect" class="form-select">
+                                <option value="1" selected>طراز 1: ركنة مودرن L-Sofa + مجلس ضيوف + سرير ملكي</option>
+                                <option value="2">طراز 2: مجلس عربي U-Majlis + جلسة عائلية + سرير مهيأ جانبي</option>
+                                <option value="3">طراز 3: صالون معاصر Contemporary + صالة مفتوحة + أسرة مزدوجة Twin</option>
+                            </select>
+                        </div>
+                        <div class="furn-row">
+                            <label id="furnRotationLabel">تدوير اتجاه الأثاث:</label>
+                            <div class="furn-rot-buttons">
+                                <button type="button" class="btn-furn-rot active" data-rot="0" title="اتجاه أصلي (0°)">0°</button>
+                                <button type="button" class="btn-furn-rot" data-rot="90" title="تدوير 90° باتجاه عقارب الساعة">90°</button>
+                                <button type="button" class="btn-furn-rot" data-rot="180" title="تدوير 180°">180°</button>
+                                <button type="button" class="btn-furn-rot" data-rot="270" title="تدوير 270°">270°</button>
+                            </div>
+                        </div>
+                    </div>
+
                     <button id="generateBtn" class="btn btn-primary btn-block generate-btn">
                         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
                             <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
@@ -371,6 +396,14 @@
                             <input type="checkbox" id="toggleFurnitureCheckbox" checked>
                             <span class="checkbox-text" id="toggleFurnitureText">🛋️ إظهار الأثاث (Furniture)</span>
                         </label>
+                        <button type="button" id="rotateFurnitureBtn" class="btn-viewport-action" title="تدوير اتجاه الأثاث في المخطط (0° / 90° / 180° / 270°)">
+                            <span>🔄</span>
+                            <span id="rotateFurnitureBtnText">تدوير الأثاث (0°)</span>
+                        </button>
+                        <button type="button" id="changeFurnitureStyleBtn" class="btn-viewport-action" title="تبديل طراز ونمط فرش الغرف (Style 1 / 2 / 3)">
+                            <span>🛋️</span>
+                            <span id="changeFurnitureStyleBtnText">طراز الأثاث (1)</span>
+                        </button>
                         <label class="tags-checkbox-label" title="إظهار أو إخفاء مسار الشمس والرياح السائدة">
                             <input type="checkbox" id="toggleSunOverlayCheckbox">
                             <span class="checkbox-text" id="toggleSunOverlayText">☀️ مسار الشمس والرياح</span>
