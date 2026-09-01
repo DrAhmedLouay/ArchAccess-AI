@@ -1396,10 +1396,10 @@ function updateUIForLang() {
 
     const orientBtns = document.querySelectorAll('.btn-orient-quick');
     if (orientBtns.length >= 4) {
-        orientBtns[0].textContent = t.orientNorth;
-        orientBtns[1].textContent = t.orientEast;
-        orientBtns[2].textContent = t.orientSouth;
-        orientBtns[3].textContent = t.orientWest;
+        orientBtns[0].querySelector('.orient-dir').textContent = `🧭 ${t.orientNorth}`;
+        orientBtns[1].querySelector('.orient-dir').textContent = `🧭 ${t.orientEast}`;
+        orientBtns[2].querySelector('.orient-dir').textContent = `🧭 ${t.orientSouth}`;
+        orientBtns[3].querySelector('.orient-dir').textContent = `🧭 ${t.orientWest}`;
     }
 
     const climLabels = document.querySelectorAll('.clim-lbl');
