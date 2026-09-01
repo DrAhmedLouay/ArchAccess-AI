@@ -111,8 +111,8 @@ SEMANTIC_SPACES: Dict[str, SpaceStandard] = {
         rgb=(1, 157, 242),
         category="indoor",
         min_turning_diameter=1.50,
-        min_clear_width=0.91,
-        description="فضاء استقبال رئيسي ومسار ربط مباشر مع المدخل"
+        min_clear_width=5.00,
+        description="فضاء استقبال رئيسي لا تقل أبعاده عن 5.00م × 3.90م (مساحة ≥ 19.50م²)"
     ),
     "living_room": SpaceStandard(
         name_ar="غرفة المعيشة العائلية",
@@ -121,8 +121,8 @@ SEMANTIC_SPACES: Dict[str, SpaceStandard] = {
         rgb=(1, 255, 236),
         category="indoor",
         min_turning_diameter=1.50,
-        min_clear_width=0.91,
-        description="سعة فراغية ومسار ربط مركزي"
+        min_clear_width=4.00,
+        description="فضاء معيشة رئيسي لا تقل أبعاده عن 4.00م × 3.90م (مساحة ≥ 15.60م²)"
     ),
     "kitchen": SpaceStandard(
         name_ar="المطبخ",
@@ -131,8 +131,8 @@ SEMANTIC_SPACES: Dict[str, SpaceStandard] = {
         rgb=(255, 184, 216),
         category="indoor",
         min_turning_diameter=1.50,
-        min_clear_width=3.00,
-        description="أبعاد قياسية رحبة لا تقل عن 3.00م × 3.00م (مساحة ≥ 9.0م²) مع ممرات ومسار حركة مريح"
+        min_clear_width=3.50,
+        description="مطبخ رحب لا تقل أبعاده عن 3.50م × 3.50م (مساحة ≥ 12.25م²)"
     ),
     "bedroom": SpaceStandard(
         name_ar="غرفة النوم القياسية",
@@ -141,8 +141,8 @@ SEMANTIC_SPACES: Dict[str, SpaceStandard] = {
         rgb=(254, 254, 10),
         category="indoor",
         min_turning_diameter=1.50,
-        min_clear_width=3.00,
-        description="أبعاد قياسية لا تقل عن 3.00م × 4.00م (مساحة ≥ 12.0م²) مع دوران صافٍ ≥ 1.50م"
+        min_clear_width=3.90,
+        description="غرفة نوم قياسية لا تقل أبعادها عن 3.90م × 3.90م (مساحة ≥ 15.21م²)"
     ),
     "disabled_bedroom": SpaceStandard(
         name_ar="غرفة نوم مهيأة لذوي الاحتياجات",
@@ -151,8 +151,8 @@ SEMANTIC_SPACES: Dict[str, SpaceStandard] = {
         rgb=(232, 1, 247),
         category="indoor",
         min_turning_diameter=1.60,
-        min_clear_width=4.50,
-        description="غرفة نوم مهيأة لا يقل عرضها عن 4.50م ومساحة ≥ 12.0م² مع سعة دوران كاملة بقطر ≥ 1.60م"
+        min_clear_width=4.80,
+        description="غرفة نوم مهيأة لا تقل عن 4.80م × 4.00م (مساحة ≥ 19.20م²) مع دوران صافٍ ≥ 1.60م"
     ),
     "disabled_bathroom": SpaceStandard(
         name_ar="حمام مهيأ لذوي الاحتياجات (En-Suite)",
@@ -161,8 +161,8 @@ SEMANTIC_SPACES: Dict[str, SpaceStandard] = {
         rgb=(255, 52, 100),
         category="indoor",
         min_turning_diameter=1.60,
-        min_clear_width=3.00,
-        description="حمام مهيأ خاص لا تقل أبعاده عن 3.00م × 3.00م (مساحة ≥ 9.0م²) متصل مباشرة بجناح ذوي الاحتياجات مع دائرة دوران صافية ≥ 1.60م"
+        min_clear_width=2.70,
+        description="حمام مهيأ خاص لا تقل أبعاده عن 2.70م × 2.20م (مساحة ≥ 5.94م²) متصل مباشرة بالجناح المهيأ"
     ),
     "bathroom": SpaceStandard(
         name_ar="حمام عام / WC",
@@ -171,8 +171,8 @@ SEMANTIC_SPACES: Dict[str, SpaceStandard] = {
         rgb=(255, 52, 100),
         category="indoor",
         min_turning_diameter=1.50,
-        min_clear_width=1.50,
-        description="حمام عام يخدم الضيوف والمعيشة وغرفة النوم متصل مباشرة بالموزع المركزي ومطل على المنور"
+        min_clear_width=1.70,
+        description="حمام ضيوف / عام لا يقل عن 1.70م × 1.10م (مساحة ≥ 1.87م²)"
     ),
     "corridors": SpaceStandard(
         name_ar="الممرات ومناطق الخدمات",
@@ -181,8 +181,8 @@ SEMANTIC_SPACES: Dict[str, SpaceStandard] = {
         rgb=(239, 222, 142),
         category="indoor",
         min_turning_diameter=1.50,
-        min_clear_width=0.91,
-        description="عرض ممر ≥ 0.91م مع عقد دوران عند التقاطعات"
+        min_clear_width=1.60,
+        description="عرض موزع مركزي لا يقل عن 1.60م مع عقد دوران عند التقاطعات"
     ),
     "doors": SpaceStandard(
         name_ar="فتحات الجدران (الأبواب)",
@@ -208,12 +208,12 @@ SEMANTIC_SPACES: Dict[str, SpaceStandard] = {
 
 # Site & Building Regulations
 CONSTRAINTS = {
-    "MAX_COVERAGE_RATIO": 0.65,          # 65% Maximum Building Coverage Ratio
-    "MIN_OUTDOOR_RATIO": 0.35,           # 35% Minimum Outdoor / Setback / Garden
+    "MAX_COVERAGE_RATIO": 0.75,          # 65% - 75% Coverage Ratio Band
+    "MIN_OUTDOOR_RATIO": 0.25,           # 25% - 35% Outdoor Setback / Garden
     "TURNING_CIRCLE_DIAMETER_MIN": 1.50,  # 60 inches (1525 mm)
-    "CORRIDOR_WIDTH_MIN": 0.91,           # 36 inches (915 mm)
-    "KITCHEN_CLEARANCE_MIN": 1.20,        # 48 inches (1220 mm)
-    "DOOR_CLEAR_OPENING_MIN": 0.90,       # 35.4 inches (900 mm)
+    "CORRIDOR_WIDTH_MIN": 1.60,           # Strictly >= 1.60m
+    "KITCHEN_CLEARANCE_MIN": 3.50,        # Strictly >= 3.50m
+    "DOOR_CLEAR_OPENING_MIN": 1.00,       # Strictly >= 1.00m
     "MAX_RAMP_SLOPE": 1.0 / 12.0,         # 1:12 slope
     "PIXELS_PER_METER_DEFAULT": 23.0
 }

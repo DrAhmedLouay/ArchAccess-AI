@@ -44,7 +44,7 @@ def test_semantic_palette():
     assert SEMANTIC_SPACES["corridors"].hex_code == "#efde8e"
     assert SEMANTIC_SPACES["neighbor_boundaries"].hex_code == "#fc0005"
     assert SEMANTIC_SPACES["street_boundary"].hex_code == "#0000fe"
-    assert CONSTRAINTS["MAX_COVERAGE_RATIO"] == 0.65
+    assert CONSTRAINTS["MAX_COVERAGE_RATIO"] == 0.75
     print("  -> Passed!")
 
 def test_preprocessor():
