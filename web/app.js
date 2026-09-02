@@ -558,7 +558,23 @@ function getSelectedSpaceObject(activeKey) {
     if (!state.currentLayout) return null;
     const { rooms, outdoorZones, accessibleParking, garageBounds, ramp } = state.currentLayout;
     
-    // 1. Search in indoor rooms and courtyards
+    // 1. If we have a specific room object stored in state (e.g. from direct click on canvas or inspector)
+    if (state.selectedRoomObj && rooms && rooms.includes(state.selectedRoomObj)) {
+        if (!activeKey || activeKey === state.selectedRoomObj.key) {
+            const r = state.selectedRoomObj;
+            return {
+                type: (r.key === 'court_garden' ? 'court' : 'room'),
+                data: r,
+                bounds: r.bounds,
+                name_ar: r.name_ar || (r.key === 'court_garden' ? 'منور / فناء / حديقة' : r.key),
+                name_en: r.name_en || (r.key === 'court_garden' ? 'Shaft / Court / Garden' : r.key),
+                key: r.key,
+                area_m2: r.area_m2
+            };
+        }
+    }
+
+    // 2. Search in indoor rooms and courtyards
     if (rooms) {
         const room = rooms.find(r => r.key === activeKey);
         if (room) {
@@ -566,8 +582,8 @@ function getSelectedSpaceObject(activeKey) {
                 type: (room.key === 'court_garden' ? 'court' : 'room'),
                 data: room,
                 bounds: room.bounds,
-                name_ar: room.name_ar,
-                name_en: room.name_en,
+                name_ar: room.name_ar || (room.key === 'court_garden' ? 'منور / فناء / حديقة' : room.key),
+                name_en: room.name_en || (room.key === 'court_garden' ? 'Shaft / Court / Garden' : room.key),
                 key: room.key,
                 area_m2: room.area_m2
             };
@@ -6986,18 +7002,19 @@ function renderOrthogonalMode() {
             const isAr = state.lang === 'ar';
             ctx.save();
 
-            // 1. Room Highlight Envelope with soft cyan glow
-            ctx.strokeStyle = '#38bdf8';
-            ctx.fillStyle = 'rgba(56, 189, 248, 0.08)';
-            ctx.lineWidth = 2.0;
+            const isCourt = (space.key === 'court_garden' || space.type === 'court');
+            // 1. Room Highlight Envelope with soft glow
+            ctx.strokeStyle = isCourt ? '#10b981' : '#38bdf8';
+            ctx.fillStyle = isCourt ? 'rgba(16, 185, 129, 0.12)' : 'rgba(56, 189, 248, 0.08)';
+            ctx.lineWidth = 2.2;
             ctx.fillRect(x, y, w, h);
             ctx.strokeRect(x, y, w, h);
 
             // 2. Corner CAD Box Grips
             ctx.fillStyle = '#ffffff';
-            ctx.strokeStyle = '#0284c7';
+            ctx.strokeStyle = isCourt ? '#059669' : '#0284c7';
             ctx.lineWidth = 1.2;
-            const gripSize = 5;
+            const gripSize = 5.5;
             [
                 { gx: x - gripSize / 2, gy: y - gripSize / 2 },
                 { gx: x + w - gripSize / 2, gy: y - gripSize / 2 },
@@ -7023,7 +7040,7 @@ function renderOrthogonalMode() {
                 }
 
                 // Core Circular Grip Node
-                ctx.fillStyle = (isDragging ? '#10b981' : (isHovered ? '#38bdf8' : '#0284c7'));
+                ctx.fillStyle = (isDragging ? '#10b981' : (isHovered ? '#38bdf8' : (isCourt ? '#059669' : '#0284c7')));
                 ctx.strokeStyle = '#ffffff';
                 ctx.lineWidth = 2.0;
                 ctx.beginPath();
@@ -7040,7 +7057,8 @@ function renderOrthogonalMode() {
                 // Live Floating TestFit Measurement Pill when Hovered or Dragging
                 if (isHovered || isDragging) {
                     const currentDimM = (g.type === 'width' ? (w / pxPerMeter) : (h / pxPerMeter)).toFixed(2);
-                    const pillText = `${g.type === 'width' ? '↔' : '↕'} ${currentDimM} ${isAr ? 'م' : 'm'}`;
+                    const pillPrefix = isCourt ? (isAr ? '🌿 منور: ' : '🌿 Shaft: ') : '';
+                    const pillText = `${pillPrefix}${g.type === 'width' ? '↔' : '↕'} ${currentDimM} ${isAr ? 'م' : 'm'}`;
                     
                     ctx.font = 'bold 9.5px Cairo, JetBrains Mono, sans-serif';
                     const textMetrics = ctx.measureText(pillText);
@@ -7050,10 +7068,10 @@ function renderOrthogonalMode() {
                     const pillY = (g.edge === 'top' || g.edge === 'bottom') ? g.y - pillH - 8 : g.y - pillH / 2;
 
                     ctx.save();
-                    ctx.shadowColor = 'rgba(56, 189, 248, 0.6)';
+                    ctx.shadowColor = isCourt ? 'rgba(16, 185, 129, 0.6)' : 'rgba(56, 189, 248, 0.6)';
                     ctx.shadowBlur = 8;
                     ctx.fillStyle = 'rgba(15, 23, 42, 0.95)';
-                    ctx.strokeStyle = isDragging ? '#10b981' : '#38bdf8';
+                    ctx.strokeStyle = isDragging ? '#10b981' : (isCourt ? '#10b981' : '#38bdf8');
                     ctx.lineWidth = 1.2;
                     ctx.beginPath();
                     if (ctx.roundRect) ctx.roundRect(pillX, pillY, pillW, pillH, 4);
@@ -7062,7 +7080,7 @@ function renderOrthogonalMode() {
                     ctx.stroke();
 
                     ctx.shadowBlur = 0;
-                    ctx.fillStyle = isDragging ? '#10b981' : '#38bdf8';
+                    ctx.fillStyle = isDragging ? '#10b981' : (isCourt ? '#34d399' : '#38bdf8');
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
                     ctx.fillText(pillText, pillX + pillW / 2, pillY + pillH / 2);
@@ -7071,24 +7089,25 @@ function renderOrthogonalMode() {
             });
 
             // 4. Selected Room Badge in top-right corner
-            const badgeW = isAr ? 76 : 82;
+            const badgeW = isCourt ? (isAr ? 86 : 94) : (isAr ? 76 : 82);
             const badgeH = 16;
             const badgeX = x + w - badgeW - 4;
             const badgeY = y + 4;
             if (w > badgeW + 8 && h > 22) {
                 ctx.fillStyle = 'rgba(15, 23, 42, 0.90)';
-                ctx.strokeStyle = '#38bdf8';
+                ctx.strokeStyle = isCourt ? '#10b981' : '#38bdf8';
                 ctx.lineWidth = 0.8;
                 ctx.beginPath();
                 if (ctx.roundRect) ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 3);
                 else ctx.rect(badgeX, badgeY, badgeW, badgeH);
                 ctx.fill();
                 ctx.stroke();
-                ctx.fillStyle = '#38bdf8';
+                ctx.fillStyle = isCourt ? '#34d399' : '#38bdf8';
                 ctx.font = 'bold 7.5px Cairo, sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText(isAr ? '✨ محدد للتعديل المباشر' : '✨ Drag to Resize', badgeX + badgeW / 2, badgeY + badgeH / 2);
+                const badgeLabel = isCourt ? (isAr ? '🌿 منور محدد للتعديل' : '🌿 Shaft Selected') : (isAr ? '✨ محدد للتعديل المباشر' : '✨ Drag to Resize');
+                ctx.fillText(badgeLabel, badgeX + badgeW / 2, badgeY + badgeH / 2);
             }
             ctx.restore();
         }
