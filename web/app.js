@@ -544,6 +544,9 @@ const btnShortenWallWidth = document.getElementById('btnShortenWallWidth');
 const btnExtendWallLength = document.getElementById('btnExtendWallLength');
 const btnShortenWallLength = document.getElementById('btnShortenWallLength');
 
+const btnConvertToLightwell = document.getElementById('btnConvertToLightwell');
+const btnMergeVoidToRoom = document.getElementById('btnMergeVoidToRoom');
+
 const btnResetRoomDefaults = document.getElementById('btnResetRoomDefaults');
 
 // ==========================================
@@ -839,6 +842,154 @@ function adjustSpaceWallDimension(roomKey, dimType, deltaM) {
     updateParametricRoomDimension(space.key, dimType, newM);
     syncSpaceInspectorUI();
     requestRender();
+}
+
+function convertVoidToLightwell(roomKey) {
+    if (!state.currentLayout || !state.currentLayout.rooms) return;
+    const activeKey = roomKey || state.selectedRoomKey;
+    const space = getSelectedSpaceObject(activeKey);
+    if (!space || !space.bounds) return;
+
+    saveHistoryState();
+    const rooms = state.currentLayout.rooms;
+    const pxPerMeter = 23.0;
+
+    if (space.type === 'court' || space.key === 'court_garden') {
+        addNewWindowToSpace(space.key);
+        syncSpaceInspectorUI();
+        renderCanvas();
+        return;
+    }
+
+    const room = space.data;
+    const { x, y, w, h } = room.bounds;
+
+    const minShaftW = Math.round(1.40 * pxPerMeter); // 1.40m shaft width
+    const minRoomW = Math.round(2.60 * pxPerMeter);
+
+    if (w >= minRoomW + minShaftW) {
+        const bb = state.currentLayout.buildingBounds || {};
+        const bldgMinX = state.currentLayout.bldgMinX ?? bb.bldgMinX ?? 0;
+        
+        let shaftX = (x <= bldgMinX + 5) ? (x + w - minShaftW) : x;
+        let newRoomX = (x <= bldgMinX + 5) ? x : (x + minShaftW);
+        let newRoomW = w - minShaftW;
+
+        room.bounds.x = newRoomX;
+        room.bounds.w = newRoomW;
+        room.area_m2 = parseFloat(((room.bounds.w * room.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
+
+        const newShaft = {
+            key: 'court_garden',
+            name_ar: 'منور إنارة وتهوية طبيعية',
+            name_en: 'Bioclimatic Light Shaft',
+            hex: '#00ff01',
+            bounds: {
+                x: shaftX,
+                y: y,
+                w: minShaftW,
+                h: h
+            },
+            area_m2: parseFloat(((minShaftW * h) / (pxPerMeter * pxPerMeter)).toFixed(1))
+        };
+
+        rooms.push(newShaft);
+        state.selectedRoomKey = 'court_garden';
+        state.selectedRoomObj = newShaft;
+
+        addNewWindowToSpace(room.key);
+    } else {
+        const shaftH = Math.round(1.40 * pxPerMeter);
+        if (h > Math.round(3.50 * pxPerMeter)) {
+            room.bounds.h -= shaftH;
+            room.area_m2 = parseFloat(((room.bounds.w * room.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
+
+            const newShaft = {
+                key: 'court_garden',
+                name_ar: 'منور إنارة وتهوية طبيعية',
+                name_en: 'Bioclimatic Light Shaft',
+                hex: '#00ff01',
+                bounds: {
+                    x: x,
+                    y: y + room.bounds.h,
+                    w: w,
+                    h: shaftH
+                },
+                area_m2: parseFloat(((w * shaftH) / (pxPerMeter * pxPerMeter)).toFixed(1))
+            };
+            rooms.push(newShaft);
+            state.selectedRoomKey = 'court_garden';
+            state.selectedRoomObj = newShaft;
+            addNewWindowToSpace(room.key);
+        }
+    }
+
+    realignAllDoorsAndWindows();
+    syncSpaceInspectorUI();
+    renderCanvas();
+}
+
+function mergeVoidToRoom(roomKey) {
+    if (!state.currentLayout || !state.currentLayout.rooms) return;
+    const activeKey = roomKey || state.selectedRoomKey;
+    const space = getSelectedSpaceObject(activeKey);
+    if (!space || !space.bounds) return;
+
+    saveHistoryState();
+    const rooms = state.currentLayout.rooms;
+    const pxPerMeter = 23.0;
+
+    if (space.key === 'court_garden' || space.type === 'court') {
+        const shaft = space.data;
+        const touchingRoom = rooms.find(r => {
+            if (r === shaft || r.key === 'court_garden' || r.key === 'corridors') return false;
+            const touchRight = Math.abs(shaft.bounds.x + shaft.bounds.w - r.bounds.x) < 5;
+            const touchLeft = Math.abs(r.bounds.x + r.bounds.w - shaft.bounds.x) < 5;
+            const overlapY = Math.min(shaft.bounds.y + shaft.bounds.h, r.bounds.y + r.bounds.h) - Math.max(shaft.bounds.y, r.bounds.y);
+            return (touchRight || touchLeft) && overlapY > 15;
+        });
+
+        if (touchingRoom) {
+            if (shaft.bounds.x < touchingRoom.bounds.x) {
+                touchingRoom.bounds.w += shaft.bounds.w;
+                touchingRoom.bounds.x = shaft.bounds.x;
+            } else {
+                touchingRoom.bounds.w += shaft.bounds.w;
+            }
+            touchingRoom.area_m2 = parseFloat(((touchingRoom.bounds.w * touchingRoom.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
+            state.currentLayout.rooms = rooms.filter(r => r !== shaft);
+            state.selectedRoomKey = touchingRoom.key;
+            state.selectedRoomObj = touchingRoom;
+        }
+    } else {
+        const room = space.data;
+        const touchingShaft = rooms.find(r => {
+            if (r.key !== 'court_garden') return false;
+            const touchRight = Math.abs(room.bounds.x + room.bounds.w - r.bounds.x) < 5;
+            const touchLeft = Math.abs(r.bounds.x + r.bounds.w - room.bounds.x) < 5;
+            const overlapY = Math.min(room.bounds.y + room.bounds.h, r.bounds.y + r.bounds.h) - Math.max(room.bounds.y, r.bounds.y);
+            return (touchRight || touchLeft) && overlapY > 15;
+        });
+
+        if (touchingShaft) {
+            if (touchingShaft.bounds.x < room.bounds.x) {
+                room.bounds.w += touchingShaft.bounds.w;
+                room.bounds.x = touchingShaft.bounds.x;
+            } else {
+                room.bounds.w += touchingShaft.bounds.w;
+            }
+            room.area_m2 = parseFloat(((room.bounds.w * room.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
+            state.currentLayout.rooms = rooms.filter(r => r !== touchingShaft);
+            state.selectedRoomKey = room.key;
+            state.selectedRoomObj = room;
+        } else {
+            updateParametricRoomDimension(room.key, 'width', (room.bounds.w / pxPerMeter) + 0.5);
+        }
+    }
+
+    realignAllDoorsAndWindows();
+    syncSpaceInspectorUI();
+    renderCanvas();
 }
 
 function getSelectedSpaceObject(activeKey) {
@@ -2329,6 +2480,18 @@ function setupEventListeners() {
     if (btnShortenWallLength) {
         btnShortenWallLength.addEventListener('click', () => {
             adjustSpaceWallDimension(state.selectedRoomKey, 'length', -0.10);
+        });
+    }
+
+    if (btnConvertToLightwell) {
+        btnConvertToLightwell.addEventListener('click', () => {
+            convertVoidToLightwell(state.selectedRoomKey);
+        });
+    }
+
+    if (btnMergeVoidToRoom) {
+        btnMergeVoidToRoom.addEventListener('click', () => {
+            mergeVoidToRoom(state.selectedRoomKey);
         });
     }
 
