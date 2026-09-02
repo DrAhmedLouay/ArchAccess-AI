@@ -1186,11 +1186,18 @@ function setupEventListeners() {
         btnResetRoomDefaults.addEventListener('click', () => {
             const activeKey = state.selectedRoomKey || 'living_room';
             if (baselineRoomSnapshots[activeKey]) {
-                const room = state.currentLayout.rooms.find(r => r.key === activeKey);
-                if (room) {
-                    room.bounds = { ...baselineRoomSnapshots[activeKey].bounds };
-                    room.area_m2 = baselineRoomSnapshots[activeKey].area_m2;
-                    realignRoomDoorsAndWindows(room);
+                const space = getSelectedSpaceObject(activeKey);
+                if (space && space.bounds) {
+                    space.bounds.w = baselineRoomSnapshots[activeKey].bounds.w;
+                    space.bounds.h = baselineRoomSnapshots[activeKey].bounds.h;
+                    space.bounds.x = baselineRoomSnapshots[activeKey].bounds.x;
+                    space.bounds.y = baselineRoomSnapshots[activeKey].bounds.y;
+                    if (space.area_m2 !== undefined) {
+                        space.area_m2 = baselineRoomSnapshots[activeKey].area_m2;
+                    }
+                    if (space.type === 'room' || space.type === 'court') {
+                        realignRoomDoorsAndWindows(space.data);
+                    }
                     syncSpaceInspectorUI();
                     updateAnalyticsHUD(state.currentLayout);
                     renderCanvas();
@@ -3418,8 +3425,8 @@ function renderCanvas() {
     // 2. Clear entire physical pixel buffer
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // 3. Draw Dark CAD Viewport Background across physical screen
-    ctx.fillStyle = '#0b0f19';
+    // 3. Draw CAD Viewport Background across physical screen (Theme-aware)
+    ctx.fillStyle = (state.theme === 'light') ? '#f8fafc' : '#0b0f19';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     ctx.save();
@@ -3983,7 +3990,7 @@ function drawBioclimaticOverlay(ctx) {
 }
 
 function drawGrid() {
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+    ctx.strokeStyle = (state.theme === 'light') ? 'rgba(0, 0, 0, 0.05)' : 'rgba(255, 255, 255, 0.04)';
     ctx.lineWidth = 1 / state.zoom;
     const step = 23;
 
@@ -5174,25 +5181,26 @@ function drawArchitecturalSectionLine(plotBounds, rooms) {
 function drawArchitecturalTitleBlock(plotBounds) {
     ctx.save();
     const isAr = state.lang === 'ar';
+    const isLight = (state.theme === 'light');
     const margin = 8;
     const tbW = 210;
     const tbH = 64;
     const tbX = canvas.width - tbW - margin;
     const tbY = canvas.height - tbH - margin;
 
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.94)';
-    ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
+    ctx.fillStyle = isLight ? 'rgba(255, 255, 255, 0.96)' : 'rgba(15, 23, 42, 0.94)';
+    ctx.strokeStyle = isLight ? '#cbd5e1' : 'rgba(56, 189, 248, 0.45)';
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.roundRect(tbX, tbY, tbW, tbH, 4);
     ctx.fill();
     ctx.stroke();
 
-    ctx.fillStyle = '#38bdf8';
+    ctx.fillStyle = '#0284c7';
     ctx.fillRect(tbX, tbY, tbW, 2.5);
 
     ctx.font = 'bold 7.8px Cairo, sans-serif';
-    ctx.fillStyle = '#38bdf8';
+    ctx.fillStyle = isLight ? '#0369a1' : '#38bdf8';
     ctx.textAlign = isAr ? 'right' : 'left';
     ctx.textBaseline = 'top';
     const titleX = isAr ? tbX + tbW - 8 : tbX + 8;
@@ -5200,15 +5208,15 @@ function drawArchitecturalTitleBlock(plotBounds) {
     ctx.fillText(isAr ? 'مشروع: المخطط المعماري الشامل (ArchAccess AI)' : 'PROJECT: ArchAccess AI Universal Housing', titleX, tbY + 6);
 
     ctx.font = '6.8px Cairo, sans-serif';
-    ctx.fillStyle = '#94a3b8';
+    ctx.fillStyle = isLight ? '#475569' : '#94a3b8';
     ctx.fillText(isAr ? 'اللوحة: مسقط الطابق الأرضي التنفيذي (Ground Floor Plan)' : 'SHEET: Ground Floor Architectural Plan (CAD)', titleX, tbY + 19);
 
     ctx.font = '6.8px JetBrains Mono, monospace';
-    ctx.fillStyle = '#cbd5e1';
+    ctx.fillStyle = isLight ? '#334155' : '#cbd5e1';
     ctx.fillText(isAr ? 'المقياس: 1:100 @ A3 • معايير كود ADA العالمية' : 'SCALE: 1:100 @ A3 • Universal ADA Standards', titleX, tbY + 32);
 
     ctx.font = 'bold 7.2px Cairo, sans-serif';
-    ctx.fillStyle = '#f59e0b';
+    ctx.fillStyle = '#d97706';
     ctx.fillText(isAr ? 'التطوير والتصميم: د. أحمد لؤي (Dr. Ahmed Louay)' : 'Designed & Developed by Dr. Ahmed Louay', titleX, tbY + 46);
 
     ctx.restore();
