@@ -1009,6 +1009,59 @@ function setupEventListeners() {
         }
     }
 
+    /**
+     * Realigns all doors and windows to strictly attach to updated room walls
+     */
+    function realignAllDoorsAndWindows() {
+        if (!state.currentLayout || !state.currentLayout.rooms) return;
+        state.currentLayout.rooms.forEach(room => {
+            realignRoomDoorsAndWindows(room);
+        });
+    }
+
+    function realignRoomDoorsAndWindows(room) {
+        if (!room || !room.bounds) return;
+        const { x, y, w, h } = room.bounds;
+
+        if (state.currentLayout.doors) {
+            state.currentLayout.doors.forEach(door => {
+                if (door.roomKey === room.key || isDoorNearRoom(door, room)) {
+                    door.roomKey = room.key;
+                    if (door.orientation === 'horizontal') {
+                        door.y = (door.wallSide === 'bottom') ? y + h : y;
+                        const pct = (door.offsetPct || 50) / 100.0;
+                        door.x = x + Math.max(4, Math.min(w - door.w - 4, w * pct - door.w / 2));
+                    } else {
+                        door.x = (door.wallSide === 'right') ? x + w : x;
+                        const pct = (door.offsetPct || 50) / 100.0;
+                        door.y = y + Math.max(4, Math.min(h - door.w - 4, h * pct - door.w / 2));
+                    }
+                }
+            });
+        }
+
+        if (state.currentLayout.windows) {
+            state.currentLayout.windows.forEach(win => {
+                if (win.roomKey === room.key || isWindowNearRoom(win, room)) {
+                    win.roomKey = room.key;
+                    if (win.orientation === 'horizontal') {
+                        win.y = (win.wallSide === 'bottom') ? y + h : y;
+                        const pct = (win.offsetPct || 50) / 100.0;
+                        win.x = x + Math.max(4, Math.min(w - win.len - 4, w * pct - win.len / 2));
+                    } else {
+                        win.x = (win.wallSide === 'right') ? x + w : x;
+                        const pct = (win.offsetPct || 50) / 100.0;
+                        win.y = y + Math.max(4, Math.min(h - win.len - 4, h * pct - win.len / 2));
+                    }
+                }
+            });
+        }
+    }
+
+    /**
+     * Architectural Parametric Resizer & Constraint Solver
+     * Dynamically reorganizes adjacent spaces to eliminate black voids/gaps and strictly prevent boundary overflow
+     */
     function updateParametricRoomDimension(roomKey, dimType, valM) {
         if (!state.currentLayout) return;
         const space = getSelectedSpaceObject(roomKey);
@@ -1025,86 +1078,288 @@ function setupEventListeners() {
             };
         }
 
-        if (dimType === 'width') {
-            const oldW = space.bounds.w;
-            const deltaW = newPx - oldW;
-            space.bounds.w = newPx;
-            
-            // Adjust touching neighbor rooms to preserve orthogonal wall alignment
-            if (state.currentLayout.rooms) {
-                state.currentLayout.rooms.forEach(other => {
-                    if (other.key === roomKey) return;
-                    if (Math.abs(other.bounds.x - (space.bounds.x + oldW)) < 4) {
-                        other.bounds.x += deltaW;
-                    }
-                });
-            }
-        } else if (dimType === 'length') {
-            const oldH = space.bounds.h;
-            const deltaH = newPx - oldH;
-            space.bounds.h = newPx;
+        const layout = state.currentLayout;
+        const rooms = layout.rooms || [];
+        const plotBounds = layout.plotBounds || {
+            minX: Math.min(...state.boundaryPoints.map(p => p.x)),
+            maxX: Math.max(...state.boundaryPoints.map(p => p.x)),
+            minY: Math.min(...state.boundaryPoints.map(p => p.y)),
+            maxY: Math.max(...state.boundaryPoints.map(p => p.y)),
+        };
 
-            // Adjust touching neighbor rooms
-            if (state.currentLayout.rooms) {
-                state.currentLayout.rooms.forEach(other => {
-                    if (other.key === roomKey) return;
-                    if (Math.abs(other.bounds.y - (space.bounds.y + oldH)) < 4) {
-                        other.bounds.y += deltaH;
-                    }
+        const targetRoom = (space.type === 'room' || space.type === 'court') ? space.data : null;
+
+        if (targetRoom && rooms.length > 0) {
+            const bldgMinX = Math.min(...rooms.map(r => r.bounds.x));
+            const bldgMaxX = Math.max(...rooms.map(r => r.bounds.x + r.bounds.w));
+            const bldgMinY = Math.min(...rooms.map(r => r.bounds.y));
+            const bldgMaxY = Math.max(...rooms.map(r => r.bounds.y + r.bounds.h));
+            const totalBldgW = bldgMaxX - bldgMinX;
+            const totalBldgH = bldgMaxY - bldgMinY;
+
+            if (dimType === 'width') {
+                // Find all rooms in the same horizontal row/band (vertical overlap >= 15px)
+                const ty0 = targetRoom.bounds.y;
+                const ty1 = targetRoom.bounds.y + targetRoom.bounds.h;
+                
+                const rowRooms = rooms.filter(r => {
+                    const ry0 = r.bounds.y;
+                    const ry1 = r.bounds.y + r.bounds.h;
+                    const overlapY = Math.min(ty1, ry1) - Math.max(ty0, ry0);
+                    return overlapY > 15;
                 });
+
+                // Group rooms into vertical columns (sharing horizontal span x and w)
+                const columns = [];
+                rowRooms.forEach(r => {
+                    let col = columns.find(c => Math.abs(c.x - r.bounds.x) < 5);
+                    if (!col) {
+                        col = { x: r.bounds.x, w: r.bounds.w, rooms: [] };
+                        columns.push(col);
+                    }
+                    col.rooms.push(r);
+                });
+
+                columns.sort((a, b) => a.x - b.x);
+
+                const targetColIndex = columns.findIndex(c => c.rooms.some(r => r.key === roomKey));
+                if (targetColIndex !== -1 && columns.length > 1) {
+                    const targetCol = columns[targetColIndex];
+                    const oldColW = targetCol.w;
+                    
+                    const minColWPx = Math.round(1.20 * pxPerMeter); // >= 1.20m minimum for any space/shaft
+                    const totalRowSpan = columns.reduce((sum, c) => sum + c.w, 0);
+                    const numOtherCols = columns.length - 1;
+                    
+                    let requestedW = Math.max(minColWPx, newPx);
+                    const maxAllowedW = totalRowSpan - (numOtherCols * minColWPx);
+                    requestedW = Math.min(maxAllowedW, requestedW);
+
+                    const deltaW = requestedW - oldColW;
+
+                    if (Math.abs(deltaW) >= 1) {
+                        targetCol.w = requestedW;
+                        let remDelta = -deltaW;
+
+                        // Distribute the delta among neighbor columns (prioritize immediate adjacent neighbors)
+                        const neighborCols = columns.filter((_, idx) => idx !== targetColIndex);
+                        neighborCols.sort((a, b) => {
+                            const distA = Math.abs(columns.indexOf(a) - targetColIndex);
+                            const distB = Math.abs(columns.indexOf(b) - targetColIndex);
+                            return distA - distB;
+                        });
+
+                        for (let col of neighborCols) {
+                            if (remDelta === 0) break;
+                            if (remDelta < 0) {
+                                const maxShrink = col.w - minColWPx;
+                                const shrinkAmt = Math.min(maxShrink, Math.abs(remDelta));
+                                col.w -= shrinkAmt;
+                                remDelta += shrinkAmt;
+                            } else {
+                                col.w += remDelta;
+                                remDelta = 0;
+                            }
+                        }
+
+                        // Re-stitch contiguous X positions across the building width
+                        let curX = columns[0].x;
+                        columns.forEach(col => {
+                            col.x = curX;
+                            col.rooms.forEach(r => {
+                                r.bounds.x = col.x;
+                                r.bounds.w = col.w;
+                                r.area_m2 = parseFloat(((r.bounds.w * r.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
+                            });
+                            curX += col.w;
+                        });
+                    }
+                }
+
+            } else if (dimType === 'length') {
+                const corridor = rooms.find(r => r.key === 'corridors');
+                const corrY = corridor ? corridor.bounds.y : 0;
+                const corrH = corridor ? corridor.bounds.h : Math.round(1.60 * pxPerMeter);
+                const minZoneHPx = Math.round(2.50 * pxPerMeter);
+
+                if (targetRoom.bounds.y + targetRoom.bounds.h <= corrY + 5) {
+                    // TARGET IN FRONT ROW
+                    const minFrontH = Math.round(3.00 * pxPerMeter);
+                    const maxFrontH = totalBldgH - corrH - minZoneHPx;
+                    const clampedH = Math.max(minFrontH, Math.min(maxFrontH, newPx));
+                    
+                    const newCorrY = bldgMinY + clampedH;
+                    const newRearY = newCorrY + corrH;
+                    const newRearH = bldgMaxY - newRearY;
+
+                    // Update Front Rooms
+                    rooms.forEach(r => {
+                        if (r.bounds.y < corrY) {
+                            const isUpperBath = (r.key === 'guest_bathroom');
+                            const isLowerShaft = (r.key === 'court_garden' && r.bounds.y > bldgMinY);
+                            
+                            if (isUpperBath) {
+                                r.bounds.y = bldgMinY;
+                                r.bounds.h = Math.min(Math.round(1.20 * pxPerMeter), Math.round(clampedH * 0.40));
+                            } else if (isLowerShaft) {
+                                const upperBath = rooms.find(ub => ub.key === 'guest_bathroom');
+                                const ubH = upperBath ? upperBath.bounds.h : Math.round(1.20 * pxPerMeter);
+                                r.bounds.y = bldgMinY + ubH;
+                                r.bounds.h = clampedH - ubH;
+                            } else {
+                                r.bounds.y = bldgMinY;
+                                r.bounds.h = clampedH;
+                            }
+                            r.area_m2 = parseFloat(((r.bounds.w * r.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
+                        }
+                    });
+
+                    // Update Corridor
+                    if (corridor) {
+                        corridor.bounds.y = newCorrY;
+                        corridor.bounds.h = corrH;
+                        corridor.area_m2 = parseFloat(((corridor.bounds.w * corridor.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
+                    }
+
+                    // Update Rear Rooms
+                    rooms.forEach(r => {
+                        if (r.bounds.y >= corrY && r.key !== 'corridors') {
+                            const isUpperBath = (r.key === 'disabled_bathroom' || r.key === 'bathroom');
+                            const isLowerShaft = (r.key === 'court_garden');
+                            
+                            if (isUpperBath) {
+                                r.bounds.y = newRearY;
+                                r.bounds.h = Math.min(Math.round(2.20 * pxPerMeter), Math.round(newRearH * 0.48));
+                            } else if (isLowerShaft) {
+                                const upperBath = rooms.find(ub => ub.key === 'disabled_bathroom' || ub.key === 'bathroom');
+                                const ubH = upperBath ? upperBath.bounds.h : Math.round(2.20 * pxPerMeter);
+                                r.bounds.y = newRearY + ubH;
+                                r.bounds.h = newRearH - ubH;
+                            } else {
+                                r.bounds.y = newRearY;
+                                r.bounds.h = newRearH;
+                            }
+                            r.area_m2 = parseFloat(((r.bounds.w * r.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
+                        }
+                    });
+
+                } else if (targetRoom.bounds.y >= corrY) {
+                    // TARGET IN REAR ROW
+                    const isUpperBath = (targetRoom.key === 'disabled_bathroom' || targetRoom.key === 'bathroom');
+                    const isRearShaft = (targetRoom.key === 'court_garden');
+
+                    if (isUpperBath || isRearShaft) {
+                        const rearY = corrY + corrH;
+                        const totalRearH = bldgMaxY - rearY;
+                        const minSubH = Math.round(1.00 * pxPerMeter);
+                        const clampedSubH = Math.max(minSubH, Math.min(totalRearH - minSubH, newPx));
+
+                        if (isUpperBath) {
+                            targetRoom.bounds.h = clampedSubH;
+                            const shaft = rooms.find(r => r.key === 'court_garden' && Math.abs(r.bounds.x - targetRoom.bounds.x) < 10);
+                            if (shaft) {
+                                shaft.bounds.y = rearY + clampedSubH;
+                                shaft.bounds.h = totalRearH - clampedSubH;
+                                shaft.area_m2 = parseFloat(((shaft.bounds.w * shaft.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
+                            }
+                        } else {
+                            targetRoom.bounds.h = clampedSubH;
+                            targetRoom.bounds.y = bldgMaxY - clampedSubH;
+                            const bath = rooms.find(r => (r.key === 'disabled_bathroom' || r.key === 'bathroom') && Math.abs(r.bounds.x - targetRoom.bounds.x) < 10);
+                            if (bath) {
+                                bath.bounds.h = totalRearH - clampedSubH;
+                                bath.area_m2 = parseFloat(((bath.bounds.w * bath.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
+                            }
+                        }
+                    } else {
+                        const minRearH = Math.round(3.00 * pxPerMeter);
+                        const maxRearH = totalBldgH - corrH - minZoneHPx;
+                        const clampedH = Math.max(minRearH, Math.min(maxRearH, newPx));
+
+                        const newRearY = bldgMaxY - clampedH;
+                        const newCorrY = newRearY - corrH;
+                        const newFrontH = newCorrY - bldgMinY;
+
+                        // Update Front Rooms
+                        rooms.forEach(r => {
+                            if (r.bounds.y < corrY) {
+                                const isUpperBath = (r.key === 'guest_bathroom');
+                                const isLowerShaft = (r.key === 'court_garden' && r.bounds.y > bldgMinY);
+                                if (isUpperBath) {
+                                    r.bounds.y = bldgMinY;
+                                    r.bounds.h = Math.min(Math.round(1.20 * pxPerMeter), Math.round(newFrontH * 0.40));
+                                } else if (isLowerShaft) {
+                                    const upperBath = rooms.find(ub => ub.key === 'guest_bathroom');
+                                    const ubH = upperBath ? upperBath.bounds.h : Math.round(1.20 * pxPerMeter);
+                                    r.bounds.y = bldgMinY + ubH;
+                                    r.bounds.h = newFrontH - ubH;
+                                } else {
+                                    r.bounds.y = bldgMinY;
+                                    r.bounds.h = newFrontH;
+                                }
+                                r.area_m2 = parseFloat(((r.bounds.w * r.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
+                            }
+                        });
+
+                        // Update Corridor
+                        if (corridor) {
+                            corridor.bounds.y = newCorrY;
+                            corridor.bounds.h = corrH;
+                            corridor.area_m2 = parseFloat(((corridor.bounds.w * corridor.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
+                        }
+
+                        // Update Rear Rooms
+                        rooms.forEach(r => {
+                            if (r.bounds.y >= corrY && r.key !== 'corridors') {
+                                const isUpperBath = (r.key === 'disabled_bathroom' || r.key === 'bathroom');
+                                const isLowerShaft = (r.key === 'court_garden');
+                                if (isUpperBath) {
+                                    r.bounds.y = newRearY;
+                                    r.bounds.h = Math.min(Math.round(2.20 * pxPerMeter), Math.round(clampedH * 0.48));
+                                } else if (isLowerShaft) {
+                                    const upperBath = rooms.find(ub => ub.key === 'disabled_bathroom' || ub.key === 'bathroom');
+                                    const ubH = upperBath ? upperBath.bounds.h : Math.round(2.20 * pxPerMeter);
+                                    r.bounds.y = newRearY + ubH;
+                                    r.bounds.h = clampedH - ubH;
+                                } else {
+                                    r.bounds.y = newRearY;
+                                    r.bounds.h = clampedH;
+                                }
+                                r.area_m2 = parseFloat(((r.bounds.w * r.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
+                            }
+                        });
+                    }
+                }
+            }
+        } else if (space.type === 'outdoor') {
+            if (roomKey === 'garage_zone' || roomKey === 'accessible_parking') {
+                if (dimType === 'length') {
+                    const minGarageH = Math.round(5.00 * pxPerMeter);
+                    const maxGarageH = Math.round((plotBounds.maxY - plotBounds.minY) * 0.40);
+                    const clampedH = Math.max(minGarageH, Math.min(maxGarageH, newPx));
+                    space.bounds.h = clampedH;
+                    if (layout.accessibleParking) layout.accessibleParking.bounds.h = clampedH;
+                    if (layout.garageBounds) layout.garageBounds.h = clampedH;
+                }
             }
         }
 
-        space.area_m2 = parseFloat(((space.bounds.w * space.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
-        if (valRoomArea) valRoomArea.textContent = `${(space.bounds.w * space.bounds.h / (pxPerMeter * pxPerMeter)).toFixed(2)} ${state.lang === 'ar' ? 'م²' : 'm²'}`;
-
-        // Recompute doors & windows positioning along the updated room walls
-        if (space.type === 'room' || space.type === 'court') {
-            realignRoomDoorsAndWindows(space.data);
+        // Update active space area display badge
+        const updatedSpace = getSelectedSpaceObject(roomKey);
+        if (updatedSpace && updatedSpace.bounds) {
+            const wM = (updatedSpace.bounds.w / pxPerMeter);
+            const lM = (updatedSpace.bounds.h / pxPerMeter);
+            if (valRoomArea) valRoomArea.textContent = `${(wM * lM).toFixed(2)} ${state.lang === 'ar' ? 'م²' : 'm²'}`;
+            if (valRoomWidth) valRoomWidth.textContent = `${wM.toFixed(2)} ${state.lang === 'ar' ? 'م' : 'm'}`;
+            if (valRoomLength) valRoomLength.textContent = `${lM.toFixed(2)} ${state.lang === 'ar' ? 'م' : 'm'}`;
         }
+
+        // Recompute all doors & windows to strictly attach to updated walls
+        realignAllDoorsAndWindows();
 
         // Update Analytics HUD & Canvas
         updateAnalyticsHUD(state.currentLayout);
         renderCanvas();
-    }
-
-    function realignRoomDoorsAndWindows(room) {
-        if (!room) return;
-        const { x, y, w, h } = room.bounds;
-
-        if (state.currentLayout.doors) {
-            state.currentLayout.doors.forEach(door => {
-                if (door.roomKey === room.key || isDoorNearRoom(door, room)) {
-                    door.roomKey = room.key;
-                    if (door.orientation === 'horizontal') {
-                        door.y = (door.wallSide === 'bottom') ? y + h : y;
-                        const pct = (door.offsetPct || 50) / 100.0;
-                        door.x = x + Math.max(6, Math.min(w - door.w - 6, w * pct - door.w / 2));
-                    } else {
-                        door.x = (door.wallSide === 'right') ? x + w : x;
-                        const pct = (door.offsetPct || 50) / 100.0;
-                        door.y = y + Math.max(6, Math.min(h - door.w - 6, h * pct - door.w / 2));
-                    }
-                }
-            });
-        }
-
-        if (state.currentLayout.windows) {
-            state.currentLayout.windows.forEach(win => {
-                if (win.roomKey === room.key || isWindowNearRoom(win, room)) {
-                    win.roomKey = room.key;
-                    if (win.orientation === 'horizontal') {
-                        win.y = (win.wallSide === 'bottom') ? y + h : y;
-                        const pct = (win.offsetPct || 50) / 100.0;
-                        win.x = x + Math.max(6, Math.min(w - win.len - 6, w * pct - win.len / 2));
-                    } else {
-                        win.x = (win.wallSide === 'right') ? x + w : x;
-                        const pct = (win.offsetPct || 50) / 100.0;
-                        win.y = y + Math.max(6, Math.min(h - win.len - 6, h * pct - win.len / 2));
-                    }
-                }
-            });
-        }
     }
 
     if (toolbarRoomSelect) {
@@ -1221,25 +1476,7 @@ function setupEventListeners() {
 
     if (btnResetRoomDefaults) {
         btnResetRoomDefaults.addEventListener('click', () => {
-            const activeKey = state.selectedRoomKey || 'living_room';
-            if (baselineRoomSnapshots[activeKey]) {
-                const space = getSelectedSpaceObject(activeKey);
-                if (space && space.bounds) {
-                    space.bounds.w = baselineRoomSnapshots[activeKey].bounds.w;
-                    space.bounds.h = baselineRoomSnapshots[activeKey].bounds.h;
-                    space.bounds.x = baselineRoomSnapshots[activeKey].bounds.x;
-                    space.bounds.y = baselineRoomSnapshots[activeKey].bounds.y;
-                    if (space.area_m2 !== undefined) {
-                        space.area_m2 = baselineRoomSnapshots[activeKey].area_m2;
-                    }
-                    if (space.type === 'room' || space.type === 'court') {
-                        realignRoomDoorsAndWindows(space.data);
-                    }
-                    syncSpaceInspectorUI();
-                    updateAnalyticsHUD(state.currentLayout);
-                    renderCanvas();
-                }
-            }
+            generateFloorplan();
         });
     }
 
