@@ -1020,8 +1020,9 @@ function setupEventListeners() {
     }
 
     function realignRoomDoorsAndWindows(room) {
-        if (!room || !room.bounds) return;
+        if (!room || !room.bounds || !state.currentLayout) return;
         const { x, y, w, h } = room.bounds;
+        const { bldgMinX, bldgMaxX, bldgMinY, bldgMaxY, rooms } = state.currentLayout;
 
         if (state.currentLayout.doors) {
             state.currentLayout.doors.forEach(door => {
@@ -1042,16 +1043,61 @@ function setupEventListeners() {
 
         if (state.currentLayout.windows) {
             state.currentLayout.windows.forEach(win => {
-                if (win.roomKey === room.key || isWindowNearRoom(win, room)) {
+                if (win.roomKey === room.key || win.id === `w_${room.key}` || isWindowNearRoom(win, room)) {
                     win.roomKey = room.key;
-                    if (win.orientation === 'horizontal') {
-                        win.y = (win.wallSide === 'bottom') ? y + h : y;
-                        const pct = (win.offsetPct || 50) / 100.0;
-                        win.x = x + Math.max(4, Math.min(w - win.len - 4, w * pct - win.len / 2));
+
+                    // Dedicated Architectural Window Placement Logic per Room:
+                    if (room.key === 'disabled_bedroom' || room.key === 'bedroom') {
+                        // Bedroom Windows: MUST face the internal lightwell/ventilation shaft (court_garden)
+                        // Never on neighbor party walls (bldgMinX, bldgMaxX, bldgMaxY)!
+                        const shaft = rooms.find(r => r.key === 'court_garden' && Math.abs(r.bounds.y + r.bounds.h - (y + h)) < 25);
+                        
+                        if (x <= bldgMinX + 5) {
+                            // Room is on Left: Window is on its RIGHT internal wall (opening into shaft)
+                            win.orientation = 'vertical';
+                            win.x = x + w;
+                            const shaftY = shaft ? shaft.bounds.y : y + Math.round(h * 0.4);
+                            const shaftH = shaft ? shaft.bounds.h : Math.round(h * 0.6);
+                            win.y = shaftY + Math.max(2, Math.min(shaftH - win.len - 2, (shaftH - win.len) / 2));
+                        } else {
+                            // Room is on Right: Window is on its LEFT internal wall (opening into shaft)
+                            win.orientation = 'vertical';
+                            win.x = x;
+                            const shaftY = shaft ? shaft.bounds.y : y + Math.round(h * 0.4);
+                            const shaftH = shaft ? shaft.bounds.h : Math.round(h * 0.6);
+                            win.y = shaftY + Math.max(2, Math.min(shaftH - win.len - 2, (shaftH - win.len) / 2));
+                        }
+                    } else if (room.key === 'disabled_bathroom' || room.key === 'bathroom') {
+                        // Bathroom Windows: MUST open on the internal shaft directly below them
+                        win.orientation = 'horizontal';
+                        win.y = y + h;
+                        win.x = x + Math.max(2, Math.min(w - win.len - 2, (w - win.len) / 2));
+                    } else if (room.key === 'guest_bathroom') {
+                        // Guest Bathroom Window: Opens onto front facade or front shaft
+                        win.orientation = 'horizontal';
+                        win.y = y;
+                        win.x = x + Math.max(2, Math.min(w - win.len - 2, (w - win.len) / 2));
+                    } else if (room.key === 'guest_room' || room.key === 'living_room' || room.key === 'kitchen') {
+                        // Front Zone Rooms: Windows open on Front Facade (y = bldgMinY) or side courtyard
+                        if (win.orientation === 'horizontal') {
+                            win.y = bldgMinY;
+                            win.x = x + Math.max(6, Math.min(w - win.len - 6, (w - win.len) / 2));
+                        } else {
+                            // Opening on interior courtyard
+                            win.x = (x <= bldgMinX + 5) ? x + w : x;
+                            win.y = y + Math.max(4, Math.min(h - win.len - 4, (h - win.len) / 2));
+                        }
                     } else {
-                        win.x = (win.wallSide === 'right') ? x + w : x;
-                        const pct = (win.offsetPct || 50) / 100.0;
-                        win.y = y + Math.max(4, Math.min(h - win.len - 4, h * pct - win.len / 2));
+                        // Generic Fallback
+                        if (win.orientation === 'horizontal') {
+                            win.y = (win.wallSide === 'bottom') ? y + h : y;
+                            const pct = (win.offsetPct || 50) / 100.0;
+                            win.x = x + Math.max(4, Math.min(w - win.len - 4, w * pct - win.len / 2));
+                        } else {
+                            win.x = (x <= bldgMinX + 5) ? x + w : x;
+                            const pct = (win.offsetPct || 50) / 100.0;
+                            win.y = y + Math.max(4, Math.min(h - win.len - 4, h * pct - win.len / 2));
+                        }
                     }
                 }
             });
@@ -1203,17 +1249,35 @@ function setupEventListeners() {
                             remDelta = 0;
                         }
 
-                        // Re-stitch contiguous X positions across the building width
-                        let curX = columns[0].x;
-                        for (let i = 0; i < columns.length; i++) {
+                        // Re-stitch contiguous X positions strictly within [bldgMinX, bldgMaxX]
+                        let curX = bldgMinX;
+                        const numCols = columns.length;
+                        for (let i = 0; i < numCols; i++) {
                             const col = columns[i];
                             col.x = curX;
-                            if (i === columns.length - 1) {
+                            if (i === numCols - 1) {
                                 col.w = Math.max(minColWPx, bldgMaxX - curX);
+                                if (curX + col.w > bldgMaxX) {
+                                    const overflow = (curX + col.w) - bldgMaxX;
+                                    for (let k = i - 1; k >= 0; k--) {
+                                        const shrink = Math.min(overflow, columns[k].w - minColWPx);
+                                        columns[k].w -= shrink;
+                                    }
+                                    let reX = bldgMinX;
+                                    for (let k = 0; k < i; k++) {
+                                        columns[k].x = reX;
+                                        reX += columns[k].w;
+                                    }
+                                    col.x = reX;
+                                    col.w = bldgMaxX - reX;
+                                }
                             }
                             col.rooms.forEach(r => {
                                 r.bounds.x = col.x;
                                 r.bounds.w = col.w;
+                                if (r.bounds.x + r.bounds.w > bldgMaxX) {
+                                    r.bounds.w = bldgMaxX - r.bounds.x;
+                                }
                                 r.area_m2 = parseFloat(((r.bounds.w * r.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
                             });
                             curX += col.w;
@@ -7083,14 +7147,15 @@ function drawWindows(windowsList) {
     windowsList.forEach(w => {
         const { x, y, len, orientation } = w;
 
-        // Strict Neighbor Wall Prohibition Guard (Zero windows on rear or side party walls)
+        // Strict Neighbor Boundary Party Wall Prohibition Guard (حرمة الجوار):
+        // Zero windows on neighbor party walls at rear or sides!
         if (orientation === "horizontal") {
             // Rear boundary (bldgMaxY) is a neighbor party wall
-            if (Math.abs(y - bldgMaxY) < 2) return;
+            if (Math.abs(y - bldgMaxY) < 4 || y > bldgMaxY - 4) return;
         } else {
             // Side boundaries are neighbor party walls (unless corner plot with setback)
             if (state.plotType !== 'corner') {
-                if (Math.abs(x - bldgMinX) < 2 || Math.abs(x - bldgMaxX) < 2) return;
+                if (Math.abs(x - bldgMinX) < 4 || Math.abs(x - bldgMaxX) < 4 || x <= bldgMinX || x >= bldgMaxX) return;
             }
         }
 
