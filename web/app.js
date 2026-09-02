@@ -463,7 +463,7 @@ function setZoom(newZoom, focalX = canvas.width / 2, focalY = canvas.height / 2)
     state.zoom = clampedZoom;
 
     updateZoomBadge();
-    renderCanvas();
+    requestRender();
 }
 
 function resetZoomAndPan() {
@@ -471,7 +471,7 @@ function resetZoomAndPan() {
     state.panX = 0;
     state.panY = 0;
     updateZoomBadge();
-    renderCanvas();
+    requestRender();
 }
 
 function setupZoomAndPan() {
@@ -514,7 +514,7 @@ function setupZoomAndPan() {
         }
         state.panX = e.clientX - state.panStartX;
         state.panY = e.clientY - state.panStartY;
-        renderCanvas();
+        requestRender();
     });
 
     window.addEventListener('mouseup', () => {
@@ -3398,18 +3398,32 @@ function generateCleanWallSegments(rooms, doors, windows = []) {
     return cutSegments;
 }
 
+let isRenderPending = false;
+function requestRender() {
+    if (isRenderPending) return;
+    isRenderPending = true;
+    requestAnimationFrame(() => {
+        isRenderPending = false;
+        renderCanvas();
+    });
+}
+
 /**
- * Main Canvas Render Function
+ * Main Canvas Render Function (With Identity Matrix Protection & 60FPS Refresh)
  */
 function renderCanvas() {
+    // 1. Force Reset Canvas 2D Transformation Matrix to absolute Identity
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+    // 2. Clear entire physical pixel buffer
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // 1. Dark CAD Canvas Background
+    // 3. Draw Dark CAD Viewport Background across physical screen
     ctx.fillStyle = '#0b0f19';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     ctx.save();
-    // 2. Apply Matrix Zoom & Pan
+    // 4. Apply Matrix Zoom & Pan
     ctx.translate(state.panX, state.panY);
     ctx.scale(state.zoom, state.zoom);
 
@@ -3426,10 +3440,10 @@ function renderCanvas() {
             renderOrthogonalMode();
         }
 
-        // 4. Outer Boundary Lines & Dimension Witnesses
+        // 5. Outer Boundary Lines & Dimension Witnesses
         drawBoundary();
 
-        // 5. Iraq Bioclimatic, Sun Path & Prevailing Wind Overlay
+        // 6. Iraq Bioclimatic, Sun Path & Prevailing Wind Overlay
         const showBio = (state.currentMode === 'bioclimatic' || state.showSunOverlay);
         const bioToolbar = document.getElementById('bioSimToolbar');
         if (bioToolbar) {
@@ -3445,7 +3459,7 @@ function renderCanvas() {
 
     ctx.restore();
 
-    // 6. Draw Fixed Screen-Space CAD Title Block Stamp (Impervious to Zoom & Pan distortion)
+    // 7. Draw Fixed Screen-Space CAD Title Block Stamp (Impervious to Zoom & Pan distortion)
     if (state.currentLayout && state.currentMode === 'orthogonal') {
         drawArchitecturalTitleBlock();
     }
@@ -6177,10 +6191,7 @@ function drawOutdoorZonesAndGardens(ctx, outdoorZones, plotBounds) {
 function renderOrthogonalMode() {
     const { rooms, ramp, accessibleParking, entranceGate, garageBounds, outdoorZones, plotBounds, doors, windows } = state.currentLayout;
 
-    // 1. Draw Architectural Drafting Paper Grid Base
-    drawDraftingGrid(plotBounds);
-
-    // 1.B. Draw Urban Context, Surrounding Streets, Sidewalks & Neighbor Plots
+    // 1. Draw Urban Context, Surrounding Streets, Sidewalks & Neighbor Plots
     drawUrbanContextAndSurroundingStreets(plotBounds);
 
     // 2. Draw Structured Outdoor Zones (Landscaped Gardens, Perimeter Walkways & Garage)
