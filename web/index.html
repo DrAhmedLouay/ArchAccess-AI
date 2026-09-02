@@ -363,7 +363,11 @@
                         <!-- Section 2: Doors & Movement -->
                         <div class="inspector-subgroup">
                             <div class="subgroup-title">
-                                <span>🚪 فتحات الأبواب ومسار الدخول:</span>
+                                <span>🚪 إدارة فتحات الأبواب ومسار الدخول:</span>
+                            </div>
+                            <div class="door-action-buttons" style="display: flex; gap: 6px; margin-bottom: 8px;">
+                                <button type="button" id="btnAddDoor" class="btn-sm-action" style="flex: 1; background: rgba(99, 102, 241, 0.15); border-color: #6366f1; color: #a5b4fc;" title="إضافة باب جديد للفضاء">➕ إضافة باب</button>
+                                <button type="button" id="btnDeleteDoor" class="btn-sm-action" style="flex: 1; background: rgba(239, 68, 68, 0.15); border-color: #dc2626; color: #f87171;" title="حذف الباب المحدد">🗑️ حذف الباب</button>
                             </div>
                             <div class="control-dual-grid">
                                 <div class="control-cell">
@@ -380,12 +384,12 @@
                                     <button type="button" id="btnFlipDoorSwing" class="btn-sm-action">🔄 عكس الفتح</button>
                                 </div>
                             </div>
-                            <div class="slider-row">
+                            <div class="slider-row" style="margin-top: 6px;">
                                 <div class="slider-meta">
                                     <label id="lblDoorPos">موقع الباب على الجدار:</label>
                                     <span class="val-badge" id="valDoorPos">50%</span>
                                 </div>
-                                <input type="range" id="rangeDoorPosition" min="15" max="85" step="5" value="50">
+                                <input type="range" id="rangeDoorPosition" min="10" max="90" step="2" value="50">
                             </div>
                         </div>
 
@@ -881,6 +885,6 @@
         </div>
     </div>
 
-    <script src="app.js?v=20260902_1650"></script>
+    <script src="app.js?v=20260902_1655"></script>
 </body>
 </html>
