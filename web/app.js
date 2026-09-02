@@ -1397,32 +1397,36 @@ function setupZoomAndPan() {
             return;
         }
 
-        // 2. Check if clicking on ANY Room or Outdoor Zone to select it immediately
+        // 2. Check if clicking on ANY Room, Lightwell, or Outdoor Zone to select it immediately
         if (state.currentLayout) {
             const { rooms, outdoorZones, accessibleParking, garageBounds, ramp } = state.currentLayout;
             let clickedKey = null;
+            let clickedObj = null;
 
-            if (ramp && ramp.bounds && worldX >= ramp.bounds.x && worldX <= ramp.bounds.x + ramp.bounds.w && worldY >= ramp.bounds.y && worldY <= ramp.bounds.y + ramp.bounds.h) {
+            if (ramp && ramp.bounds && worldX >= ramp.bounds.x - 2 && worldX <= ramp.bounds.x + ramp.bounds.w + 2 && worldY >= ramp.bounds.y - 2 && worldY <= ramp.bounds.y + ramp.bounds.h + 2) {
                 clickedKey = 'ramp';
-            } else if (accessibleParking && accessibleParking.bounds && worldX >= accessibleParking.bounds.x && worldX <= accessibleParking.bounds.x + accessibleParking.bounds.w && worldY >= accessibleParking.bounds.y && worldY <= accessibleParking.bounds.y + accessibleParking.bounds.h) {
+            } else if (accessibleParking && accessibleParking.bounds && worldX >= accessibleParking.bounds.x - 2 && worldX <= accessibleParking.bounds.x + accessibleParking.bounds.w + 2 && worldY >= accessibleParking.bounds.y - 2 && worldY <= accessibleParking.bounds.y + accessibleParking.bounds.h + 2) {
                 clickedKey = 'garage_zone';
-            } else if (garageBounds && worldX >= garageBounds.x && worldX <= garageBounds.x + garageBounds.w && worldY >= garageBounds.y && worldY <= garageBounds.y + garageBounds.h) {
+            } else if (garageBounds && worldX >= garageBounds.x - 2 && worldX <= garageBounds.x + garageBounds.w + 2 && worldY >= garageBounds.y - 2 && worldY <= garageBounds.y + garageBounds.h + 2) {
                 clickedKey = 'garage_zone';
             } else if (rooms) {
-                const hitRoom = rooms.find(r => worldX >= r.bounds.x && worldX <= r.bounds.x + r.bounds.w && worldY >= r.bounds.y && worldY <= r.bounds.y + r.bounds.h);
-                if (hitRoom) clickedKey = hitRoom.key;
+                const hitRoom = rooms.find(r => worldX >= r.bounds.x - 2 && worldX <= r.bounds.x + r.bounds.w + 2 && worldY >= r.bounds.y - 2 && worldY <= r.bounds.y + r.bounds.h + 2);
+                if (hitRoom) {
+                    clickedKey = hitRoom.key;
+                    clickedObj = hitRoom;
+                }
             }
 
             if (!clickedKey && outdoorZones) {
-                const hitZone = outdoorZones.find(z => worldX >= z.bounds.x && worldX <= z.bounds.x + z.bounds.w && worldY >= z.bounds.y && worldY <= z.bounds.y + z.bounds.h);
+                const hitZone = outdoorZones.find(z => worldX >= z.bounds.x - 2 && worldX <= z.bounds.x + z.bounds.w + 2 && worldY >= z.bounds.y - 2 && worldY <= z.bounds.y + z.bounds.h + 2);
                 if (hitZone) clickedKey = (hitZone.type === 'garage') ? 'garage_zone' : ((hitZone.type === 'garden') ? 'front_garden' : 'side_walkway');
             }
 
             if (clickedKey) {
                 state.selectedRoomKey = clickedKey;
+                state.selectedRoomObj = clickedObj;
                 syncSpaceInspectorUI();
                 requestRender();
-                // Allow user to immediately begin panning or moving after selecting
             }
         }
 
@@ -2102,23 +2106,27 @@ function setupEventListeners() {
                 }
             }
 
-            // 3. Check Indoor Rooms & Courtyards
+            // 3. Check Indoor Rooms & Courtyards/Lightwells
             if (!hitKey && rooms) {
                 const hitRoom = rooms.find(r => {
                     const b = r.bounds;
-                    return worldX >= b.x && worldX <= b.x + b.w && worldY >= b.y && worldY <= b.y + b.h;
+                    return worldX >= b.x - 2 && worldX <= b.x + b.w + 2 && worldY >= b.y - 2 && worldY <= b.y + b.h + 2;
                 });
-                if (hitRoom) hitKey = hitRoom.key;
+                if (hitRoom) {
+                    hitKey = hitRoom.key;
+                    state.selectedRoomObj = hitRoom;
+                }
             }
 
             // 4. Check Outdoor Zones (Front Garden, Side Walkway, etc.)
             if (!hitKey && outdoorZones) {
                 const hitZone = outdoorZones.find(z => {
                     const b = z.bounds;
-                    return worldX >= b.x && worldX <= b.x + b.w && worldY >= b.y && worldY <= b.y + b.h;
+                    return worldX >= b.x - 2 && worldX <= b.x + b.w + 2 && worldY >= b.y - 2 && worldY <= b.y + b.h + 2;
                 });
                 if (hitZone) {
                     hitKey = (hitZone.type === 'garage') ? 'garage_zone' : ((hitZone.type === 'garden') ? 'front_garden' : 'side_walkway');
+                    state.selectedRoomObj = hitZone;
                 }
             }
 
