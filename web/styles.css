@@ -763,6 +763,16 @@ body {
     transform: translateY(0);
 }
 
+.btn-viewport-action:disabled,
+.zoom-btn:disabled {
+    opacity: 0.38;
+    cursor: not-allowed !important;
+    pointer-events: none;
+    transform: none !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-muted) !important;
+}
+
 /* Parametric Space Inspector Card in Sidebar */
 .parametric-inspector-card {
     background: linear-gradient(145deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%);

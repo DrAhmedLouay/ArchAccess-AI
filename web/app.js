@@ -546,6 +546,95 @@ const btnShortenWallLength = document.getElementById('btnShortenWallLength');
 
 const btnResetRoomDefaults = document.getElementById('btnResetRoomDefaults');
 
+// ==========================================
+// Undo / Redo History Stack Engine
+// ==========================================
+const historyStack = [];
+const redoStack = [];
+const MAX_HISTORY_STATES = 50;
+
+function createHistorySnapshot() {
+    if (!state.currentLayout) return null;
+    return {
+        currentLayout: JSON.parse(JSON.stringify(state.currentLayout)),
+        roomFurniture: JSON.parse(JSON.stringify(state.roomFurniture || {})),
+        selectedRoomKey: state.selectedRoomKey,
+        plotLengthM: state.plotLengthM,
+        plotWidthM: state.plotWidthM,
+        plotTypology: state.plotTypology,
+        plotType: state.plotType,
+        currentPreset: state.currentPreset,
+        boundaryPoints: JSON.parse(JSON.stringify(state.boundaryPoints || []))
+    };
+}
+
+function saveHistoryState() {
+    const snap = createHistorySnapshot();
+    if (!snap) return;
+    historyStack.push(snap);
+    if (historyStack.length > MAX_HISTORY_STATES) {
+        historyStack.shift();
+    }
+    redoStack.length = 0; // Reset redo on new modification
+    updateUndoRedoUI();
+}
+
+function restoreHistorySnapshot(snap) {
+    if (!snap) return;
+    state.currentLayout = JSON.parse(JSON.stringify(snap.currentLayout));
+    state.roomFurniture = JSON.parse(JSON.stringify(snap.roomFurniture || {}));
+    state.selectedRoomKey = snap.selectedRoomKey || 'living_room';
+    state.plotLengthM = snap.plotLengthM;
+    state.plotWidthM = snap.plotWidthM;
+    state.plotTypology = snap.plotTypology;
+    state.plotType = snap.plotType;
+    state.currentPreset = snap.currentPreset;
+    state.boundaryPoints = JSON.parse(JSON.stringify(snap.boundaryPoints || []));
+    state.selectedRoomObj = null;
+    state.selectedDoorId = null;
+    state.selectedDoor = null;
+    state.selectedWindowId = null;
+    state.selectedWindow = null;
+    
+    syncSpaceInspectorUI();
+    renderCanvas();
+}
+
+function performUndo() {
+    if (historyStack.length === 0) return;
+    const currentSnap = createHistorySnapshot();
+    if (currentSnap) redoStack.push(currentSnap);
+    
+    const prevSnap = historyStack.pop();
+    restoreHistorySnapshot(prevSnap);
+    updateUndoRedoUI();
+}
+
+function performRedo() {
+    if (redoStack.length === 0) return;
+    const currentSnap = createHistorySnapshot();
+    if (currentSnap) historyStack.push(currentSnap);
+    
+    const nextSnap = redoStack.pop();
+    restoreHistorySnapshot(nextSnap);
+    updateUndoRedoUI();
+}
+
+function updateUndoRedoUI() {
+    const canUndo = historyStack.length > 0;
+    const canRedo = redoStack.length > 0;
+    
+    const btnUndo = document.getElementById('btnUndo');
+    const btnRedo = document.getElementById('btnRedo');
+    const floatingUndoBtn = document.getElementById('floatingUndoBtn');
+    const floatingRedoBtn = document.getElementById('floatingRedoBtn');
+    
+    if (btnUndo) btnUndo.disabled = !canUndo;
+    if (btnRedo) btnRedo.disabled = !canRedo;
+    if (floatingUndoBtn) floatingUndoBtn.disabled = !canUndo;
+    if (floatingRedoBtn) floatingRedoBtn.disabled = !canRedo;
+}
+
 // Baseline snapshots for resetting
 const baselineRoomSnapshots = {};
 
@@ -565,6 +654,7 @@ function isWindowNearRoom(win, room) {
 
 function addNewDoorToSpace(roomKey) {
     if (!state.currentLayout) return;
+    saveHistoryState();
     const space = getSelectedSpaceObject(roomKey || state.selectedRoomKey);
     if (!space || !space.bounds) return;
     const { x, y, w, h } = space.bounds;
@@ -632,6 +722,7 @@ function deleteSelectedDoor() {
     if (!targetId) {
         const door = findRoomDoor(state.selectedRoomKey);
         if (door) {
+            saveHistoryState();
             state.currentLayout.doors = state.currentLayout.doors.filter(d => d !== door);
             state.selectedDoorId = null;
             state.selectedDoor = null;
@@ -641,6 +732,7 @@ function deleteSelectedDoor() {
         return;
     }
 
+    saveHistoryState();
     state.currentLayout.doors = state.currentLayout.doors.filter(d => d.id !== targetId && d !== state.selectedDoor);
     state.selectedDoorId = null;
     state.selectedDoor = null;
@@ -650,6 +742,7 @@ function deleteSelectedDoor() {
 
 function addNewWindowToSpace(roomKey) {
     if (!state.currentLayout) return;
+    saveHistoryState();
     const space = getSelectedSpaceObject(roomKey || state.selectedRoomKey);
     if (!space || !space.bounds) return;
     const { x, y, w, h } = space.bounds;
@@ -718,6 +811,7 @@ function deleteSelectedWindow() {
     if (!targetId) {
         const win = findRoomWindow(state.selectedRoomKey);
         if (win) {
+            saveHistoryState();
             state.currentLayout.windows = state.currentLayout.windows.filter(w => w !== win);
             state.selectedWindowId = null;
             state.selectedWindow = null;
@@ -727,6 +821,7 @@ function deleteSelectedWindow() {
         return;
     }
 
+    saveHistoryState();
     state.currentLayout.windows = state.currentLayout.windows.filter(w => w.id !== targetId && w !== state.selectedWindow);
     state.selectedWindowId = null;
     state.selectedWindow = null;
@@ -737,6 +832,7 @@ function deleteSelectedWindow() {
 function adjustSpaceWallDimension(roomKey, dimType, deltaM) {
     const space = getSelectedSpaceObject(roomKey || state.selectedRoomKey);
     if (!space || !space.bounds) return;
+    saveHistoryState();
     const pxPerMeter = 23.0;
     const currentM = (dimType === 'width') ? (space.bounds.w / pxPerMeter) : (space.bounds.h / pxPerMeter);
     const newM = Math.max(1.0, parseFloat((currentM + deltaM).toFixed(2)));
@@ -1583,6 +1679,7 @@ function setupZoomAndPan() {
         const hitGrip = grips.find(g => Math.hypot(g.x - worldX, g.y - worldY) < 18 / state.zoom);
 
         if (hitGrip) {
+            state.dragPreSnapshot = createHistorySnapshot();
             const space = getSelectedSpaceObject(hitGrip.roomKey);
             state.isDraggingGrip = true;
             state.activeGrip = {
@@ -1610,6 +1707,7 @@ function setupZoomAndPan() {
             });
 
             if (hitDoor) {
+                state.dragPreSnapshot = createHistorySnapshot();
                 state.selectedDoorId = hitDoor.id;
                 state.selectedDoor = hitDoor;
                 state.isDraggingDoor = true;
@@ -1643,6 +1741,7 @@ function setupZoomAndPan() {
             });
 
             if (hitWin) {
+                state.dragPreSnapshot = createHistorySnapshot();
                 state.selectedWindowId = hitWin.id;
                 state.selectedWindow = hitWin;
                 state.isDraggingWindow = true;
@@ -1871,21 +1970,32 @@ function setupZoomAndPan() {
     });
 
     window.addEventListener('mouseup', () => {
+        let didDrag = false;
         if (state.isDraggingGrip) {
             state.isDraggingGrip = false;
             state.activeGrip = null;
+            didDrag = true;
             syncSpaceInspectorUI();
             requestRender();
         }
         if (state.isDraggingDoor) {
             state.isDraggingDoor = false;
+            didDrag = true;
             syncSpaceInspectorUI();
             requestRender();
         }
         if (state.isDraggingWindow) {
             state.isDraggingWindow = false;
+            didDrag = true;
             syncSpaceInspectorUI();
             requestRender();
+        }
+        if (didDrag && state.dragPreSnapshot) {
+            historyStack.push(state.dragPreSnapshot);
+            if (historyStack.length > MAX_HISTORY_STATES) historyStack.shift();
+            redoStack.length = 0;
+            updateUndoRedoUI();
+            state.dragPreSnapshot = null;
         }
         if (state.isPanning) {
             state.isPanning = false;
@@ -2099,6 +2209,7 @@ function setupEventListeners() {
             const widthM = widthCm / 100.0;
             const door = findRoomDoor(activeKey);
             if (door) {
+                saveHistoryState();
                 door.w = widthM * 23.0;
                 door.widthM = widthM;
                 renderCanvas();
@@ -2126,6 +2237,7 @@ function setupEventListeners() {
             const activeKey = state.selectedRoomKey || 'living_room';
             const door = findRoomDoor(activeKey);
             if (door) {
+                saveHistoryState();
                 door.dir = (door.dir || 1) * -1;
                 renderCanvas();
             }
@@ -2138,6 +2250,7 @@ function setupEventListeners() {
             const lenM = parseFloat(e.target.value) || 1.2;
             const win = findRoomWindow(activeKey);
             if (win) {
+                saveHistoryState();
                 win.len = lenM * 23.0;
                 renderCanvas();
             }
@@ -2164,6 +2277,7 @@ function setupEventListeners() {
             const activeKey = state.selectedRoomKey || 'living_room';
             const win = findRoomWindow(activeKey);
             if (win) {
+                saveHistoryState();
                 win.disabled = !e.target.checked;
                 renderCanvas();
             }
@@ -2218,8 +2332,33 @@ function setupEventListeners() {
         });
     }
 
+    const btnUndo = document.getElementById('btnUndo');
+    const btnRedo = document.getElementById('btnRedo');
+    const floatingUndoBtn = document.getElementById('floatingUndoBtn');
+    const floatingRedoBtn = document.getElementById('floatingRedoBtn');
+
+    if (btnUndo) btnUndo.addEventListener('click', performUndo);
+    if (btnRedo) btnRedo.addEventListener('click', performRedo);
+    if (floatingUndoBtn) floatingUndoBtn.addEventListener('click', performUndo);
+    if (floatingRedoBtn) floatingRedoBtn.addEventListener('click', performRedo);
+
     window.addEventListener('keydown', (e) => {
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+        
+        // Undo: Ctrl+Z or Cmd+Z
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+            e.preventDefault();
+            performUndo();
+            return;
+        }
+
+        // Redo: Ctrl+Y or Cmd+Shift+Z or Ctrl+Shift+Z
+        if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.key.toLowerCase() === 'z' && e.shiftKey))) {
+            e.preventDefault();
+            performRedo();
+            return;
+        }
+
         if (e.key === 'Delete' || e.key === 'Backspace') {
             if (state.selectedDoorId || state.selectedDoor) {
                 e.preventDefault();
@@ -2233,6 +2372,7 @@ function setupEventListeners() {
 
     if (btnResetRoomDefaults) {
         btnResetRoomDefaults.addEventListener('click', () => {
+            saveHistoryState();
             generateFloorplan();
         });
     }
@@ -2240,6 +2380,7 @@ function setupEventListeners() {
     if (furnitureStyleSelect) {
         furnitureStyleSelect.addEventListener('change', (e) => {
             const activeKey = state.selectedRoomKey || 'living_room';
+            saveHistoryState();
             if (!state.roomFurniture[activeKey]) {
                 state.roomFurniture[activeKey] = { rotation: 0, style: 1 };
             }
@@ -2252,6 +2393,7 @@ function setupEventListeners() {
     document.querySelectorAll('.btn-furn-rot').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const activeKey = state.selectedRoomKey || 'living_room';
+            saveHistoryState();
             if (!state.roomFurniture[activeKey]) {
                 state.roomFurniture[activeKey] = { rotation: 0, style: 1 };
             }
@@ -2264,6 +2406,7 @@ function setupEventListeners() {
     if (rotateFurnitureBtn) {
         rotateFurnitureBtn.addEventListener('click', () => {
             const activeKey = state.selectedRoomKey || 'living_room';
+            saveHistoryState();
             if (!state.roomFurniture[activeKey]) {
                 state.roomFurniture[activeKey] = { rotation: 0, style: 1 };
             }
@@ -2276,6 +2419,7 @@ function setupEventListeners() {
     if (changeFurnitureStyleBtn) {
         changeFurnitureStyleBtn.addEventListener('click', () => {
             const activeKey = state.selectedRoomKey || 'living_room';
+            saveHistoryState();
             if (!state.roomFurniture[activeKey]) {
                 state.roomFurniture[activeKey] = { rotation: 0, style: 1 };
             }
