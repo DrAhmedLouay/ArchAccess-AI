@@ -507,17 +507,6 @@ function resetZoomAndPan() {
     requestRender();
 }
 
-function setupZoomAndPan() {
-    if (zoomInBtn) {
-        zoomInBtn.addEventListener('click', () => setZoom(state.zoom + 0.20));
-    }
-    if (zoomOutBtn) {
-        zoomOutBtn.addEventListener('click', () => setZoom(state.zoom - 0.20));
-    }
-    if (zoomResetBtn) {
-        zoomResetBtn.addEventListener('click', resetZoomAndPan);
-    }
-
 function getActiveRoomGrips() {
     if (!state.selectedRoomKey || !state.currentLayout) return [];
     const space = getSelectedSpaceObject(state.selectedRoomKey);
@@ -577,7 +566,7 @@ function getActiveRoomGrips() {
     return grips;
 }
 
-function setupPanZoomSystem() {
+function setupZoomAndPan() {
     const zoomInBtn = document.getElementById('zoomInBtn');
     const zoomOutBtn = document.getElementById('zoomOutBtn');
     const zoomResetBtn = document.getElementById('zoomResetBtn');
