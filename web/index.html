@@ -321,10 +321,10 @@
                             </select>
                         </div>
 
-                        <!-- Section 1: Dimensions & Area -->
+                        <!-- Section 1: Dimensions, Area & Wall Extension -->
                         <div class="inspector-subgroup">
                             <div class="subgroup-title">
-                                <span>📏 الأبعاد والمساحة المعمارية:</span>
+                                <span>📏 الأبعاد والمساحة والمعايرة:</span>
                                 <span class="area-tag" id="valRoomArea">24.50 م²</span>
                             </div>
                             
@@ -344,6 +344,19 @@
                                     <span class="val-badge" id="valRoomLength">5.20 م</span>
                                 </div>
                                 <input type="range" id="rangeRoomLength" min="2.0" max="7.5" step="0.1" value="5.2">
+                            </div>
+
+                            <!-- Precision Wall Lengthening / Shortening Buttons -->
+                            <div class="wall-adjust-container" style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed rgba(226, 232, 240, 0.2);">
+                                <label style="font-size: 11px; font-weight: bold; color: var(--text-muted); display: block; margin-bottom: 5px;">🧱 إطالة / تقصير جدران الفضاء:</label>
+                                <div class="control-dual-grid" style="margin-bottom: 6px;">
+                                    <button type="button" id="btnExtendWallWidth" class="btn-sm-action" title="إطالة عرض الجدار (+0.10م)">➕ إطالة العرض (+0.10م)</button>
+                                    <button type="button" id="btnShortenWallWidth" class="btn-sm-action" title="تقصير عرض الجدار (-0.10م)">➖ تقصير العرض (-0.10م)</button>
+                                </div>
+                                <div class="control-dual-grid">
+                                    <button type="button" id="btnExtendWallLength" class="btn-sm-action" title="إطالة عمق الجدار (+0.10م)">➕ إطالة العمق (+0.10م)</button>
+                                    <button type="button" id="btnShortenWallLength" class="btn-sm-action" title="تقصير عمق الجدار (-0.10م)">➖ تقصير العمق (-0.10م)</button>
+                                </div>
                             </div>
                         </div>
 
@@ -379,16 +392,21 @@
                         <!-- Section 3: Windows & Glazing -->
                         <div class="inspector-subgroup">
                             <div class="subgroup-title">
-                                <span>🪟 النوافذ والتهوية الطبيعية:</span>
+                                <span>🪟 إدارة الشبابيك والنوافذ:</span>
                                 <label class="mini-toggle-label">
                                     <input type="checkbox" id="checkWindowEnabled" checked>
                                     <span id="lblWindowEnable">مفعلة</span>
                                 </label>
                             </div>
+                            <div class="window-action-buttons" style="display: flex; gap: 6px; margin-bottom: 8px;">
+                                <button type="button" id="btnAddWindow" class="btn-sm-action" style="flex: 1; background: rgba(14, 165, 233, 0.15); border-color: #0284c7; color: #38bdf8;" title="إضافة شباك جديد للفضاء على الواجهة أو المنور">➕ إضافة شباك</button>
+                                <button type="button" id="btnDeleteWindow" class="btn-sm-action" style="flex: 1; background: rgba(239, 68, 68, 0.15); border-color: #dc2626; color: #f87171;" title="حذف الشباك المحدد">🗑️ حذف الشباك</button>
+                            </div>
                             <div class="control-dual-grid">
                                 <div class="control-cell">
-                                    <label id="lblWindowWidth">عرض النافذة:</label>
+                                    <label id="lblWindowWidth">عرض الشباك:</label>
                                     <select id="selectWindowWidth" class="form-select-sm">
+                                        <option value="0.8">0.80م</option>
                                         <option value="1.0">1.00م</option>
                                         <option value="1.2" selected>1.20م</option>
                                         <option value="1.5">1.50م</option>
@@ -397,11 +415,13 @@
                                     </select>
                                 </div>
                                 <div class="control-cell">
-                                    <label id="lblWindowPos">موقع النافذة:</label>
+                                    <label id="lblWindowPos">موقع الشباك:</label>
                                     <span class="val-badge" id="valWindowPos">50%</span>
                                 </div>
                             </div>
-                            <input type="range" id="rangeWindowPosition" min="15" max="85" step="5" value="50">
+                            <div class="slider-row" style="margin-top: 6px;">
+                                <input type="range" id="rangeWindowPosition" min="10" max="90" step="2" value="50">
+                            </div>
                         </div>
 
                         <!-- Section 4: Furniture Studio -->
@@ -861,6 +881,6 @@
         </div>
     </div>
 
-    <script src="app.js?v=20260902_1645"></script>
+    <script src="app.js?v=20260902_1650"></script>
 </body>
 </html>

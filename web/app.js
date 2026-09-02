@@ -534,6 +534,13 @@ const checkWindowEnabled = document.getElementById('checkWindowEnabled');
 const selectWindowWidth = document.getElementById('selectWindowWidth');
 const rangeWindowPosition = document.getElementById('rangeWindowPosition');
 const valWindowPosition = document.getElementById('valWindowPos') || document.getElementById('valWindowPosition');
+const btnAddWindow = document.getElementById('btnAddWindow');
+const btnDeleteWindow = document.getElementById('btnDeleteWindow');
+
+const btnExtendWallWidth = document.getElementById('btnExtendWallWidth');
+const btnShortenWallWidth = document.getElementById('btnShortenWallWidth');
+const btnExtendWallLength = document.getElementById('btnExtendWallLength');
+const btnShortenWallLength = document.getElementById('btnShortenWallLength');
 
 const btnResetRoomDefaults = document.getElementById('btnResetRoomDefaults');
 
@@ -552,6 +559,98 @@ function isWindowNearRoom(win, room) {
     const { x, y, w, h } = room.bounds;
     const margin = 10;
     return (win.x >= x - margin && win.x <= x + w + margin && win.y >= y - margin && win.y <= y + h + margin);
+}
+
+function addNewWindowToSpace(roomKey) {
+    if (!state.currentLayout) return;
+    const space = getSelectedSpaceObject(roomKey || state.selectedRoomKey);
+    if (!space || !space.bounds) return;
+    const { x, y, w, h } = space.bounds;
+    const pxPerMeter = 23.0;
+    const winLenPx = Math.round(1.20 * pxPerMeter);
+    const bb = state.currentLayout.buildingBounds || {};
+    const bldgMinX = state.currentLayout.bldgMinX ?? bb.bldgMinX ?? 0;
+    const bldgMinY = state.currentLayout.bldgMinY ?? bb.bldgMinY ?? 0;
+
+    let orientation = 'horizontal';
+    let winX = x + Math.round((w - winLenPx) / 2);
+    let winY = y;
+    let wallSide = 'top';
+
+    if (space.key === 'disabled_bedroom' || space.key === 'bedroom') {
+        orientation = 'vertical';
+        winX = (x <= bldgMinX + 5) ? x + w : x;
+        winY = y + Math.round(h * 0.35);
+        wallSide = (x <= bldgMinX + 5) ? 'right' : 'left';
+    } else if (space.key === 'disabled_bathroom' || space.key === 'bathroom') {
+        orientation = 'horizontal';
+        winX = x + Math.round((w - winLenPx) / 2);
+        winY = y + h;
+        wallSide = 'bottom';
+    } else if (y <= bldgMinY + 5) {
+        orientation = 'horizontal';
+        winX = x + Math.round((w - winLenPx) / 2);
+        winY = bldgMinY;
+        wallSide = 'top';
+    } else {
+        orientation = 'horizontal';
+        winX = x + Math.round((w - winLenPx) / 2);
+        winY = y;
+        wallSide = 'top';
+    }
+
+    if (!state.currentLayout.windows) state.currentLayout.windows = [];
+    const newWin = {
+        id: 'w_' + Math.random().toString(36).substr(2, 7),
+        name: (state.lang === 'ar' ? 'نافذة ' : 'Window ') + (space.name_ar || space.key),
+        roomKey: space.key,
+        x: winX,
+        y: winY,
+        len: winLenPx,
+        orientation: orientation,
+        wallSide: wallSide,
+        offsetPct: 50,
+        disabled: false
+    };
+
+    state.currentLayout.windows.push(newWin);
+    state.selectedWindowId = newWin.id;
+    state.selectedWindow = newWin;
+    syncSpaceInspectorUI();
+    renderCanvas();
+}
+
+function deleteSelectedWindow() {
+    if (!state.currentLayout || !state.currentLayout.windows) return;
+    const targetId = state.selectedWindowId || (state.selectedWindow ? state.selectedWindow.id : null);
+    if (!targetId) {
+        const win = findRoomWindow(state.selectedRoomKey);
+        if (win) {
+            state.currentLayout.windows = state.currentLayout.windows.filter(w => w !== win);
+            state.selectedWindowId = null;
+            state.selectedWindow = null;
+            syncSpaceInspectorUI();
+            renderCanvas();
+        }
+        return;
+    }
+
+    state.currentLayout.windows = state.currentLayout.windows.filter(w => w.id !== targetId && w !== state.selectedWindow);
+    state.selectedWindowId = null;
+    state.selectedWindow = null;
+    syncSpaceInspectorUI();
+    renderCanvas();
+}
+
+function adjustSpaceWallDimension(roomKey, dimType, deltaM) {
+    const space = getSelectedSpaceObject(roomKey || state.selectedRoomKey);
+    if (!space || !space.bounds) return;
+    const pxPerMeter = 23.0;
+    const currentM = (dimType === 'width') ? (space.bounds.w / pxPerMeter) : (space.bounds.h / pxPerMeter);
+    const newM = Math.max(1.0, parseFloat((currentM + deltaM).toFixed(2)));
+    updateParametricRoomDimension(space.key, dimType, newM);
+    syncSpaceInspectorUI();
+    requestRender();
 }
 
 function getSelectedSpaceObject(activeKey) {
@@ -672,9 +771,15 @@ function findRoomDoor(roomKey) {
 
 function findRoomWindow(roomKey) {
     if (!state.currentLayout || !state.currentLayout.windows) return null;
-    const room = state.currentLayout.rooms.find(r => r.key === roomKey);
-    if (!room) return null;
-    return state.currentLayout.windows.find(w => w.roomKey === roomKey || isWindowNearRoom(w, room));
+    if (state.selectedWindowId) {
+        const sw = state.currentLayout.windows.find(w => w.id === state.selectedWindowId);
+        if (sw && (!roomKey || sw.roomKey === roomKey)) return sw;
+    }
+    if (state.selectedWindow && (!roomKey || state.selectedWindow.roomKey === roomKey)) {
+        return state.selectedWindow;
+    }
+    const room = state.currentLayout.rooms ? state.currentLayout.rooms.find(r => r.key === roomKey) : null;
+    return state.currentLayout.windows.find(w => w.roomKey === roomKey || (room && isWindowNearRoom(w, room))) || null;
 }
 
 function syncFurnitureControls() {
@@ -1397,7 +1502,38 @@ function setupZoomAndPan() {
             return;
         }
 
-        // 2. Check if clicking on ANY Room, Lightwell, or Outdoor Zone to select it immediately
+        // 2. Check if clicking on an interactive Window (to select and drag/slide along wall)
+        if (state.currentLayout && state.currentLayout.windows) {
+            const hitWin = state.currentLayout.windows.find(w => {
+                if (w.orientation === 'horizontal') {
+                    return worldX >= w.x - 4 && worldX <= w.x + w.len + 4 && Math.abs(worldY - w.y) < 14;
+                } else {
+                    return worldY >= w.y - 4 && worldY <= w.y + w.len + 4 && Math.abs(worldX - w.x) < 14;
+                }
+            });
+
+            if (hitWin) {
+                state.selectedWindowId = hitWin.id;
+                state.selectedWindow = hitWin;
+                state.isDraggingWindow = true;
+                state.dragWindowStartX = worldX;
+                state.dragWindowStartY = worldY;
+                state.dragWindowInitialX = hitWin.x;
+                state.dragWindowInitialY = hitWin.y;
+                if (hitWin.roomKey) {
+                    state.selectedRoomKey = hitWin.roomKey;
+                    const roomObj = state.currentLayout.rooms?.find(r => r.key === hitWin.roomKey);
+                    if (roomObj) state.selectedRoomObj = roomObj;
+                }
+                state.isPanning = false;
+                canvas.style.cursor = (hitWin.orientation === 'horizontal') ? 'ew-resize' : 'ns-resize';
+                syncSpaceInspectorUI();
+                requestRender();
+                return;
+            }
+        }
+
+        // 3. Check if clicking on ANY Room, Lightwell, or Outdoor Zone to select it immediately
         if (state.currentLayout) {
             const { rooms, outdoorZones, accessibleParking, garageBounds, ramp } = state.currentLayout;
             let clickedKey = null;
@@ -1425,12 +1561,14 @@ function setupZoomAndPan() {
             if (clickedKey) {
                 state.selectedRoomKey = clickedKey;
                 state.selectedRoomObj = clickedObj;
+                state.selectedWindowId = null;
+                state.selectedWindow = null;
                 syncSpaceInspectorUI();
                 requestRender();
             }
         }
 
-        // 3. Otherwise start standard canvas panning
+        // 4. Otherwise start standard canvas panning
         state.isPanning = true;
         state.panStartX = e.clientX - state.panX;
         state.panStartY = e.clientY - state.panY;
@@ -1475,7 +1613,39 @@ function setupZoomAndPan() {
             return;
         }
 
-        // B. Handle Canvas Panning
+        // B. Handle Interactive Window Dragging along wall
+        if (state.isDraggingWindow && state.selectedWindow) {
+            const win = state.selectedWindow;
+            const room = getSelectedSpaceObject(win.roomKey || state.selectedRoomKey);
+            const rBounds = (room && room.bounds) ? room.bounds : { x: 0, y: 0, w: 1000, h: 1000 };
+            
+            if (win.orientation === 'horizontal') {
+                const deltaX = worldX - state.dragWindowStartX;
+                const newX = state.dragWindowInitialX + deltaX;
+                const minX = rBounds.x + 4;
+                const maxX = rBounds.x + rBounds.w - win.len - 4;
+                win.x = Math.max(minX, Math.min(maxX, newX));
+                const span = Math.max(1, maxX - minX);
+                win.offsetPct = Math.round(((win.x - minX) / span) * 100);
+            } else {
+                const deltaY = worldY - state.dragWindowStartY;
+                const newY = state.dragWindowInitialY + deltaY;
+                const minY = rBounds.y + 4;
+                const maxY = rBounds.y + rBounds.h - win.len - 4;
+                win.y = Math.max(minY, Math.min(maxY, newY));
+                const span = Math.max(1, maxY - minY);
+                win.offsetPct = Math.round(((win.y - minY) / span) * 100);
+            }
+
+            if (valWindowPosition && rangeWindowPosition) {
+                rangeWindowPosition.value = win.offsetPct || 50;
+                valWindowPosition.textContent = `${win.offsetPct || 50}%`;
+            }
+            requestRender();
+            return;
+        }
+
+        // C. Handle Canvas Panning
         if (state.isPanning) {
             const dx = Math.abs(e.clientX - state.mouseStartX);
             const dy = Math.abs(e.clientY - state.mouseStartY);
@@ -1488,15 +1658,29 @@ function setupZoomAndPan() {
             return;
         }
 
-        // C. Hover detection over CAD grips with instant live pill rendering
+        // D. Hover detection over CAD grips and windows
         const grips = getActiveRoomGrips();
         const hoverGrip = grips.find(g => Math.hypot(g.x - worldX, g.y - worldY) < 18 / state.zoom);
         const prevHoveredEdge = state.hoveredGrip ? state.hoveredGrip.edge : null;
         const newHoveredEdge = hoverGrip ? hoverGrip.edge : null;
         state.hoveredGrip = hoverGrip || null;
 
+        let hoverWin = null;
+        if (state.currentLayout && state.currentLayout.windows) {
+            hoverWin = state.currentLayout.windows.find(w => {
+                if (w.orientation === 'horizontal') {
+                    return worldX >= w.x - 4 && worldX <= w.x + w.len + 4 && Math.abs(worldY - w.y) < 14;
+                } else {
+                    return worldY >= w.y - 4 && worldY <= w.y + w.len + 4 && Math.abs(worldX - w.x) < 14;
+                }
+            });
+        }
+        state.hoveredWindow = hoverWin || null;
+
         if (hoverGrip) {
             canvas.style.cursor = hoverGrip.cursor;
+        } else if (hoverWin) {
+            canvas.style.cursor = (hoverWin.orientation === 'horizontal') ? 'ew-resize' : 'ns-resize';
         } else if (!state.isPanning) {
             canvas.style.cursor = 'default';
         }
@@ -1510,6 +1694,11 @@ function setupZoomAndPan() {
         if (state.isDraggingGrip) {
             state.isDraggingGrip = false;
             state.activeGrip = null;
+            syncSpaceInspectorUI();
+            requestRender();
+        }
+        if (state.isDraggingWindow) {
+            state.isDraggingWindow = false;
             syncSpaceInspectorUI();
             requestRender();
         }
@@ -1795,6 +1984,52 @@ function setupEventListeners() {
             }
         });
     }
+
+    if (btnAddWindow) {
+        btnAddWindow.addEventListener('click', () => {
+            addNewWindowToSpace(state.selectedRoomKey);
+        });
+    }
+
+    if (btnDeleteWindow) {
+        btnDeleteWindow.addEventListener('click', () => {
+            deleteSelectedWindow();
+        });
+    }
+
+    if (btnExtendWallWidth) {
+        btnExtendWallWidth.addEventListener('click', () => {
+            adjustSpaceWallDimension(state.selectedRoomKey, 'width', 0.10);
+        });
+    }
+
+    if (btnShortenWallWidth) {
+        btnShortenWallWidth.addEventListener('click', () => {
+            adjustSpaceWallDimension(state.selectedRoomKey, 'width', -0.10);
+        });
+    }
+
+    if (btnExtendWallLength) {
+        btnExtendWallLength.addEventListener('click', () => {
+            adjustSpaceWallDimension(state.selectedRoomKey, 'length', 0.10);
+        });
+    }
+
+    if (btnShortenWallLength) {
+        btnShortenWallLength.addEventListener('click', () => {
+            adjustSpaceWallDimension(state.selectedRoomKey, 'length', -0.10);
+        });
+    }
+
+    window.addEventListener('keydown', (e) => {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+        if (e.key === 'Delete' || e.key === 'Backspace') {
+            if (state.selectedWindowId || state.selectedWindow) {
+                e.preventDefault();
+                deleteSelectedWindow();
+            }
+        }
+    });
 
     if (btnResetRoomDefaults) {
         btnResetRoomDefaults.addEventListener('click', () => {
@@ -7487,6 +7722,49 @@ function drawWindows(windowsList) {
             ctx.fillStyle = '#000000';
             ctx.fillRect(x - 3, y - 2, 6, 3);
             ctx.fillRect(x - 3, y + len - 1, 6, 3);
+        }
+
+        const isSelected = (state.selectedWindowId === w.id || state.selectedWindow === w);
+        if (isSelected) {
+            ctx.save();
+            ctx.shadowColor = 'rgba(245, 158, 11, 0.75)';
+            ctx.shadowBlur = 10;
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 2.2;
+            if (orientation === "horizontal") {
+                ctx.strokeRect(x - 3, y - 6, len + 6, 12);
+            } else {
+                ctx.strokeRect(x - 6, y - 3, 12, len + 6);
+            }
+            ctx.shadowBlur = 0;
+
+            // Draw floating window dimension & action pill
+            const pxPerMeter = 23.0;
+            const isAr = state.lang === 'ar';
+            const winM = (len / pxPerMeter).toFixed(2);
+            const pillText = `🪟 ${w.name || (isAr ? 'شباك' : 'Window')}: ${winM} ${isAr ? 'م (اسحب للتحريك ↔ | Del للحذف)' : 'm (Drag to move ↔ | Del to delete)'}`;
+            
+            ctx.font = 'bold 9.5px Cairo, JetBrains Mono, sans-serif';
+            const tm = ctx.measureText(pillText);
+            const pw = tm.width + 18;
+            const ph = 20;
+            const px = (orientation === "horizontal") ? (x + len / 2 - pw / 2) : (x - pw / 2);
+            const py = (orientation === "horizontal") ? (y - ph - 8) : (y - ph - 8);
+
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.95)';
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 1.2;
+            ctx.beginPath();
+            if (ctx.roundRect) ctx.roundRect(px, py, pw, ph, 4);
+            else ctx.rect(px, py, pw, ph);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = '#fbbf24';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(pillText, px + pw / 2, py + ph / 2);
+            ctx.restore();
         }
     });
 }
