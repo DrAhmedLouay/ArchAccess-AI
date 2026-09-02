@@ -547,37 +547,43 @@ body {
     width: 100%;
     min-width: 0;
     box-sizing: border-box;
-    margin-bottom: 2px;
+    margin-bottom: 4px;
 }
 
 /* Tier 1: View Mode Tabs */
 .view-mode-tabs {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
     background-color: var(--bg-card);
-    padding: 3px 6px;
+    padding: 4px 8px;
     border-radius: var(--radius-md);
     border: 1px solid var(--border-color);
     width: 100%;
     box-sizing: border-box;
     overflow-x: auto;
-    scrollbar-width: none;
+    white-space: nowrap;
+    scrollbar-width: thin;
 }
 
 .view-mode-tabs::-webkit-scrollbar {
-    display: none;
+    height: 4px;
+}
+
+.view-mode-tabs::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
 }
 
 .view-tab {
     background: transparent;
     border: 1px solid transparent;
     color: var(--text-secondary);
-    padding: 5px 12px;
-    height: 30px;
+    padding: 6px 12px;
+    height: 32px;
     border-radius: var(--radius-sm);
     font-family: inherit;
-    font-size: 0.78rem;
+    font-size: 0.80rem;
     font-weight: 600;
     cursor: pointer;
     display: inline-flex;
@@ -628,11 +634,12 @@ body {
 /* Tier 2: Viewport Options & Furniture Studio Ribbon */
 .viewport-options-ribbon {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     background: linear-gradient(180deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.8) 100%);
     border: 1px solid var(--border-color);
-    padding: 4px 8px;
+    padding: 6px 10px;
     border-radius: var(--radius-md);
     gap: 8px;
     box-sizing: border-box;
@@ -1013,10 +1020,10 @@ body {
     white-space: nowrap !important;
     flex-shrink: 0;
     margin-inline-start: auto;
-    background: rgba(0, 0, 0, 0.25);
-    padding: 3px 8px;
+    background: rgba(0, 0, 0, 0.40);
+    padding: 4px 10px;
     border-radius: 4px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .canvas-card {
