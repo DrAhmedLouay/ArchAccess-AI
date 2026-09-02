@@ -1267,7 +1267,13 @@ function getActiveRoomGrips() {
     const space = getSelectedSpaceObject(state.selectedRoomKey);
     if (!space || !space.bounds) return [];
     const { x, y, w, h } = space.bounds;
-    const { bldgMinX, bldgMaxX, bldgMinY, bldgMaxY } = state.currentLayout;
+    
+    const bb = state.currentLayout.buildingBounds || {};
+    const pb = state.currentLayout.plotBounds || {};
+    const bldgMinX = (state.currentLayout.bldgMinX !== undefined) ? state.currentLayout.bldgMinX : (bb.bldgMinX !== undefined ? bb.bldgMinX : (pb.minX || 0));
+    const bldgMaxX = (state.currentLayout.bldgMaxX !== undefined) ? state.currentLayout.bldgMaxX : (bb.bldgMaxX !== undefined ? bb.bldgMaxX : (pb.maxX || 1000));
+    const bldgMinY = (state.currentLayout.bldgMinY !== undefined) ? state.currentLayout.bldgMinY : (bb.bldgMinY !== undefined ? bb.bldgMinY : (pb.minY || 0));
+    const bldgMaxY = (state.currentLayout.bldgMaxY !== undefined) ? state.currentLayout.bldgMaxY : (bb.bldgMaxY !== undefined ? bb.bldgMaxY : (pb.maxY || 1000));
 
     const grips = [];
     // Right Edge Grip (Adjust Width)
@@ -1348,15 +1354,15 @@ function setupZoomAndPan() {
     canvas.addEventListener('mousedown', (e) => {
         if (state.currentPreset === 'custom') return;
         
-        // 1. Check if clicking on an interactive TestFit CAD Grip Handle
         const rect = canvas.getBoundingClientRect();
         const screenX = e.clientX - rect.left;
         const screenY = e.clientY - rect.top;
         const worldX = (screenX - state.panX) / state.zoom;
         const worldY = (screenY - state.panY) / state.zoom;
 
+        // 1. Check if clicking on an interactive TestFit CAD Grip Handle
         const grips = getActiveRoomGrips();
-        const hitGrip = grips.find(g => Math.hypot(g.x - worldX, g.y - worldY) < 14 / state.zoom);
+        const hitGrip = grips.find(g => Math.hypot(g.x - worldX, g.y - worldY) < 18 / state.zoom);
 
         if (hitGrip) {
             const space = getSelectedSpaceObject(hitGrip.roomKey);
@@ -1375,7 +1381,36 @@ function setupZoomAndPan() {
             return;
         }
 
-        // 2. Otherwise start standard canvas panning
+        // 2. Check if clicking on ANY Room or Outdoor Zone to select it immediately
+        if (state.currentLayout) {
+            const { rooms, outdoorZones, accessibleParking, garageBounds, ramp } = state.currentLayout;
+            let clickedKey = null;
+
+            if (ramp && ramp.bounds && worldX >= ramp.bounds.x && worldX <= ramp.bounds.x + ramp.bounds.w && worldY >= ramp.bounds.y && worldY <= ramp.bounds.y + ramp.bounds.h) {
+                clickedKey = 'ramp';
+            } else if (accessibleParking && accessibleParking.bounds && worldX >= accessibleParking.bounds.x && worldX <= accessibleParking.bounds.x + accessibleParking.bounds.w && worldY >= accessibleParking.bounds.y && worldY <= accessibleParking.bounds.y + accessibleParking.bounds.h) {
+                clickedKey = 'garage_zone';
+            } else if (garageBounds && worldX >= garageBounds.x && worldX <= garageBounds.x + garageBounds.w && worldY >= garageBounds.y && worldY <= garageBounds.y + garageBounds.h) {
+                clickedKey = 'garage_zone';
+            } else if (rooms) {
+                const hitRoom = rooms.find(r => worldX >= r.bounds.x && worldX <= r.bounds.x + r.bounds.w && worldY >= r.bounds.y && worldY <= r.bounds.y + r.bounds.h);
+                if (hitRoom) clickedKey = hitRoom.key;
+            }
+
+            if (!clickedKey && outdoorZones) {
+                const hitZone = outdoorZones.find(z => worldX >= z.bounds.x && worldX <= z.bounds.x + z.bounds.w && worldY >= z.bounds.y && worldY <= z.bounds.y + z.bounds.h);
+                if (hitZone) clickedKey = (hitZone.type === 'garage') ? 'garage_zone' : ((hitZone.type === 'garden') ? 'front_garden' : 'side_walkway');
+            }
+
+            if (clickedKey) {
+                state.selectedRoomKey = clickedKey;
+                syncSpaceInspectorUI();
+                requestRender();
+                // Allow user to immediately begin panning or moving after selecting
+            }
+        }
+
+        // 3. Otherwise start standard canvas panning
         state.isPanning = true;
         state.panStartX = e.clientX - state.panX;
         state.panStartY = e.clientY - state.panY;
@@ -1433,15 +1468,21 @@ function setupZoomAndPan() {
             return;
         }
 
-        // C. Hover detection over CAD grips
+        // C. Hover detection over CAD grips with instant live pill rendering
         const grips = getActiveRoomGrips();
-        const hoverGrip = grips.find(g => Math.hypot(g.x - worldX, g.y - worldY) < 14 / state.zoom);
+        const hoverGrip = grips.find(g => Math.hypot(g.x - worldX, g.y - worldY) < 18 / state.zoom);
+        const prevHoveredEdge = state.hoveredGrip ? state.hoveredGrip.edge : null;
+        const newHoveredEdge = hoverGrip ? hoverGrip.edge : null;
         state.hoveredGrip = hoverGrip || null;
 
         if (hoverGrip) {
             canvas.style.cursor = hoverGrip.cursor;
         } else if (!state.isPanning) {
             canvas.style.cursor = 'default';
+        }
+
+        if (prevHoveredEdge !== newHoveredEdge) {
+            requestRender();
         }
     });
 
@@ -1450,7 +1491,7 @@ function setupZoomAndPan() {
             state.isDraggingGrip = false;
             state.activeGrip = null;
             syncSpaceInspectorUI();
-            renderCanvas();
+            requestRender();
         }
         if (state.isPanning) {
             state.isPanning = false;
@@ -3566,6 +3607,10 @@ function synthesizeLayout(boundary, variant, typology) {
         boundary: boundary,
         plotBounds: { minX, maxX, minY, maxY, plotW, plotH },
         buildingBounds: { bldgMinX, bldgMinY, bldgMaxX, bldgMaxY, bw, bh },
+        bldgMinX: bldgMinX,
+        bldgMinY: bldgMinY,
+        bldgMaxX: bldgMaxX,
+        bldgMaxY: bldgMaxY,
         garageBounds: garageBounds,
         accessibleParking: accessibleParking,
         outdoorZones: outdoorZones,
@@ -6971,25 +7016,25 @@ function renderOrthogonalMode() {
 
                 // Outer Halo
                 if (isHovered || isDragging) {
-                    ctx.fillStyle = 'rgba(56, 189, 248, 0.35)';
+                    ctx.fillStyle = isDragging ? 'rgba(16, 185, 129, 0.40)' : 'rgba(56, 189, 248, 0.40)';
                     ctx.beginPath();
-                    ctx.arc(g.x, g.y, 11, 0, Math.PI * 2);
+                    ctx.arc(g.x, g.y, 13, 0, Math.PI * 2);
                     ctx.fill();
                 }
 
                 // Core Circular Grip Node
                 ctx.fillStyle = (isDragging ? '#10b981' : (isHovered ? '#38bdf8' : '#0284c7'));
                 ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = 1.8;
+                ctx.lineWidth = 2.0;
                 ctx.beginPath();
-                ctx.arc(g.x, g.y, 5.5, 0, Math.PI * 2);
+                ctx.arc(g.x, g.y, 6.5, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.stroke();
 
-                // Inner Crosshair / Direction Dot
+                // Inner Direction Dot
                 ctx.fillStyle = '#ffffff';
                 ctx.beginPath();
-                ctx.arc(g.x, g.y, 1.8, 0, Math.PI * 2);
+                ctx.arc(g.x, g.y, 2.2, 0, Math.PI * 2);
                 ctx.fill();
 
                 // Live Floating TestFit Measurement Pill when Hovered or Dragging
@@ -6997,26 +7042,31 @@ function renderOrthogonalMode() {
                     const currentDimM = (g.type === 'width' ? (w / pxPerMeter) : (h / pxPerMeter)).toFixed(2);
                     const pillText = `${g.type === 'width' ? '↔' : '↕'} ${currentDimM} ${isAr ? 'م' : 'm'}`;
                     
-                    ctx.font = 'bold 9px Cairo, JetBrains Mono, sans-serif';
+                    ctx.font = 'bold 9.5px Cairo, JetBrains Mono, sans-serif';
                     const textMetrics = ctx.measureText(pillText);
-                    const pillW = textMetrics.width + 16;
-                    const pillH = 18;
+                    const pillW = textMetrics.width + 18;
+                    const pillH = 20;
                     const pillX = g.x - pillW / 2;
-                    const pillY = (g.edge === 'top' || g.edge === 'bottom') ? g.y - pillH - 6 : g.y - pillH / 2;
+                    const pillY = (g.edge === 'top' || g.edge === 'bottom') ? g.y - pillH - 8 : g.y - pillH / 2;
 
-                    ctx.fillStyle = 'rgba(15, 23, 42, 0.94)';
-                    ctx.strokeStyle = '#38bdf8';
-                    ctx.lineWidth = 1;
+                    ctx.save();
+                    ctx.shadowColor = 'rgba(56, 189, 248, 0.6)';
+                    ctx.shadowBlur = 8;
+                    ctx.fillStyle = 'rgba(15, 23, 42, 0.95)';
+                    ctx.strokeStyle = isDragging ? '#10b981' : '#38bdf8';
+                    ctx.lineWidth = 1.2;
                     ctx.beginPath();
                     if (ctx.roundRect) ctx.roundRect(pillX, pillY, pillW, pillH, 4);
                     else ctx.rect(pillX, pillY, pillW, pillH);
                     ctx.fill();
                     ctx.stroke();
 
-                    ctx.fillStyle = '#38bdf8';
+                    ctx.shadowBlur = 0;
+                    ctx.fillStyle = isDragging ? '#10b981' : '#38bdf8';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
                     ctx.fillText(pillText, pillX + pillW / 2, pillY + pillH / 2);
+                    ctx.restore();
                 }
             });
 
