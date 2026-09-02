@@ -247,7 +247,12 @@ const state = {
     panY: 0,
     isPanning: false,
     panStartX: 0,
-    panStartY: 0
+    panStartY: 0,
+
+    // TestFit Interactive CAD Grip Dragging State
+    isDraggingGrip: false,
+    activeGrip: null,
+    hoveredGrip: null
 };
 
 // Seeded PRNG (Mulberry32) for deterministic & stochastic reproducible synthesis
@@ -513,6 +518,80 @@ function setupZoomAndPan() {
         zoomResetBtn.addEventListener('click', resetZoomAndPan);
     }
 
+function getActiveRoomGrips() {
+    if (!state.selectedRoomKey || !state.currentLayout) return [];
+    const space = getSelectedSpaceObject(state.selectedRoomKey);
+    if (!space || !space.bounds) return [];
+    const { x, y, w, h } = space.bounds;
+    const { bldgMinX, bldgMaxX, bldgMinY, bldgMaxY } = state.currentLayout;
+
+    const grips = [];
+    // Right Edge Grip (Adjust Width)
+    if (x + w < bldgMaxX - 2) {
+        grips.push({
+            type: 'width',
+            edge: 'right',
+            roomKey: state.selectedRoomKey,
+            x: x + w,
+            y: y + h / 2,
+            cursor: 'ew-resize',
+            label: state.lang === 'ar' ? 'سحب لتعديل العرض ↔' : 'Drag to Resize Width ↔'
+        });
+    }
+    // Left Edge Grip (Adjust Width)
+    if (x > bldgMinX + 2) {
+        grips.push({
+            type: 'width',
+            edge: 'left',
+            roomKey: state.selectedRoomKey,
+            x: x,
+            y: y + h / 2,
+            cursor: 'ew-resize',
+            label: state.lang === 'ar' ? 'سحب لتعديل العرض ↔' : 'Drag to Resize Width ↔'
+        });
+    }
+    // Bottom Edge Grip (Adjust Length/Height)
+    if (y + h < bldgMaxY - 2) {
+        grips.push({
+            type: 'length',
+            edge: 'bottom',
+            roomKey: state.selectedRoomKey,
+            x: x + w / 2,
+            y: y + h,
+            cursor: 'ns-resize',
+            label: state.lang === 'ar' ? 'سحب لتعديل الطول ↕' : 'Drag to Resize Length ↕'
+        });
+    }
+    // Top Edge Grip (Adjust Length/Height)
+    if (y > bldgMinY + 2) {
+        grips.push({
+            type: 'length',
+            edge: 'top',
+            roomKey: state.selectedRoomKey,
+            x: x + w / 2,
+            y: y,
+            cursor: 'ns-resize',
+            label: state.lang === 'ar' ? 'سحب لتعديل الطول ↕' : 'Drag to Resize Length ↕'
+        });
+    }
+    return grips;
+}
+
+function setupPanZoomSystem() {
+    const zoomInBtn = document.getElementById('zoomInBtn');
+    const zoomOutBtn = document.getElementById('zoomOutBtn');
+    const zoomResetBtn = document.getElementById('zoomResetBtn');
+
+    if (zoomInBtn) {
+        zoomInBtn.addEventListener('click', () => setZoom(state.zoom + 0.20));
+    }
+    if (zoomOutBtn) {
+        zoomOutBtn.addEventListener('click', () => setZoom(state.zoom - 0.20));
+    }
+    if (zoomResetBtn) {
+        zoomResetBtn.addEventListener('click', resetZoomAndPan);
+    }
+
     canvas.addEventListener('wheel', (e) => {
         e.preventDefault();
         const rect = canvas.getBoundingClientRect();
@@ -524,6 +603,35 @@ function setupZoomAndPan() {
 
     canvas.addEventListener('mousedown', (e) => {
         if (state.currentPreset === 'custom') return;
+        
+        // 1. Check if clicking on an interactive TestFit CAD Grip Handle
+        const rect = canvas.getBoundingClientRect();
+        const screenX = e.clientX - rect.left;
+        const screenY = e.clientY - rect.top;
+        const worldX = (screenX - state.panX) / state.zoom;
+        const worldY = (screenY - state.panY) / state.zoom;
+
+        const grips = getActiveRoomGrips();
+        const hitGrip = grips.find(g => Math.hypot(g.x - worldX, g.y - worldY) < 14 / state.zoom);
+
+        if (hitGrip) {
+            const space = getSelectedSpaceObject(hitGrip.roomKey);
+            state.isDraggingGrip = true;
+            state.activeGrip = {
+                ...hitGrip,
+                startMouseWorldX: worldX,
+                startMouseWorldY: worldY,
+                initialW: space.bounds.w,
+                initialH: space.bounds.h,
+                initialX: space.bounds.x,
+                initialY: space.bounds.y
+            };
+            state.isPanning = false;
+            canvas.style.cursor = hitGrip.cursor;
+            return;
+        }
+
+        // 2. Otherwise start standard canvas panning
         state.isPanning = true;
         state.panStartX = e.clientX - state.panX;
         state.panStartY = e.clientY - state.panY;
@@ -534,18 +642,72 @@ function setupZoomAndPan() {
     });
 
     window.addEventListener('mousemove', (e) => {
-        if (!state.isPanning) return;
-        const dx = Math.abs(e.clientX - state.mouseStartX);
-        const dy = Math.abs(e.clientY - state.mouseStartY);
-        if (dx > 4 || dy > 4) {
-            state.hasMovedWhilePanning = true;
+        const rect = canvas.getBoundingClientRect();
+        const screenX = e.clientX - rect.left;
+        const screenY = e.clientY - rect.top;
+        const worldX = (screenX - state.panX) / state.zoom;
+        const worldY = (screenY - state.panY) / state.zoom;
+
+        // A. Handle Active CAD Grip Dragging (TestFit Real-Time Constraint Solver)
+        if (state.isDraggingGrip && state.activeGrip) {
+            const pxPerMeter = 23.0;
+            const g = state.activeGrip;
+
+            if (g.edge === 'right') {
+                const deltaPx = worldX - g.startMouseWorldX;
+                const newW_M = (g.initialW + deltaPx) / pxPerMeter;
+                updateParametricRoomDimension(g.roomKey, 'width', newW_M);
+            } else if (g.edge === 'left') {
+                const deltaPx = g.startMouseWorldX - worldX;
+                const newW_M = (g.initialW + deltaPx) / pxPerMeter;
+                updateParametricRoomDimension(g.roomKey, 'width', newW_M);
+            } else if (g.edge === 'bottom') {
+                const deltaPx = worldY - g.startMouseWorldY;
+                const newH_M = (g.initialH + deltaPx) / pxPerMeter;
+                updateParametricRoomDimension(g.roomKey, 'length', newH_M);
+            } else if (g.edge === 'top') {
+                const deltaPx = g.startMouseWorldY - worldY;
+                const newH_M = (g.initialH + deltaPx) / pxPerMeter;
+                updateParametricRoomDimension(g.roomKey, 'length', newH_M);
+            }
+
+            syncSpaceInspectorUI();
+            requestRender();
+            return;
         }
-        state.panX = e.clientX - state.panStartX;
-        state.panY = e.clientY - state.panStartY;
-        requestRender();
+
+        // B. Handle Canvas Panning
+        if (state.isPanning) {
+            const dx = Math.abs(e.clientX - state.mouseStartX);
+            const dy = Math.abs(e.clientY - state.mouseStartY);
+            if (dx > 4 || dy > 4) {
+                state.hasMovedWhilePanning = true;
+            }
+            state.panX = e.clientX - state.panStartX;
+            state.panY = e.clientY - state.panStartY;
+            requestRender();
+            return;
+        }
+
+        // C. Hover detection over CAD grips
+        const grips = getActiveRoomGrips();
+        const hoverGrip = grips.find(g => Math.hypot(g.x - worldX, g.y - worldY) < 14 / state.zoom);
+        state.hoveredGrip = hoverGrip || null;
+
+        if (hoverGrip) {
+            canvas.style.cursor = hoverGrip.cursor;
+        } else if (!state.isPanning) {
+            canvas.style.cursor = 'default';
+        }
     });
 
     window.addEventListener('mouseup', () => {
+        if (state.isDraggingGrip) {
+            state.isDraggingGrip = false;
+            state.activeGrip = null;
+            syncSpaceInspectorUI();
+            renderCanvas();
+        }
         if (state.isPanning) {
             state.isPanning = false;
             canvas.classList.remove('panning');
@@ -6780,22 +6942,26 @@ function renderOrthogonalMode() {
         drawLabels();
     }
 
-    // 9.5 Draw Active Room / Space Selection CAD Grip Handles & Highlight
+    // 9.5 Draw Active Room / Space Selection & TestFit Interactive CAD Drag Grips
     if (state.selectedRoomKey) {
         const space = getSelectedSpaceObject(state.selectedRoomKey);
         if (space && space.bounds) {
             const { x, y, w, h } = space.bounds;
+            const pxPerMeter = 23.0;
+            const isAr = state.lang === 'ar';
             ctx.save();
+
+            // 1. Room Highlight Envelope with soft cyan glow
             ctx.strokeStyle = '#38bdf8';
             ctx.fillStyle = 'rgba(56, 189, 248, 0.08)';
-            ctx.lineWidth = 1.8;
+            ctx.lineWidth = 2.0;
             ctx.fillRect(x, y, w, h);
             ctx.strokeRect(x, y, w, h);
 
-            // 4 corner CAD grip boxes
+            // 2. Corner CAD Box Grips
             ctx.fillStyle = '#ffffff';
             ctx.strokeStyle = '#0284c7';
-            ctx.lineWidth = 1;
+            ctx.lineWidth = 1.2;
             const gripSize = 5;
             [
                 { gx: x - gripSize / 2, gy: y - gripSize / 2 },
@@ -6807,13 +6973,69 @@ function renderOrthogonalMode() {
                 ctx.strokeRect(g.gx, g.gy, gripSize, gripSize);
             });
 
-            // Selected Room Badge in corner
-            const isAr = state.lang === 'ar';
-            const badgeW = isAr ? 68 : 74;
-            const badgeH = 15;
-            const badgeX = x + w - badgeW - 3;
-            const badgeY = y + 3;
-            if (w > badgeW + 6 && h > 20) {
+            // 3. TestFit Interactive Edge Drag Grips (Circular Handles with Crosshairs)
+            const grips = getActiveRoomGrips();
+            grips.forEach(g => {
+                const isHovered = (state.hoveredGrip && state.hoveredGrip.edge === g.edge);
+                const isDragging = (state.isDraggingGrip && state.activeGrip && state.activeGrip.edge === g.edge);
+
+                // Outer Halo
+                if (isHovered || isDragging) {
+                    ctx.fillStyle = 'rgba(56, 189, 248, 0.35)';
+                    ctx.beginPath();
+                    ctx.arc(g.x, g.y, 11, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // Core Circular Grip Node
+                ctx.fillStyle = (isDragging ? '#10b981' : (isHovered ? '#38bdf8' : '#0284c7'));
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1.8;
+                ctx.beginPath();
+                ctx.arc(g.x, g.y, 5.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                // Inner Crosshair / Direction Dot
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(g.x, g.y, 1.8, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Live Floating TestFit Measurement Pill when Hovered or Dragging
+                if (isHovered || isDragging) {
+                    const currentDimM = (g.type === 'width' ? (w / pxPerMeter) : (h / pxPerMeter)).toFixed(2);
+                    const pillText = `${g.type === 'width' ? '↔' : '↕'} ${currentDimM} ${isAr ? 'م' : 'm'}`;
+                    
+                    ctx.font = 'bold 9px Cairo, JetBrains Mono, sans-serif';
+                    const textMetrics = ctx.measureText(pillText);
+                    const pillW = textMetrics.width + 16;
+                    const pillH = 18;
+                    const pillX = g.x - pillW / 2;
+                    const pillY = (g.edge === 'top' || g.edge === 'bottom') ? g.y - pillH - 6 : g.y - pillH / 2;
+
+                    ctx.fillStyle = 'rgba(15, 23, 42, 0.94)';
+                    ctx.strokeStyle = '#38bdf8';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    if (ctx.roundRect) ctx.roundRect(pillX, pillY, pillW, pillH, 4);
+                    else ctx.rect(pillX, pillY, pillW, pillH);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#38bdf8';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(pillText, pillX + pillW / 2, pillY + pillH / 2);
+                }
+            });
+
+            // 4. Selected Room Badge in top-right corner
+            const badgeW = isAr ? 76 : 82;
+            const badgeH = 16;
+            const badgeX = x + w - badgeW - 4;
+            const badgeY = y + 4;
+            if (w > badgeW + 8 && h > 22) {
                 ctx.fillStyle = 'rgba(15, 23, 42, 0.90)';
                 ctx.strokeStyle = '#38bdf8';
                 ctx.lineWidth = 0.8;
@@ -6823,10 +7045,10 @@ function renderOrthogonalMode() {
                 ctx.fill();
                 ctx.stroke();
                 ctx.fillStyle = '#38bdf8';
-                ctx.font = 'bold 7.2px Cairo, sans-serif';
+                ctx.font = 'bold 7.5px Cairo, sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText(isAr ? '✨ محدد للتعديل' : '✨ Selected for Edit', badgeX + badgeW / 2, badgeY + badgeH / 2);
+                ctx.fillText(isAr ? '✨ محدد للتعديل المباشر' : '✨ Drag to Resize', badgeX + badgeW / 2, badgeY + badgeH / 2);
             }
             ctx.restore();
         }
