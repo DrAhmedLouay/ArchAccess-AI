@@ -686,11 +686,8 @@ function setupEventListeners() {
     });
 
     document.querySelectorAll('.view-tab').forEach(tab => {
-        if (tab.id === 'toggleMaxCanvasBtn') return;
         tab.addEventListener('click', () => {
-            document.querySelectorAll('.view-tab').forEach(t => {
-                if (t.id !== 'toggleMaxCanvasBtn') t.classList.remove('active');
-            });
+            document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
             state.currentMode = tab.dataset.mode || 'orthogonal';
             renderCanvas();
@@ -1645,48 +1642,6 @@ function setupEventListeners() {
             state.lang = state.lang === 'ar' ? 'en' : 'ar';
             updateUIForLang();
             renderCanvas();
-        });
-    }
-
-    // Sidebar Collapsible Toggles & Max Canvas Viewport
-    const toggleLeftBtn = document.getElementById('toggleLeftSidebarBtn');
-    const toggleRightBtn = document.getElementById('toggleRightSidebarBtn');
-    const toggleMaxCanvasBtn = document.getElementById('toggleMaxCanvasBtn');
-    const workspaceGrid = document.querySelector('.workspace-grid');
-
-    if (toggleLeftBtn && workspaceGrid) {
-        toggleLeftBtn.addEventListener('click', () => {
-            workspaceGrid.classList.toggle('left-collapsed');
-            const isColl = workspaceGrid.classList.contains('left-collapsed');
-            toggleLeftBtn.textContent = isColl ? '▶' : '◀';
-            setTimeout(() => { resizeCanvas(); renderCanvas(); }, 240);
-        });
-    }
-
-    if (toggleRightBtn && workspaceGrid) {
-        toggleRightBtn.addEventListener('click', () => {
-            workspaceGrid.classList.toggle('right-collapsed');
-            const isColl = workspaceGrid.classList.contains('right-collapsed');
-            toggleRightBtn.textContent = isColl ? '◀' : '▶';
-            setTimeout(() => { resizeCanvas(); renderCanvas(); }, 240);
-        });
-    }
-
-    if (toggleMaxCanvasBtn && workspaceGrid) {
-        toggleMaxCanvasBtn.addEventListener('click', () => {
-            const isBoth = workspaceGrid.classList.contains('both-collapsed');
-            if (isBoth) {
-                workspaceGrid.classList.remove('both-collapsed', 'left-collapsed', 'right-collapsed');
-                if (toggleLeftBtn) toggleLeftBtn.textContent = '◀';
-                if (toggleRightBtn) toggleRightBtn.textContent = '▶';
-                toggleMaxCanvasBtn.classList.remove('active');
-            } else {
-                workspaceGrid.classList.add('both-collapsed');
-                if (toggleLeftBtn) toggleLeftBtn.textContent = '▶';
-                if (toggleRightBtn) toggleRightBtn.textContent = '◀';
-                toggleMaxCanvasBtn.classList.add('active');
-            }
-            setTimeout(() => { resizeCanvas(); renderCanvas(); }, 240);
         });
     }
 }
