@@ -1059,8 +1059,9 @@ function setupEventListeners() {
     }
 
     /**
-     * Architectural Parametric Resizer & Constraint Solver
-     * Dynamically reorganizes adjacent spaces to eliminate black voids/gaps and strictly prevent boundary overflow
+     * Architectural Parametric Resizer & Intelligent Zoning Engine
+     * Reorganizes adjacent spaces or synthesizes a new bioclimatic ventilation shaft (court_garden)
+     * strictly within plot boundaries with zero black voids/gaps.
      */
     function updateParametricRoomDimension(roomKey, dimType, valM) {
         if (!state.currentLayout) return;
@@ -1122,12 +1123,12 @@ function setupEventListeners() {
 
                 columns.sort((a, b) => a.x - b.x);
 
-                const targetColIndex = columns.findIndex(c => c.rooms.some(r => r.key === roomKey));
-                if (targetColIndex !== -1 && columns.length > 1) {
+                let targetColIndex = columns.findIndex(c => c.rooms.some(r => r.key === roomKey));
+                if (targetColIndex !== -1) {
                     const targetCol = columns[targetColIndex];
                     const oldColW = targetCol.w;
                     
-                    const minColWPx = Math.round(1.20 * pxPerMeter); // >= 1.20m minimum for any space/shaft
+                    const minColWPx = Math.round(1.20 * pxPerMeter); // >= 1.20m minimum
                     const totalRowSpan = columns.reduce((sum, c) => sum + c.w, 0);
                     const numOtherCols = columns.length - 1;
                     
@@ -1141,38 +1142,82 @@ function setupEventListeners() {
                         targetCol.w = requestedW;
                         let remDelta = -deltaW;
 
-                        // Distribute the delta among neighbor columns (prioritize immediate adjacent neighbors)
-                        const neighborCols = columns.filter((_, idx) => idx !== targetColIndex);
-                        neighborCols.sort((a, b) => {
-                            const distA = Math.abs(columns.indexOf(a) - targetColIndex);
-                            const distB = Math.abs(columns.indexOf(b) - targetColIndex);
-                            return distA - distB;
-                        });
+                        // Check if an existing shaft column is in this row
+                        const shaftCol = columns.find((c, idx) => idx !== targetColIndex && c.rooms.some(r => r.key === 'court_garden'));
 
-                        for (let col of neighborCols) {
-                            if (remDelta === 0) break;
+                        if (shaftCol) {
+                            // Expand or shrink existing shaft column
                             if (remDelta < 0) {
-                                const maxShrink = col.w - minColWPx;
+                                const maxShrink = shaftCol.w - minColWPx;
                                 const shrinkAmt = Math.min(maxShrink, Math.abs(remDelta));
-                                col.w -= shrinkAmt;
+                                shaftCol.w -= shrinkAmt;
                                 remDelta += shrinkAmt;
                             } else {
-                                col.w += remDelta;
+                                shaftCol.w += remDelta;
                                 remDelta = 0;
                             }
                         }
 
+                        // If remaining delta exists, distribute among neighbor columns
+                        if (remDelta !== 0) {
+                            const neighborCols = columns.filter((c, idx) => idx !== targetColIndex && c !== shaftCol);
+                            neighborCols.sort((a, b) => {
+                                const distA = Math.abs(columns.indexOf(a) - targetColIndex);
+                                const distB = Math.abs(columns.indexOf(b) - targetColIndex);
+                                return distA - distB;
+                            });
+
+                            for (let col of neighborCols) {
+                                if (remDelta === 0) break;
+                                if (remDelta < 0) {
+                                    const maxShrink = col.w - minColWPx;
+                                    const shrinkAmt = Math.min(maxShrink, Math.abs(remDelta));
+                                    col.w -= shrinkAmt;
+                                    remDelta += shrinkAmt;
+                                } else {
+                                    col.w += remDelta;
+                                    remDelta = 0;
+                                }
+                            }
+                        }
+
+                        // INTELLIGENT SHAFT SYNTHESIS:
+                        // If user shrunk space significantly (remDelta > 0 remains unabsorbed), synthesize a new lightwell courtyard (court_garden)!
+                        if (remDelta > 0 && remDelta >= minColWPx) {
+                            const newShaft = {
+                                key: 'court_garden',
+                                name_ar: 'منور / فناء تهوية طبيعية',
+                                name_en: 'Bioclimatic Light Shaft',
+                                hex: '#00ff01',
+                                bounds: {
+                                    x: targetCol.x + targetCol.w,
+                                    y: targetRoom.bounds.y,
+                                    w: remDelta,
+                                    h: targetRoom.bounds.h
+                                },
+                                area_m2: parseFloat(((remDelta * targetRoom.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1))
+                            };
+                            rooms.push(newShaft);
+                            columns.push({ x: newShaft.bounds.x, w: remDelta, rooms: [newShaft] });
+                            columns.sort((a, b) => a.x - b.x);
+                            remDelta = 0;
+                        }
+
                         // Re-stitch contiguous X positions across the building width
                         let curX = columns[0].x;
-                        columns.forEach(col => {
+                        for (let i = 0; i < columns.length; i++) {
+                            const col = columns[i];
                             col.x = curX;
+                            if (i === columns.length - 1) {
+                                col.w = Math.max(minColWPx, bldgMaxX - curX);
+                            }
                             col.rooms.forEach(r => {
                                 r.bounds.x = col.x;
                                 r.bounds.w = col.w;
                                 r.area_m2 = parseFloat(((r.bounds.w * r.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
                             });
                             curX += col.w;
-                        });
+                        }
                     }
                 }
 
@@ -6334,8 +6379,16 @@ function drawGraphicScaleBar(plotBounds) {
  * 3. Garage & Driveway Base (كراج وموقف سيارة)
  */
 function drawOutdoorZonesAndGardens(ctx, outdoorZones, plotBounds) {
-    if (!outdoorZones || !outdoorZones.length) return;
+    if (!plotBounds) return;
     const isAr = state.lang === 'ar';
+
+    // 0. Base Continuous Architectural Landscape Layer across Entire Plot (Eliminates any black canvas holes)
+    ctx.save();
+    ctx.fillStyle = '#15803d'; // Rich green garden base
+    ctx.fillRect(plotBounds.minX, plotBounds.minY, plotBounds.plotW, plotBounds.plotH);
+    ctx.restore();
+
+    if (!outdoorZones || !outdoorZones.length) return;
 
     outdoorZones.forEach(z => {
         const { x, y, w, h } = z.bounds;
@@ -6486,8 +6539,23 @@ function renderOrthogonalMode() {
     if (outdoorZones && outdoorZones.length) {
         drawOutdoorZonesAndGardens(ctx, outdoorZones, plotBounds);
     } else {
-        ctx.fillStyle = '#1e293b';
+        ctx.fillStyle = '#15803d';
         ctx.fillRect(plotBounds.minX, plotBounds.minY, plotBounds.plotW, plotBounds.plotH);
+    }
+
+    // 2.A. Continuous Solid Foundation Floor Slab under the Building Footprint
+    if (rooms && rooms.length) {
+        const bldgMinX = Math.min(...rooms.map(r => r.bounds.x));
+        const bldgMaxX = Math.max(...rooms.map(r => r.bounds.x + r.bounds.w));
+        const bldgMinY = Math.min(...rooms.map(r => r.bounds.y));
+        const bldgMaxY = Math.max(...rooms.map(r => r.bounds.y + r.bounds.h));
+        const bldgW = bldgMaxX - bldgMinX;
+        const bldgH = bldgMaxY - bldgMinY;
+
+        ctx.save();
+        ctx.fillStyle = '#f8fafc'; // Clean solid foundation slab
+        ctx.fillRect(bldgMinX, bldgMinY, bldgW, bldgH);
+        ctx.restore();
     }
 
     // 2.B. Draw Accessible Parking Stall & Driver Transfer Aisle & Approach Trajectory
