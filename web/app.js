@@ -306,24 +306,49 @@ function initApp() {
     updateCalculatedPlotArea();
     updateBioclimaticUI();
     loadPreset('dimensions');
+
+    // 1. ResizeObserver to immediately adapt when CSS layout completes
+    if (window.ResizeObserver && canvasWrapper) {
+        const ro = new ResizeObserver(entries => {
+            for (let entry of entries) {
+                const cr = entry.contentRect;
+                if (cr.width > 0 && cr.height > 0) {
+                    const newW = Math.round(cr.width);
+                    const newH = Math.round(cr.height);
+                    if (canvas.width !== newW || canvas.height !== newH) {
+                        canvas.width = newW;
+                        canvas.height = newH;
+                        if (state.currentPreset === 'dimensions') {
+                            state.boundaryPoints = computeBoundaryFromDimensions(state.plotLengthM, state.plotWidthM);
+                        }
+                        generateFloorplan();
+                        renderCanvas();
+                    }
+                }
+            }
+        });
+        ro.observe(canvasWrapper);
+    }
     
-    // 1. Immediate Next Frame render to guarantee canvas is drawn
+    // 2. Immediate Next Frame render to guarantee canvas is drawn
     requestAnimationFrame(() => {
         resizeCanvas();
         if (state.currentPreset === 'dimensions') {
             state.boundaryPoints = computeBoundaryFromDimensions(state.plotLengthM, state.plotWidthM);
         }
         generateFloorplan();
+        renderCanvas();
     });
 
-    // 2. Timeout refreshes to catch full CSS layout resolution & flexbox expansion
+    // 3. Timeout refreshes to catch full CSS layout resolution & flexbox expansion
     setTimeout(() => {
         resizeCanvas();
         if (state.currentPreset === 'dimensions') {
             state.boundaryPoints = computeBoundaryFromDimensions(state.plotLengthM, state.plotWidthM);
         }
         generateFloorplan();
-    }, 50);
+        renderCanvas();
+    }, 60);
 
     setTimeout(() => {
         resizeCanvas();
@@ -331,25 +356,27 @@ function initApp() {
             state.boundaryPoints = computeBoundaryFromDimensions(state.plotLengthM, state.plotWidthM);
         }
         generateFloorplan();
+        renderCanvas();
     }, 200);
 
-    // 3. Complete window load
+    // 4. Complete window load
     window.addEventListener('load', () => {
         resizeCanvas();
         if (state.currentPreset === 'dimensions') {
             state.boundaryPoints = computeBoundaryFromDimensions(state.plotLengthM, state.plotWidthM);
         }
         generateFloorplan();
+        renderCanvas();
     });
 
-    // 4. Web Fonts ready
+    // 5. Web Fonts ready
     if (document.fonts) {
         document.fonts.ready.then(() => {
             renderCanvas();
         });
     }
 
-    // 5. Window resize
+    // 6. Window resize
     window.addEventListener('resize', () => {
         resizeCanvas();
         if (state.currentPreset === 'dimensions') {
@@ -358,6 +385,7 @@ function initApp() {
             loadPreset(state.currentPreset);
         }
         generateFloorplan();
+        renderCanvas();
     });
 }
 
@@ -539,6 +567,7 @@ function setupZoomAndPan() {
 
 function setupEventListeners() {
     function updateTypologySelection(val) {
+        if (!val) return;
         state.plotTypology = val;
         document.querySelectorAll('.typology-option').forEach(opt => {
             const radio = opt.querySelector('input[name="plotTypology"]');
@@ -555,12 +584,15 @@ function setupEventListeners() {
             state.boundaryPoints = computeBoundaryFromDimensions(state.plotLengthM, state.plotWidthM);
         }
         generateFloorplan();
+        renderCanvas();
     }
 
     document.querySelectorAll('.typology-option').forEach(option => {
         option.addEventListener('click', (e) => {
+            if (e.target.tagName && e.target.tagName.toLowerCase() === 'input') return;
             const radio = option.querySelector('input[name="plotTypology"]');
-            if (radio && radio.value !== state.plotTypology) {
+            if (radio) {
+                radio.checked = true;
                 updateTypologySelection(radio.value);
             }
         });
@@ -568,11 +600,14 @@ function setupEventListeners() {
 
     document.querySelectorAll('input[name="plotTypology"]').forEach(radio => {
         radio.addEventListener('change', (e) => {
-            updateTypologySelection(e.target.value);
+            if (e.target.checked) {
+                updateTypologySelection(e.target.value);
+            }
         });
     });
 
     function updateCornerEntrySelection(val) {
+        if (!val) return;
         state.cornerGarageEntry = val;
         document.querySelectorAll('.corner-entry-opt').forEach(opt => {
             const radio = opt.querySelector('input[name="cornerEntrySide"]');
@@ -584,12 +619,15 @@ function setupEventListeners() {
             state.boundaryPoints = computeBoundaryFromDimensions(state.plotLengthM, state.plotWidthM);
         }
         generateFloorplan();
+        renderCanvas();
     }
 
     document.querySelectorAll('.corner-entry-opt').forEach(option => {
         option.addEventListener('click', (e) => {
+            if (e.target.tagName && e.target.tagName.toLowerCase() === 'input') return;
             const radio = option.querySelector('input[name="cornerEntrySide"]');
-            if (radio && radio.value !== state.cornerGarageEntry) {
+            if (radio) {
+                radio.checked = true;
                 updateCornerEntrySelection(radio.value);
             }
         });
@@ -597,7 +635,9 @@ function setupEventListeners() {
 
     document.querySelectorAll('input[name="cornerEntrySide"]').forEach(radio => {
         radio.addEventListener('change', (e) => {
-            updateCornerEntrySelection(e.target.value);
+            if (e.target.checked) {
+                updateCornerEntrySelection(e.target.value);
+            }
         });
     });
 
