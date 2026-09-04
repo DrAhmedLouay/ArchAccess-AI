@@ -1773,6 +1773,10 @@ function updateParametricRoomDimension(roomKey, dimType, valM, dragEdge) {
         const corrY = corridor ? corridor.bounds.y : (rearBed ? rearBed.bounds.y : (bldgMinY + Math.round(totalBldgH * 0.55)));
         const corrH = corridor ? corridor.bounds.h : 0;
 
+        // Detect if layout has 3 bands (Variant 1: Front Band, Middle Living Band, Rear Band) or 2 bands
+        const is3Band = rooms.some(r => r.bounds.y <= bldgMinY + 15 && r.bounds.y + r.bounds.h < corrY - 20) &&
+                        rooms.some(r => r.bounds.y > bldgMinY + 25 && Math.abs(r.bounds.y + r.bounds.h - corrY) < 20);
+
         if (targetRoom.key === 'corridors') {
             // =========================================================================
             // CENTRAL CORRIDOR PARAMETRIC RESIZING (ADA CLEAR PASSAGE WIDTH >= 1.60M)
