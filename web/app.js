@@ -1391,101 +1391,192 @@ function syncSpaceInspectorUI() {
  */
 function realignAllDoorsAndWindows() {
     if (!state.currentLayout || !state.currentLayout.rooms) return;
-    state.currentLayout.rooms.forEach(room => {
-        realignRoomDoorsAndWindows(room);
-    });
-}
+    const { rooms, doors, windows, bldgMinX, bldgMaxX, bldgMinY, bldgMaxY } = state.currentLayout;
+    const pxPerMeter = 23.0;
 
-function realignRoomDoorsAndWindows(room) {
-    if (!room || !room.bounds || !state.currentLayout) return;
-    const { x, y, w, h } = room.bounds;
-    const { bldgMinX, bldgMaxX, bldgMinY, bldgMaxY, rooms } = state.currentLayout;
+    // 1. Deterministic Door Anchoring
+    if (doors) {
+        doors.forEach(door => {
+            let roomKey = door.roomKey;
+            let wallSide = door.wallSide;
 
-    if (state.currentLayout.doors) {
-        state.currentLayout.doors.forEach(door => {
-            if (door.roomKey === room.key || isDoorNearRoom(door, room)) {
-                door.roomKey = room.key;
+            if (door.id === 'd_living_corr') { roomKey = 'living_room'; wallSide = 'bottom'; }
+            else if (door.id === 'd_living') { roomKey = 'living_room'; wallSide = 'bottom'; }
+            else if (door.id === 'd_main') { roomKey = 'living_room'; wallSide = 'top'; }
+            else if (door.id === 'd_kitchen_int') { roomKey = 'kitchen'; wallSide = 'bottom'; }
+            else if (door.id === 'd_kitchen_ext') { roomKey = 'kitchen'; wallSide = 'top'; }
+            else if (door.id === 'd_kitchen') { roomKey = 'kitchen'; wallSide = 'bottom'; }
+            else if (door.id === 'd_guest_ext') { roomKey = 'guest_room'; wallSide = 'top'; }
+            else if (door.id === 'd_guest_int') { roomKey = 'guest_room'; wallSide = 'bottom'; }
+            else if (door.id === 'd_guest_bath') { roomKey = 'guest_bathroom'; wallSide = 'bottom'; }
+            else if (door.id === 'd_dis_bed') { roomKey = 'disabled_bedroom'; wallSide = 'top'; }
+            else if (door.id === 'd_dis_bath') { roomKey = 'disabled_bathroom'; wallSide = 'left'; }
+            else if (door.id === 'd_hbath') { roomKey = 'bathroom'; wallSide = 'top'; }
+            else if (door.id === 'd_bed') { roomKey = 'bedroom'; wallSide = 'top'; }
+
+            door.roomKey = roomKey || door.roomKey;
+            door.wallSide = wallSide || door.wallSide || 'bottom';
+
+            const room = rooms.find(r => r.key === door.roomKey);
+            if (room && room.bounds) {
+                const { x, y, w, h } = room.bounds;
+                const pct = (door.offsetPct !== undefined ? door.offsetPct : 50) / 100.0;
                 if (door.orientation === 'horizontal') {
                     door.y = (door.wallSide === 'bottom') ? y + h : y;
-                    const pct = (door.offsetPct || 50) / 100.0;
                     door.x = x + Math.max(4, Math.min(w - door.w - 4, w * pct - door.w / 2));
                 } else {
                     door.x = (door.wallSide === 'right') ? x + w : x;
-                    const pct = (door.offsetPct || 50) / 100.0;
                     door.y = y + Math.max(4, Math.min(h - door.w - 4, h * pct - door.w / 2));
                 }
             }
         });
     }
 
-    if (state.currentLayout.windows) {
-        state.currentLayout.windows.forEach(win => {
-            if (win.roomKey === room.key || win.id === `w_${room.key}` || isWindowNearRoom(win, room)) {
-                win.roomKey = room.key;
+    // 2. Deterministic Window Anchoring
+    if (windows) {
+        windows.forEach(win => {
+            let roomKey = win.roomKey;
+            let wallSide = win.wallSide;
 
-                // Dedicated Architectural Window Placement Logic per Room:
-                const pct = (win.offsetPct !== undefined ? win.offsetPct : 50) / 100.0;
-                if (room.key === 'disabled_bedroom' || room.key === 'bedroom') {
-                    // Bedroom Windows: MUST face the internal lightwell/ventilation shaft (court_garden)
-                    // Never on neighbor party walls (bldgMinX, bldgMaxX, bldgMaxY)!
-                    const shaft = rooms.find(r => r.key === 'court_garden' && Math.abs(r.bounds.y + r.bounds.h - (y + h)) < 25);
-                    
-                    if (x <= bldgMinX + 5) {
-                        // Room is on Left: Window is on its RIGHT internal wall (opening into shaft)
-                        win.orientation = 'vertical';
-                        win.x = x + w;
-                        const shaftY = shaft ? shaft.bounds.y : y + Math.round(h * 0.4);
-                        const shaftH = shaft ? shaft.bounds.h : Math.round(h * 0.6);
-                        win.y = shaftY + Math.max(2, Math.min(shaftH - win.len - 2, (shaftH - win.len) * pct));
-                    } else {
-                        // Room is on Right: Window is on its LEFT internal wall (opening into shaft)
-                        win.orientation = 'vertical';
-                        win.x = x;
-                        const shaftY = shaft ? shaft.bounds.y : y + Math.round(h * 0.4);
-                        const shaftH = shaft ? shaft.bounds.h : Math.round(h * 0.6);
-                        win.y = shaftY + Math.max(2, Math.min(shaftH - win.len - 2, (shaftH - win.len) * pct));
-                    }
-                } else if (room.key === 'disabled_bathroom' || room.key === 'bathroom') {
-                    // Bathroom Windows: MUST open on the internal shaft directly below them
-                    win.orientation = 'horizontal';
-                    win.y = y + h;
-                    win.x = x + Math.max(2, Math.min(w - win.len - 2, (w - win.len) * pct));
-                } else if (room.key === 'guest_bathroom') {
-                    // Guest Bathroom Window: Opens onto front facade or front shaft
-                    win.orientation = 'horizontal';
-                    win.y = y;
-                    win.x = x + Math.max(2, Math.min(w - win.len - 2, (w - win.len) * pct));
-                } else if (room.key === 'guest_room' || room.key === 'living_room' || room.key === 'kitchen') {
-                    // Front Zone Rooms: Windows open on Front Facade (y = bldgMinY) or side courtyard
-                    if (win.orientation === 'horizontal') {
-                        win.y = bldgMinY;
-                        win.x = x + Math.max(6, Math.min(w - win.len - 6, (w - win.len) * pct));
-                    } else {
-                        // Opening on interior courtyard
-                        win.x = (x <= bldgMinX + 5) ? x + w : x;
-                        win.y = y + Math.max(4, Math.min(h - win.len - 4, (h - win.len) * pct));
-                    }
+            if (win.id === 'w_living') {
+                roomKey = 'living_room';
+                const living = rooms.find(r => r.key === 'living_room');
+                const isMiddle = living && (living.bounds.y > bldgMinY + 25);
+                if (isMiddle) {
+                    wallSide = 'right';
+                    win.orientation = 'vertical';
                 } else {
-                    // Generic Fallback
-                    if (win.orientation === 'horizontal') {
-                        win.y = (win.wallSide === 'bottom') ? y + h : y;
-                        win.x = x + Math.max(4, Math.min(w - win.len - 4, (w - win.len) * pct));
-                    } else {
-                        win.x = (x <= bldgMinX + 5) ? x + w : x;
-                        win.y = y + Math.max(4, Math.min(h - win.len - 4, (h - win.len) * pct));
-                    }
+                    wallSide = 'top';
+                    win.orientation = 'horizontal';
+                }
+            } else if (win.id === 'w_kitch' || win.id === 'w_kitchen') {
+                roomKey = 'kitchen'; wallSide = 'top'; win.orientation = 'horizontal';
+            } else if (win.id === 'w_guest') {
+                roomKey = 'guest_room'; wallSide = 'top'; win.orientation = 'horizontal';
+            } else if (win.id === 'w_gbath') {
+                roomKey = 'guest_bathroom'; wallSide = 'top'; win.orientation = 'horizontal';
+            } else if (win.id === 'w_dis_bed') {
+                roomKey = 'disabled_bedroom';
+                const bed = rooms.find(r => r.key === 'disabled_bedroom');
+                wallSide = (bed && bed.bounds.x <= bldgMinX + 10) ? 'right' : 'left';
+                win.orientation = 'vertical';
+            } else if (win.id === 'w_dis_bath') {
+                roomKey = 'disabled_bathroom'; wallSide = 'bottom'; win.orientation = 'horizontal';
+            } else if (win.id === 'w_hbath') {
+                roomKey = 'bathroom'; wallSide = 'bottom'; win.orientation = 'horizontal';
+            } else if (win.id === 'w_bed') {
+                roomKey = 'bedroom';
+                const bed = rooms.find(r => r.key === 'bedroom');
+                wallSide = (bed && bed.bounds.x <= bldgMinX + 10) ? 'right' : 'left';
+                win.orientation = 'vertical';
+            }
+
+            win.roomKey = roomKey || win.roomKey;
+            win.wallSide = wallSide || win.wallSide || 'top';
+
+            const room = rooms.find(r => r.key === win.roomKey);
+            if (room && room.bounds) {
+                const { x, y, w, h } = room.bounds;
+                const pct = (win.offsetPct !== undefined ? win.offsetPct : 50) / 100.0;
+                if (win.orientation === 'horizontal') {
+                    win.y = (win.wallSide === 'bottom') ? y + h : y;
+                    win.x = x + Math.max(4, Math.min(w - win.len - 4, (w - win.len) * pct));
+                } else {
+                    win.x = (win.wallSide === 'right') ? x + w : x;
+                    win.y = y + Math.max(4, Math.min(h - win.len - 4, (h - win.len) * pct));
                 }
             }
         });
     }
 }
 
+function realignRoomDoorsAndWindows(room) {
+    realignAllDoorsAndWindows();
+}
+
+/**
+ * Helper to adjust column widths within a contiguous horizontal row
+ */
+function adjustRowWidthColumns(rowRooms, targetRoom, newPx, bldgMinX, bldgMaxX, pxPerMeter) {
+    if (!rowRooms || !rowRooms.length || !targetRoom) return;
+    const columns = [];
+    rowRooms.forEach(r => {
+        let col = columns.find(c => Math.abs(c.x - r.bounds.x) < 5);
+        if (!col) {
+            col = { x: r.bounds.x, w: r.bounds.w, rooms: [] };
+            columns.push(col);
+        }
+        col.rooms.push(r);
+    });
+
+    columns.sort((a, b) => a.x - b.x);
+    let targetColIndex = columns.findIndex(c => c.rooms.some(r => r.key === targetRoom.key));
+    if (targetColIndex === -1) return;
+
+    const targetCol = columns[targetColIndex];
+    const minColWPx = Math.round(1.20 * pxPerMeter);
+    const totalRowSpan = bldgMaxX - bldgMinX;
+    const numOtherCols = columns.length - 1;
+    
+    let requestedW = Math.max(minColWPx, Math.min(totalRowSpan - (numOtherCols * minColWPx), newPx));
+    const deltaW = requestedW - targetCol.w;
+    if (Math.abs(deltaW) < 1) return;
+
+    targetCol.w = requestedW;
+    let remDelta = -deltaW;
+
+    // Distribute remDelta to other columns in the row (prefer shaft or void column first)
+    const otherCols = columns.filter((c, idx) => idx !== targetColIndex);
+    const flexibleCol = otherCols.find(c => c.rooms.some(r => r.key === 'court_garden' || r.key === 'void_space' || r.isVoid));
+    if (flexibleCol) {
+        if (remDelta > 0) {
+            flexibleCol.w += remDelta;
+            remDelta = 0;
+        } else {
+            const shrinkAmt = Math.min(flexibleCol.w - minColWPx, Math.abs(remDelta));
+            flexibleCol.w -= shrinkAmt;
+            remDelta += shrinkAmt;
+        }
+    }
+
+    if (remDelta !== 0) {
+        for (let col of otherCols) {
+            if (col === flexibleCol) continue;
+            if (remDelta === 0) break;
+            if (remDelta > 0) {
+                col.w += remDelta;
+                remDelta = 0;
+            } else {
+                const shrinkAmt = Math.min(col.w - minColWPx, Math.abs(remDelta));
+                col.w -= shrinkAmt;
+                remDelta += shrinkAmt;
+            }
+        }
+    }
+
+    // Re-stitch strictly from bldgMinX to bldgMaxX
+    let curX = bldgMinX;
+    const numCols = columns.length;
+    for (let i = 0; i < numCols; i++) {
+        const col = columns[i];
+        col.x = curX;
+        if (i === numCols - 1) {
+            col.w = Math.max(minColWPx, bldgMaxX - curX);
+        }
+        col.rooms.forEach(r => {
+            r.bounds.x = col.x;
+            r.bounds.w = col.w;
+            r.area_m2 = parseFloat(((r.bounds.w * r.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
+        });
+        curX += col.w;
+    }
+}
+
 /**
  * Architectural Parametric Resizer & Intelligent Zoning Engine
- * Reorganizes adjacent spaces or synthesizes a new bioclimatic ventilation shaft (court_garden)
- * strictly within plot boundaries with zero black voids/gaps.
+ * Reorganizes adjacent spaces strictly within plot boundaries with zero voids/overlaps.
  */
-function updateParametricRoomDimension(roomKey, dimType, valM) {
+function updateParametricRoomDimension(roomKey, dimType, valM, dragEdge) {
     if (!state.currentLayout) return;
     const space = getSelectedSpaceObject(roomKey);
     if (!space || !space.bounds) return;
@@ -1510,7 +1601,7 @@ function updateParametricRoomDimension(roomKey, dimType, valM) {
         maxY: Math.max(...state.boundaryPoints.map(p => p.y)),
     };
 
-    const targetRoom = (space.type === 'room' || space.type === 'court') ? space.data : null;
+    const targetRoom = (space.type === 'room' || space.type === 'court' || space.type === 'void') ? space.data : null;
 
     if (targetRoom && rooms.length > 0) {
         const bldgMinX = Math.min(...rooms.map(r => r.bounds.x));
@@ -1520,159 +1611,273 @@ function updateParametricRoomDimension(roomKey, dimType, valM) {
         const totalBldgW = bldgMaxX - bldgMinX;
         const totalBldgH = bldgMaxY - bldgMinY;
 
-        if (dimType === 'width') {
-            // Find all rooms in the same horizontal row/band (vertical overlap >= 15px)
-            const ty0 = targetRoom.bounds.y;
-            const ty1 = targetRoom.bounds.y + targetRoom.bounds.h;
-            
-            const rowRooms = rooms.filter(r => {
-                const ry0 = r.bounds.y;
-                const ry1 = r.bounds.y + r.bounds.h;
-                const overlapY = Math.min(ty1, ry1) - Math.max(ty0, ry0);
-                return overlapY > 15;
-            });
+        const corridor = rooms.find(r => r.key === 'corridors');
+        const corrY = corridor ? corridor.bounds.y : (bldgMinY + Math.round(totalBldgH * 0.55));
+        const corrH = corridor ? corridor.bounds.h : Math.round(1.60 * pxPerMeter);
 
-            // Group rooms into vertical columns (sharing horizontal span x and w)
-            const columns = [];
-            rowRooms.forEach(r => {
-                let col = columns.find(c => Math.abs(c.x - r.bounds.x) < 5);
-                if (!col) {
-                    col = { x: r.bounds.x, w: r.bounds.w, rooms: [] };
-                    columns.push(col);
-                }
-                col.rooms.push(r);
-            });
+        // Detect if layout has 3 bands (Variant 1: Front Band, Middle Living Band, Rear Band) or 2 bands
+        const is3Band = rooms.some(r => r.bounds.y <= bldgMinY + 15 && r.bounds.y + r.bounds.h < corrY - 20) &&
+                        rooms.some(r => r.bounds.y > bldgMinY + 25 && Math.abs(r.bounds.y + r.bounds.h - corrY) < 20);
 
-            columns.sort((a, b) => a.x - b.x);
+        if (is3Band) {
+            // =========================================================================
+            // 3-BAND TYPOLOGY (Default: Front Band, Middle Living Band, Rear Band)
+            // =========================================================================
+            const isMiddleBand = (targetRoom.bounds.y > bldgMinY + 25 && Math.abs(targetRoom.bounds.y + targetRoom.bounds.h - corrY) < 20);
+            const isFrontBand = (targetRoom.bounds.y <= bldgMinY + 15 && targetRoom.bounds.y + targetRoom.bounds.h < corrY - 20);
+            const isRearBand = (targetRoom.bounds.y >= corrY + corrH - 15);
 
-            let targetColIndex = columns.findIndex(c => c.rooms.some(r => r.key === roomKey));
-            if (targetColIndex !== -1) {
-                const targetCol = columns[targetColIndex];
-                const oldColW = targetCol.w;
-                
-                const minColWPx = Math.round(1.20 * pxPerMeter); // >= 1.20m minimum
-                const totalRowSpan = columns.reduce((sum, c) => sum + c.w, 0);
-                const numOtherCols = columns.length - 1;
-                
-                let requestedW = Math.max(minColWPx, newPx);
-                const maxAllowedW = totalRowSpan - (numOtherCols * minColWPx);
-                requestedW = Math.min(maxAllowedW, requestedW);
+            if (isMiddleBand) {
+                // TARGET IS IN MIDDLE BAND (Living Room or Central Court/Shaft)
+                if (dimType === 'width') {
+                    const minLivingWPx = Math.round(3.80 * pxPerMeter);
+                    const minCourtWPx = Math.round(1.40 * pxPerMeter);
+                    const maxLivingWPx = totalBldgW - minCourtWPx;
 
-                const deltaW = requestedW - oldColW;
+                    if (targetRoom.key === 'living_room') {
+                        const clampedW = Math.max(minLivingWPx, Math.min(maxLivingWPx, newPx));
+                        targetRoom.bounds.x = bldgMinX;
+                        targetRoom.bounds.w = clampedW;
+                        targetRoom.area_m2 = parseFloat(((targetRoom.bounds.w * targetRoom.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
 
-                if (Math.abs(deltaW) >= 1) {
-                    targetCol.w = requestedW;
-                    let remDelta = -deltaW;
-
-                    // Check if an existing void_space or shaft column is in this row
-                    const voidCol = columns.find((c, idx) => idx !== targetColIndex && c.rooms.some(r => r.key === 'void_space' || r.isVoid));
-                    const shaftCol = columns.find((c, idx) => idx !== targetColIndex && c.rooms.some(r => r.key === 'court_garden'));
-
-                    if (remDelta > 0) {
-                        // Room was shortened: create or expand a resulting closed void space!
-                        if (voidCol) {
-                            voidCol.w += remDelta;
-                            remDelta = 0;
-                        } else if (shaftCol) {
-                            shaftCol.w += remDelta;
-                            remDelta = 0;
-                        } else {
-                            const newVoid = {
-                                key: 'void_space',
-                                id: 'void_' + Math.random().toString(36).substr(2, 6),
-                                name_ar: 'فضاء مغلق ناتج (فراغ)',
-                                name_en: 'Resulting Closed Void',
-                                hex: '#e2e8f0',
-                                isVoid: true,
-                                bounds: {
-                                    x: targetCol.x + targetCol.w,
-                                    y: targetRoom.bounds.y,
-                                    w: remDelta,
-                                    h: targetRoom.bounds.h
-                                },
-                                area_m2: parseFloat(((remDelta * targetRoom.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1))
-                            };
-                            rooms.push(newVoid);
-                            columns.push({ x: newVoid.bounds.x, w: remDelta, rooms: [newVoid] });
-                            columns.sort((a, b) => a.x - b.x);
-                            remDelta = 0;
+                        const neighbor = rooms.find(r => r !== targetRoom && Math.abs(r.bounds.y - targetRoom.bounds.y) < 15);
+                        if (neighbor) {
+                            neighbor.bounds.x = bldgMinX + clampedW;
+                            neighbor.bounds.w = bldgMaxX - neighbor.bounds.x;
+                            neighbor.bounds.y = targetRoom.bounds.y;
+                            neighbor.bounds.h = targetRoom.bounds.h;
+                            neighbor.area_m2 = parseFloat(((neighbor.bounds.w * neighbor.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
                         }
-                    } else if (remDelta < 0) {
-                        // Room was expanded: absorb from void_space if available
-                        if (voidCol) {
-                            const shrinkAmt = Math.min(voidCol.w, Math.abs(remDelta));
-                            voidCol.w -= shrinkAmt;
-                            remDelta += shrinkAmt;
-                            if (voidCol.w < 10) {
-                                state.currentLayout.rooms = rooms.filter(r => !voidCol.rooms.includes(r));
-                                columns = columns.filter(c => c !== voidCol);
-                            }
-                        } else if (shaftCol) {
-                            const shrinkAmt = Math.min(shaftCol.w - minColWPx, Math.abs(remDelta));
-                            shaftCol.w -= shrinkAmt;
-                            remDelta += shrinkAmt;
-                        }
+                    } else {
+                        // Shaft or Void in middle band
+                        const clampedW = Math.max(minCourtWPx, Math.min(totalBldgW - minLivingWPx, newPx));
+                        targetRoom.bounds.w = clampedW;
+                        targetRoom.bounds.x = bldgMaxX - clampedW;
+                        targetRoom.area_m2 = parseFloat(((targetRoom.bounds.w * targetRoom.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
 
-                        if (remDelta !== 0) {
-                            const neighborCols = columns.filter((c, idx) => idx !== targetColIndex && c !== shaftCol && c !== voidCol);
-                            for (let col of neighborCols) {
-                                if (remDelta === 0) break;
-                                const shrinkAmt = Math.min(col.w - minColWPx, Math.abs(remDelta));
-                                col.w -= shrinkAmt;
-                                remDelta += shrinkAmt;
-                            }
+                        const living = rooms.find(r => r.key === 'living_room' && Math.abs(r.bounds.y - targetRoom.bounds.y) < 15);
+                        if (living) {
+                            living.bounds.x = bldgMinX;
+                            living.bounds.w = targetRoom.bounds.x - bldgMinX;
+                            living.bounds.y = targetRoom.bounds.y;
+                            living.bounds.h = targetRoom.bounds.h;
+                            living.area_m2 = parseFloat(((living.bounds.w * living.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
                         }
                     }
+                } else if (dimType === 'length') {
+                    if (dragEdge === 'top') {
+                        // User dragged the TOP wall of living room (boundary between Front & Middle bands)
+                        const requestedY = corrY - newPx;
+                        const minY = bldgMinY + Math.round(3.00 * pxPerMeter); // Min front room height >= 3.00m
+                        const maxY = corrY - Math.round(3.50 * pxPerMeter);     // Min living room height >= 3.50m
+                        const newYFrontEnd = Math.max(minY, Math.min(maxY, requestedY));
 
-                    // Re-stitch contiguous X positions strictly within [bldgMinX, bldgMaxX]
-                    let curX = bldgMinX;
-                    const numCols = columns.length;
-                    for (let i = 0; i < numCols; i++) {
-                        const col = columns[i];
-                        col.x = curX;
-                        if (i === numCols - 1) {
-                            col.w = Math.max(minColWPx, bldgMaxX - curX);
-                            if (curX + col.w > bldgMaxX) {
-                                const overflow = (curX + col.w) - bldgMaxX;
-                                for (let k = i - 1; k >= 0; k--) {
-                                    const shrink = Math.min(overflow, columns[k].w - minColWPx);
-                                    columns[k].w -= shrink;
+                        // 1. Update Front Rooms
+                        rooms.forEach(r => {
+                            if (r.bounds.y <= bldgMinY + 15 && r.bounds.y + r.bounds.h < corrY - 20) {
+                                if (r.key === 'guest_bathroom') {
+                                    r.bounds.y = bldgMinY;
+                                    r.bounds.h = Math.min(Math.round(1.20 * pxPerMeter), Math.round((newYFrontEnd - bldgMinY) * 0.40));
+                                } else if (r.key === 'court_garden' && r.bounds.y > bldgMinY + 5) {
+                                    const gbath = rooms.find(gb => gb.key === 'guest_bathroom');
+                                    const gbathH = gbath ? gbath.bounds.h : Math.round(1.20 * pxPerMeter);
+                                    r.bounds.y = bldgMinY + gbathH;
+                                    r.bounds.h = newYFrontEnd - r.bounds.y;
+                                } else {
+                                    r.bounds.y = bldgMinY;
+                                    r.bounds.h = newYFrontEnd - bldgMinY;
                                 }
-                                let reX = bldgMinX;
-                                for (let k = 0; k < i; k++) {
-                                    columns[k].x = reX;
-                                    reX += columns[k].w;
-                                }
-                                col.x = reX;
-                                col.w = bldgMaxX - reX;
+                                r.area_m2 = parseFloat(((r.bounds.w * r.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
                             }
+                        });
+
+                        // 2. Update Middle Rooms
+                        rooms.forEach(r => {
+                            if (r.bounds.y > bldgMinY + 25 && Math.abs(r.bounds.y + r.bounds.h - corrY) < 20) {
+                                r.bounds.y = newYFrontEnd;
+                                r.bounds.h = corrY - newYFrontEnd;
+                                r.area_m2 = parseFloat(((r.bounds.w * r.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
+                            }
+                        });
+                        // Corridor and rear rooms remain untouched
+                    } else {
+                        // User dragged the BOTTOM wall of living room (boundary with Corridor)
+                        const requestedCorrY = targetRoom.bounds.y + newPx;
+                        const minCorrY = targetRoom.bounds.y + Math.round(3.50 * pxPerMeter); // Min living room height >= 3.50m
+                        const maxCorrY = bldgMaxY - corrH - Math.round(3.20 * pxPerMeter);    // Min rear rooms height >= 3.20m
+                        const newCorrY = Math.max(minCorrY, Math.min(maxCorrY, requestedCorrY));
+
+                        // 1. Update Middle Rooms
+                        rooms.forEach(r => {
+                            if (r.bounds.y > bldgMinY + 25 && Math.abs(r.bounds.y + r.bounds.h - corrY) < 20) {
+                                r.bounds.h = newCorrY - r.bounds.y;
+                                r.area_m2 = parseFloat(((r.bounds.w * r.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
+                            }
+                        });
+
+                        // 2. Update Corridor
+                        if (corridor) {
+                            corridor.bounds.y = newCorrY;
+                            corridor.bounds.h = corrH;
+                            corridor.area_m2 = parseFloat(((corridor.bounds.w * corridor.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
                         }
-                        col.rooms.forEach(r => {
-                            r.bounds.x = col.x;
-                            r.bounds.w = col.w;
-                            if (r.bounds.x + r.bounds.w > bldgMaxX) {
-                                r.bounds.w = bldgMaxX - r.bounds.x;
+
+                        // 3. Update Rear Rooms
+                        const newRearY = newCorrY + corrH;
+                        const newRearH = bldgMaxY - newRearY;
+                        rooms.forEach(r => {
+                            if (r.bounds.y >= corrY + corrH - 15) {
+                                const isUpperBath = (r.key === 'disabled_bathroom' || r.key === 'bathroom');
+                                const isLowerShaft = (r.key === 'court_garden');
+                                if (isUpperBath) {
+                                    r.bounds.y = newRearY;
+                                    r.bounds.h = Math.min(Math.round(2.20 * pxPerMeter), Math.round(newRearH * 0.48));
+                                } else if (isLowerShaft) {
+                                    const upperBath = rooms.find(ub => (ub.key === 'disabled_bathroom' || ub.key === 'bathroom') && Math.abs(ub.bounds.x - r.bounds.x) < 15);
+                                    const ubH = upperBath ? upperBath.bounds.h : Math.round(2.20 * pxPerMeter);
+                                    r.bounds.y = newRearY + ubH;
+                                    r.bounds.h = newRearH - ubH;
+                                } else {
+                                    r.bounds.y = newRearY;
+                                    r.bounds.h = newRearH;
+                                }
+                                r.area_m2 = parseFloat(((r.bounds.w * r.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
+                            }
+                        });
+                        // Front rooms remain untouched
+                    }
+                }
+            } else if (isFrontBand) {
+                // Target is in Front Band (kitchen, guest_room, guest_bathroom)
+                if (dimType === 'length') {
+                    const requestedY = bldgMinY + newPx;
+                    const minY = bldgMinY + Math.round(3.00 * pxPerMeter);
+                    const maxY = corrY - Math.round(3.50 * pxPerMeter);
+                    const newYFrontEnd = Math.max(minY, Math.min(maxY, requestedY));
+
+                    rooms.forEach(r => {
+                        if (r.bounds.y <= bldgMinY + 15 && r.bounds.y + r.bounds.h < corrY - 20) {
+                            if (r.key === 'guest_bathroom') {
+                                r.bounds.y = bldgMinY;
+                                r.bounds.h = Math.min(Math.round(1.20 * pxPerMeter), Math.round((newYFrontEnd - bldgMinY) * 0.40));
+                            } else if (r.key === 'court_garden' && r.bounds.y > bldgMinY + 5) {
+                                const gbath = rooms.find(gb => gb.key === 'guest_bathroom');
+                                const gbathH = gbath ? gbath.bounds.h : Math.round(1.20 * pxPerMeter);
+                                r.bounds.y = bldgMinY + gbathH;
+                                r.bounds.h = newYFrontEnd - r.bounds.y;
+                            } else {
+                                r.bounds.y = bldgMinY;
+                                r.bounds.h = newYFrontEnd - bldgMinY;
                             }
                             r.area_m2 = parseFloat(((r.bounds.w * r.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
+                        }
+                    });
+
+                    rooms.forEach(r => {
+                        if (r.bounds.y > bldgMinY + 25 && Math.abs(r.bounds.y + r.bounds.h - corrY) < 20) {
+                            r.bounds.y = newYFrontEnd;
+                            r.bounds.h = corrY - newYFrontEnd;
+                            r.area_m2 = parseFloat(((r.bounds.w * r.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
+                        }
+                    });
+                } else if (dimType === 'width') {
+                    adjustRowWidthColumns(rooms.filter(r => r.bounds.y <= bldgMinY + 15 && r.bounds.y + r.bounds.h < corrY - 20), targetRoom, newPx, bldgMinX, bldgMaxX, pxPerMeter);
+                }
+            } else if (isRearBand) {
+                // Target is in Rear Band
+                if (dimType === 'length') {
+                    const isUpperBath = (targetRoom.key === 'disabled_bathroom' || targetRoom.key === 'bathroom');
+                    const isRearShaft = (targetRoom.key === 'court_garden');
+                    const rearY = corrY + corrH;
+                    const totalRearH = bldgMaxY - rearY;
+
+                    if (isUpperBath || isRearShaft) {
+                        const minSubH = Math.round(1.00 * pxPerMeter);
+                        const clampedSubH = Math.max(minSubH, Math.min(totalRearH - minSubH, newPx));
+                        if (isUpperBath) {
+                            targetRoom.bounds.h = clampedSubH;
+                            const shaft = rooms.find(r => r.key === 'court_garden' && Math.abs(r.bounds.x - targetRoom.bounds.x) < 15);
+                            if (shaft) {
+                                shaft.bounds.y = rearY + clampedSubH;
+                                shaft.bounds.h = totalRearH - clampedSubH;
+                                shaft.area_m2 = parseFloat(((shaft.bounds.w * shaft.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
+                            }
+                        } else {
+                            targetRoom.bounds.h = clampedSubH;
+                            targetRoom.bounds.y = bldgMaxY - clampedSubH;
+                            const bath = rooms.find(r => (r.key === 'disabled_bathroom' || r.key === 'bathroom') && Math.abs(r.bounds.x - targetRoom.bounds.x) < 15);
+                            if (bath) {
+                                bath.bounds.h = totalRearH - clampedSubH;
+                                bath.area_m2 = parseFloat(((bath.bounds.w * bath.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
+                            }
+                        }
+                        targetRoom.area_m2 = parseFloat(((targetRoom.bounds.w * targetRoom.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
+                    } else {
+                        // Bedroom in rear band
+                        const requestedCorrY = bldgMaxY - newPx - corrH;
+                        const middleBand = rooms.find(r => r.bounds.y > bldgMinY + 25 && Math.abs(r.bounds.y + r.bounds.h - corrY) < 20);
+                        const middleY = middleBand ? middleBand.bounds.y : bldgMinY + Math.round(3.50 * pxPerMeter);
+                        const minCorrY = middleY + Math.round(3.50 * pxPerMeter);
+                        const maxCorrY = bldgMaxY - corrH - Math.round(3.20 * pxPerMeter);
+                        const newCorrY = Math.max(minCorrY, Math.min(maxCorrY, requestedCorrY));
+
+                        rooms.forEach(r => {
+                            if (r.bounds.y > bldgMinY + 25 && Math.abs(r.bounds.y + r.bounds.h - corrY) < 20) {
+                                r.bounds.h = newCorrY - r.bounds.y;
+                                r.area_m2 = parseFloat(((r.bounds.w * r.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
+                            }
                         });
-                        curX += col.w;
+
+                        if (corridor) {
+                            corridor.bounds.y = newCorrY;
+                            corridor.bounds.h = corrH;
+                            corridor.area_m2 = parseFloat(((corridor.bounds.w * corridor.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
+                        }
+
+                        const newRearY = newCorrY + corrH;
+                        const newRearH = bldgMaxY - newRearY;
+                        rooms.forEach(r => {
+                            if (r.bounds.y >= corrY + corrH - 15) {
+                                const isUB = (r.key === 'disabled_bathroom' || r.key === 'bathroom');
+                                const isLS = (r.key === 'court_garden');
+                                if (isUB) {
+                                    r.bounds.y = newRearY;
+                                    r.bounds.h = Math.min(Math.round(2.20 * pxPerMeter), Math.round(newRearH * 0.48));
+                                } else if (isLS) {
+                                    const ub = rooms.find(b => (b.key === 'disabled_bathroom' || b.key === 'bathroom') && Math.abs(b.bounds.x - r.bounds.x) < 15);
+                                    const ubH = ub ? ub.bounds.h : Math.round(2.20 * pxPerMeter);
+                                    r.bounds.y = newRearY + ubH;
+                                    r.bounds.h = newRearH - ubH;
+                                } else {
+                                    r.bounds.y = newRearY;
+                                    r.bounds.h = newRearH;
+                                }
+                                r.area_m2 = parseFloat(((r.bounds.w * r.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
+                            }
+                        });
                     }
+                } else if (dimType === 'width') {
+                    adjustRowWidthColumns(rooms.filter(r => r.bounds.y >= corrY + corrH - 15), targetRoom, newPx, bldgMinX, bldgMaxX, pxPerMeter);
                 }
             }
+        } else {
+            // =========================================================================
+            // 2-BAND TYPOLOGY (Variants 2 and 3: Front Rooms from bldgMinY to corrY)
+            // =========================================================================
+            if (dimType === 'width') {
+                adjustRowWidthColumns(rooms.filter(r => r.bounds.y < corrY), targetRoom, newPx, bldgMinX, bldgMaxX, pxPerMeter);
+            } else if (dimType === 'length') {
+                const minFrontH = Math.round(3.50 * pxPerMeter);
+                const minRearH = Math.round(3.50 * pxPerMeter);
+                const maxCorrY = bldgMaxY - corrH - minRearH;
+                const minCorrY = bldgMinY + minFrontH;
 
-        } else if (dimType === 'length') {
-            const corridor = rooms.find(r => r.key === 'corridors');
-            const corrY = corridor ? corridor.bounds.y : 0;
-            const corrH = corridor ? corridor.bounds.h : Math.round(1.60 * pxPerMeter);
-            const minZoneHPx = Math.round(2.50 * pxPerMeter);
-
-            if (targetRoom.bounds.y + targetRoom.bounds.h <= corrY + 5) {
-                // TARGET IN FRONT ROW
-                const minFrontH = Math.round(3.00 * pxPerMeter);
-                const maxFrontH = totalBldgH - corrH - minZoneHPx;
-                const clampedH = Math.max(minFrontH, Math.min(maxFrontH, newPx));
-                
-                const newCorrY = bldgMinY + clampedH;
+                let requestedCorrY = bldgMinY + newPx;
+                if (targetRoom.bounds.y >= corrY) {
+                    requestedCorrY = bldgMaxY - newPx - corrH;
+                }
+                const newCorrY = Math.max(minCorrY, Math.min(maxCorrY, requestedCorrY));
+                const newFrontH = newCorrY - bldgMinY;
                 const newRearY = newCorrY + corrH;
                 const newRearH = bldgMaxY - newRearY;
 
@@ -1680,19 +1885,18 @@ function updateParametricRoomDimension(roomKey, dimType, valM) {
                 rooms.forEach(r => {
                     if (r.bounds.y < corrY) {
                         const isUpperBath = (r.key === 'guest_bathroom');
-                        const isLowerShaft = (r.key === 'court_garden' && r.bounds.y > bldgMinY);
-                        
+                        const isLowerShaft = (r.key === 'court_garden' && r.bounds.y > bldgMinY + 5);
                         if (isUpperBath) {
                             r.bounds.y = bldgMinY;
-                            r.bounds.h = Math.min(Math.round(1.20 * pxPerMeter), Math.round(clampedH * 0.40));
+                            r.bounds.h = Math.min(Math.round(1.20 * pxPerMeter), Math.round(newFrontH * 0.40));
                         } else if (isLowerShaft) {
-                            const upperBath = rooms.find(ub => ub.key === 'guest_bathroom');
-                            const ubH = upperBath ? upperBath.bounds.h : Math.round(1.20 * pxPerMeter);
+                            const ub = rooms.find(gb => gb.key === 'guest_bathroom');
+                            const ubH = ub ? ub.bounds.h : Math.round(1.20 * pxPerMeter);
                             r.bounds.y = bldgMinY + ubH;
-                            r.bounds.h = clampedH - ubH;
+                            r.bounds.h = newFrontH - ubH;
                         } else {
                             r.bounds.y = bldgMinY;
-                            r.bounds.h = clampedH;
+                            r.bounds.h = newFrontH;
                         }
                         r.area_m2 = parseFloat(((r.bounds.w * r.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
                     }
@@ -1710,13 +1914,12 @@ function updateParametricRoomDimension(roomKey, dimType, valM) {
                     if (r.bounds.y >= corrY && r.key !== 'corridors') {
                         const isUpperBath = (r.key === 'disabled_bathroom' || r.key === 'bathroom');
                         const isLowerShaft = (r.key === 'court_garden');
-                        
                         if (isUpperBath) {
                             r.bounds.y = newRearY;
                             r.bounds.h = Math.min(Math.round(2.20 * pxPerMeter), Math.round(newRearH * 0.48));
                         } else if (isLowerShaft) {
-                            const upperBath = rooms.find(ub => ub.key === 'disabled_bathroom' || ub.key === 'bathroom');
-                            const ubH = upperBath ? upperBath.bounds.h : Math.round(2.20 * pxPerMeter);
+                            const ub = rooms.find(b => (b.key === 'disabled_bathroom' || b.key === 'bathroom') && Math.abs(b.bounds.x - r.bounds.x) < 15);
+                            const ubH = ub ? ub.bounds.h : Math.round(2.20 * pxPerMeter);
                             r.bounds.y = newRearY + ubH;
                             r.bounds.h = newRearH - ubH;
                         } else {
@@ -1726,93 +1929,6 @@ function updateParametricRoomDimension(roomKey, dimType, valM) {
                         r.area_m2 = parseFloat(((r.bounds.w * r.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
                     }
                 });
-
-            } else if (targetRoom.bounds.y >= corrY) {
-                // TARGET IN REAR ROW
-                const isUpperBath = (targetRoom.key === 'disabled_bathroom' || targetRoom.key === 'bathroom');
-                const isRearShaft = (targetRoom.key === 'court_garden');
-
-                if (isUpperBath || isRearShaft) {
-                    const rearY = corrY + corrH;
-                    const totalRearH = bldgMaxY - rearY;
-                    const minSubH = Math.round(1.00 * pxPerMeter);
-                    const clampedSubH = Math.max(minSubH, Math.min(totalRearH - minSubH, newPx));
-
-                    if (isUpperBath) {
-                        targetRoom.bounds.h = clampedSubH;
-                        const shaft = rooms.find(r => r.key === 'court_garden' && Math.abs(r.bounds.x - targetRoom.bounds.x) < 10);
-                        if (shaft) {
-                            shaft.bounds.y = rearY + clampedSubH;
-                            shaft.bounds.h = totalRearH - clampedSubH;
-                            shaft.area_m2 = parseFloat(((shaft.bounds.w * shaft.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
-                        }
-                    } else {
-                        targetRoom.bounds.h = clampedSubH;
-                        targetRoom.bounds.y = bldgMaxY - clampedSubH;
-                        const bath = rooms.find(r => (r.key === 'disabled_bathroom' || r.key === 'bathroom') && Math.abs(r.bounds.x - targetRoom.bounds.x) < 10);
-                        if (bath) {
-                            bath.bounds.h = totalRearH - clampedSubH;
-                            bath.area_m2 = parseFloat(((bath.bounds.w * bath.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
-                        }
-                    }
-                } else {
-                    const minRearH = Math.round(3.00 * pxPerMeter);
-                    const maxRearH = totalBldgH - corrH - minZoneHPx;
-                    const clampedH = Math.max(minRearH, Math.min(maxRearH, newPx));
-
-                    const newRearY = bldgMaxY - clampedH;
-                    const newCorrY = newRearY - corrH;
-                    const newFrontH = newCorrY - bldgMinY;
-
-                    // Update Front Rooms
-                    rooms.forEach(r => {
-                        if (r.bounds.y < corrY) {
-                            const isUpperBath = (r.key === 'guest_bathroom');
-                            const isLowerShaft = (r.key === 'court_garden' && r.bounds.y > bldgMinY);
-                            if (isUpperBath) {
-                                r.bounds.y = bldgMinY;
-                                r.bounds.h = Math.min(Math.round(1.20 * pxPerMeter), Math.round(newFrontH * 0.40));
-                            } else if (isLowerShaft) {
-                                const upperBath = rooms.find(ub => ub.key === 'guest_bathroom');
-                                const ubH = upperBath ? upperBath.bounds.h : Math.round(1.20 * pxPerMeter);
-                                r.bounds.y = bldgMinY + ubH;
-                                r.bounds.h = newFrontH - ubH;
-                            } else {
-                                r.bounds.y = bldgMinY;
-                                r.bounds.h = newFrontH;
-                            }
-                            r.area_m2 = parseFloat(((r.bounds.w * r.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
-                        }
-                    });
-
-                    // Update Corridor
-                    if (corridor) {
-                        corridor.bounds.y = newCorrY;
-                        corridor.bounds.h = corrH;
-                        corridor.area_m2 = parseFloat(((corridor.bounds.w * corridor.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
-                    }
-
-                    // Update Rear Rooms
-                    rooms.forEach(r => {
-                        if (r.bounds.y >= corrY && r.key !== 'corridors') {
-                            const isUpperBath = (r.key === 'disabled_bathroom' || r.key === 'bathroom');
-                            const isLowerShaft = (r.key === 'court_garden');
-                            if (isUpperBath) {
-                                r.bounds.y = newRearY;
-                                r.bounds.h = Math.min(Math.round(2.20 * pxPerMeter), Math.round(clampedH * 0.48));
-                            } else if (isLowerShaft) {
-                                const upperBath = rooms.find(ub => ub.key === 'disabled_bathroom' || ub.key === 'bathroom');
-                                const ubH = upperBath ? upperBath.bounds.h : Math.round(2.20 * pxPerMeter);
-                                r.bounds.y = newRearY + ubH;
-                                r.bounds.h = clampedH - ubH;
-                            } else {
-                                r.bounds.y = newRearY;
-                                r.bounds.h = clampedH;
-                            }
-                            r.area_m2 = parseFloat(((r.bounds.w * r.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
-                        }
-                    });
-                }
             }
         }
     } else if (space.type === 'outdoor') {
@@ -2107,19 +2223,19 @@ function setupZoomAndPan() {
             if (g.edge === 'right') {
                 const deltaPx = worldX - g.startMouseWorldX;
                 const newW_M = (g.initialW + deltaPx) / pxPerMeter;
-                updateParametricRoomDimension(g.roomKey, 'width', newW_M);
+                updateParametricRoomDimension(g.roomKey, 'width', newW_M, 'right');
             } else if (g.edge === 'left') {
                 const deltaPx = g.startMouseWorldX - worldX;
                 const newW_M = (g.initialW + deltaPx) / pxPerMeter;
-                updateParametricRoomDimension(g.roomKey, 'width', newW_M);
+                updateParametricRoomDimension(g.roomKey, 'width', newW_M, 'left');
             } else if (g.edge === 'bottom') {
                 const deltaPx = worldY - g.startMouseWorldY;
                 const newH_M = (g.initialH + deltaPx) / pxPerMeter;
-                updateParametricRoomDimension(g.roomKey, 'length', newH_M);
+                updateParametricRoomDimension(g.roomKey, 'length', newH_M, 'bottom');
             } else if (g.edge === 'top') {
                 const deltaPx = g.startMouseWorldY - worldY;
                 const newH_M = (g.initialH + deltaPx) / pxPerMeter;
-                updateParametricRoomDimension(g.roomKey, 'length', newH_M);
+                updateParametricRoomDimension(g.roomKey, 'length', newH_M, 'top');
             }
 
             syncSpaceInspectorUI();
