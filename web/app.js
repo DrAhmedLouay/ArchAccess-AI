@@ -844,6 +844,110 @@ function adjustSpaceWallDimension(roomKey, dimType, deltaM) {
     requestRender();
 }
 
+function isTouching(b1, b2) {
+    if (!b1 || !b2) return false;
+    const margin = 8;
+    const touchHoriz = (Math.abs((b1.x + b1.w) - b2.x) < margin || Math.abs((b2.x + b2.w) - b1.x) < margin);
+    const overlapVert = Math.min(b1.y + b1.h, b2.y + b2.h) - Math.max(b1.y, b2.y);
+    if (touchHoriz && overlapVert > 8) return true;
+
+    const touchVert = (Math.abs((b1.y + b1.h) - b2.y) < margin || Math.abs((b2.y + b2.h) - b1.y) < margin);
+    const overlapHoriz = Math.min(b1.x + b1.w, b2.x + b2.w) - Math.max(b1.x, b2.x);
+    if (touchVert && overlapHoriz > 8) return true;
+
+    return false;
+}
+
+function expandRoomToCover(room, voidObj) {
+    if (!room || !room.bounds || !voidObj || !voidObj.bounds) return;
+    const rb = room.bounds;
+    const vb = voidObj.bounds;
+
+    const minX = Math.min(rb.x, vb.x);
+    const maxX = Math.max(rb.x + rb.w, vb.x + vb.w);
+    const minY = Math.min(rb.y, vb.y);
+    const maxY = Math.max(rb.y + rb.h, vb.y + vb.h);
+
+    if (Math.abs(rb.y - vb.y) < 6 && Math.abs(rb.h - vb.h) < 6) {
+        rb.x = minX;
+        rb.w = maxX - minX;
+    } else if (Math.abs(rb.x - vb.x) < 6 && Math.abs(rb.w - vb.w) < 6) {
+        rb.y = minY;
+        rb.h = maxY - minY;
+    } else {
+        rb.x = minX;
+        rb.w = maxX - minX;
+        rb.y = minY;
+        rb.h = maxY - minY;
+    }
+}
+
+function detectVoidAtPoint(worldX, worldY) {
+    if (!state.currentLayout || !state.currentLayout.rooms) return null;
+    const rooms = state.currentLayout.rooms;
+    if (!rooms.length) return null;
+
+    const bldgMinX = Math.min(...rooms.map(r => r.bounds.x));
+    const bldgMaxX = Math.max(...rooms.map(r => r.bounds.x + r.bounds.w));
+    const bldgMinY = Math.min(...rooms.map(r => r.bounds.y));
+    const bldgMaxY = Math.max(...rooms.map(r => r.bounds.y + r.bounds.h));
+
+    // Must be strictly within the building envelope
+    if (worldX < bldgMinX || worldX > bldgMaxX || worldY < bldgMinY || worldY > bldgMaxY) {
+        return null;
+    }
+
+    // Must not be inside any existing room
+    const insideRoom = rooms.some(r => 
+        worldX >= r.bounds.x && worldX <= r.bounds.x + r.bounds.w &&
+        worldY >= r.bounds.y && worldY <= r.bounds.y + r.bounds.h
+    );
+    if (insideRoom) return null;
+
+    let left = bldgMinX;
+    let right = bldgMaxX;
+    rooms.forEach(r => {
+        if (worldY >= r.bounds.y && worldY <= r.bounds.y + r.bounds.h) {
+            if (r.bounds.x + r.bounds.w <= worldX) {
+                left = Math.max(left, r.bounds.x + r.bounds.w);
+            }
+            if (r.bounds.x >= worldX) {
+                right = Math.min(right, r.bounds.x);
+            }
+        }
+    });
+
+    let top = bldgMinY;
+    let bottom = bldgMaxY;
+    rooms.forEach(r => {
+        if (worldX >= r.bounds.x && worldX <= r.bounds.x + r.bounds.w) {
+            if (r.bounds.y + r.bounds.h <= worldY) {
+                top = Math.max(top, r.bounds.y + r.bounds.h);
+            }
+            if (r.bounds.y >= worldY) {
+                bottom = Math.min(bottom, r.bounds.y);
+            }
+        }
+    });
+
+    const w = right - left;
+    const h = bottom - top;
+    const pxPerMeter = 23.0;
+
+    if (w < 8 || h < 8) return null;
+
+    return {
+        key: 'void_space',
+        id: 'void_' + Math.random().toString(36).substr(2, 6),
+        name_ar: 'فضاء مغلق ناتج (فراغ)',
+        name_en: 'Resulting Closed Void',
+        hex: '#e2e8f0',
+        isVoid: true,
+        bounds: { x: left, y: top, w: w, h: h },
+        area_m2: parseFloat(((w * h) / (pxPerMeter * pxPerMeter)).toFixed(1))
+    };
+}
+
 function convertVoidToLightwell(roomKey) {
     if (!state.currentLayout || !state.currentLayout.rooms) return;
     const activeKey = roomKey || state.selectedRoomKey;
@@ -854,6 +958,33 @@ function convertVoidToLightwell(roomKey) {
     const rooms = state.currentLayout.rooms;
     const pxPerMeter = 23.0;
 
+    // 1. If target is already a void_space or marked as void
+    if (space.type === 'void' || space.key === 'void_space' || space.data?.isVoid) {
+        const voidObj = space.data;
+        voidObj.key = 'court_garden';
+        voidObj.name_ar = 'منور إنارة وتهوية طبيعية';
+        voidObj.name_en = 'Bioclimatic Light Shaft';
+        voidObj.hex = '#00ff01';
+        delete voidObj.isVoid;
+        state.selectedRoomKey = 'court_garden';
+        state.selectedRoomObj = voidObj;
+
+        // Automatically open windows from adjacent rooms facing this newly created shaft
+        rooms.forEach(r => {
+            if (r !== voidObj && r.key !== 'court_garden' && r.key !== 'corridors') {
+                if (isTouching(r.bounds, voidObj.bounds)) {
+                    addNewWindowToSpace(r.key);
+                }
+            }
+        });
+
+        realignAllDoorsAndWindows();
+        syncSpaceInspectorUI();
+        renderCanvas();
+        return;
+    }
+
+    // 2. If already a court_garden, add an extra window
     if (space.type === 'court' || space.key === 'court_garden') {
         addNewWindowToSpace(space.key);
         syncSpaceInspectorUI();
@@ -861,6 +992,7 @@ function convertVoidToLightwell(roomKey) {
         return;
     }
 
+    // 3. If a regular room, carve out a lightwell from it
     const room = space.data;
     const { x, y, w, h } = room.bounds;
 
@@ -939,47 +1071,33 @@ function mergeVoidToRoom(roomKey) {
     const rooms = state.currentLayout.rooms;
     const pxPerMeter = 23.0;
 
-    if (space.key === 'court_garden' || space.type === 'court') {
-        const shaft = space.data;
+    // 1. If target is void_space or court_garden: merge it into an adjacent room!
+    if (space.type === 'void' || space.key === 'void_space' || space.data?.isVoid || space.key === 'court_garden' || space.type === 'court') {
+        const voidObj = space.data;
         const touchingRoom = rooms.find(r => {
-            if (r === shaft || r.key === 'court_garden' || r.key === 'corridors') return false;
-            const touchRight = Math.abs(shaft.bounds.x + shaft.bounds.w - r.bounds.x) < 5;
-            const touchLeft = Math.abs(r.bounds.x + r.bounds.w - shaft.bounds.x) < 5;
-            const overlapY = Math.min(shaft.bounds.y + shaft.bounds.h, r.bounds.y + r.bounds.h) - Math.max(shaft.bounds.y, r.bounds.y);
-            return (touchRight || touchLeft) && overlapY > 15;
+            if (r === voidObj || r.key === 'court_garden' || r.key === 'void_space' || r.isVoid || r.key === 'corridors') return false;
+            return isTouching(r.bounds, voidObj.bounds);
         });
 
         if (touchingRoom) {
-            if (shaft.bounds.x < touchingRoom.bounds.x) {
-                touchingRoom.bounds.w += shaft.bounds.w;
-                touchingRoom.bounds.x = shaft.bounds.x;
-            } else {
-                touchingRoom.bounds.w += shaft.bounds.w;
-            }
+            expandRoomToCover(touchingRoom, voidObj);
             touchingRoom.area_m2 = parseFloat(((touchingRoom.bounds.w * touchingRoom.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
-            state.currentLayout.rooms = rooms.filter(r => r !== shaft);
+            state.currentLayout.rooms = rooms.filter(r => r !== voidObj);
             state.selectedRoomKey = touchingRoom.key;
             state.selectedRoomObj = touchingRoom;
         }
     } else {
+        // 2. Target is a regular room: Look for adjacent void_space or court_garden touching it
         const room = space.data;
-        const touchingShaft = rooms.find(r => {
-            if (r.key !== 'court_garden') return false;
-            const touchRight = Math.abs(room.bounds.x + room.bounds.w - r.bounds.x) < 5;
-            const touchLeft = Math.abs(r.bounds.x + r.bounds.w - room.bounds.x) < 5;
-            const overlapY = Math.min(room.bounds.y + room.bounds.h, r.bounds.y + r.bounds.h) - Math.max(room.bounds.y, r.bounds.y);
-            return (touchRight || touchLeft) && overlapY > 15;
+        const touchingVoid = rooms.find(r => {
+            if (r.key !== 'court_garden' && r.key !== 'void_space' && !r.isVoid) return false;
+            return isTouching(room.bounds, r.bounds);
         });
 
-        if (touchingShaft) {
-            if (touchingShaft.bounds.x < room.bounds.x) {
-                room.bounds.w += touchingShaft.bounds.w;
-                room.bounds.x = touchingShaft.bounds.x;
-            } else {
-                room.bounds.w += touchingShaft.bounds.w;
-            }
+        if (touchingVoid) {
+            expandRoomToCover(room, touchingVoid);
             room.area_m2 = parseFloat(((room.bounds.w * room.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
-            state.currentLayout.rooms = rooms.filter(r => r !== touchingShaft);
+            state.currentLayout.rooms = rooms.filter(r => r !== touchingVoid);
             state.selectedRoomKey = room.key;
             state.selectedRoomObj = room;
         } else {
@@ -998,30 +1116,30 @@ function getSelectedSpaceObject(activeKey) {
     
     // 1. If we have a specific room object stored in state (e.g. from direct click on canvas or inspector)
     if (state.selectedRoomObj && rooms && rooms.includes(state.selectedRoomObj)) {
-        if (!activeKey || activeKey === state.selectedRoomObj.key) {
+        if (!activeKey || activeKey === state.selectedRoomObj.key || (state.selectedRoomObj.isVoid && activeKey === 'void_space')) {
             const r = state.selectedRoomObj;
             return {
-                type: (r.key === 'court_garden' ? 'court' : 'room'),
+                type: (r.key === 'court_garden' ? 'court' : ((r.isVoid || r.key === 'void_space') ? 'void' : 'room')),
                 data: r,
                 bounds: r.bounds,
-                name_ar: r.name_ar || (r.key === 'court_garden' ? 'منور / فناء / حديقة' : r.key),
-                name_en: r.name_en || (r.key === 'court_garden' ? 'Shaft / Court / Garden' : r.key),
+                name_ar: r.name_ar || (r.key === 'court_garden' ? 'منور / فناء / حديقة' : ((r.isVoid || r.key === 'void_space') ? 'فضاء مغلق ناتج (فراغ)' : r.key)),
+                name_en: r.name_en || (r.key === 'court_garden' ? 'Shaft / Court / Garden' : ((r.isVoid || r.key === 'void_space') ? 'Closed Void Space' : r.key)),
                 key: r.key,
                 area_m2: r.area_m2
             };
         }
     }
 
-    // 2. Search in indoor rooms and courtyards
+    // 2. Search in indoor rooms, voids, and courtyards
     if (rooms) {
-        const room = rooms.find(r => r.key === activeKey);
+        const room = rooms.find(r => r.key === activeKey || (activeKey === 'void_space' && (r.isVoid || r.key === 'void_space')));
         if (room) {
             return {
-                type: (room.key === 'court_garden' ? 'court' : 'room'),
+                type: (room.key === 'court_garden' ? 'court' : ((room.isVoid || room.key === 'void_space') ? 'void' : 'room')),
                 data: room,
                 bounds: room.bounds,
-                name_ar: room.name_ar || (room.key === 'court_garden' ? 'منور / فناء / حديقة' : room.key),
-                name_en: room.name_en || (room.key === 'court_garden' ? 'Shaft / Court / Garden' : room.key),
+                name_ar: room.name_ar || (room.key === 'court_garden' ? 'منور / فناء / حديقة' : ((room.isVoid || room.key === 'void_space') ? 'فضاء مغلق ناتج (فراغ)' : room.key)),
+                name_en: room.name_en || (room.key === 'court_garden' ? 'Shaft / Court / Garden' : ((room.isVoid || room.key === 'void_space') ? 'Closed Void Space' : room.key)),
                 key: room.key,
                 area_m2: room.area_m2
             };
@@ -1222,6 +1340,9 @@ function syncSpaceInspectorUI() {
         } else if (space.key === 'garage_zone' || space.key === 'accessible_parking') {
             isAdaPass = (wM >= 4.0 || lM >= 4.0);
             badgeText = isAdaPass ? (isAr ? 'ADA موقف مهيأ 1.80م ✅' : 'ADA Parking Pass ✅') : (isAr ? 'موقف ضيق ⚠️' : 'Tight Parking ⚠️');
+        } else if (space.key === 'void_space' || space.type === 'void' || space.data?.isVoid) {
+            isAdaPass = true;
+            badgeText = isAr ? 'فضاء مغلق ناتج (جاهز للتحويل لمنور أو دمج) 🌿' : 'Closed Void (Ready to Convert/Merge) 🌿';
         } else if (space.key === 'front_garden' || space.key === 'side_walkway') {
             isAdaPass = (wM >= 1.2 || lM >= 1.2);
             badgeText = isAdaPass ? (isAr ? 'فناء وممشى مهيأ للوصول ✅' : 'Accessible Yard Pass ✅') : (isAr ? 'ممشى ضيق ⚠️' : 'Narrow Walkway ⚠️');
@@ -1443,65 +1564,64 @@ function updateParametricRoomDimension(roomKey, dimType, valM) {
                     targetCol.w = requestedW;
                     let remDelta = -deltaW;
 
-                    // Check if an existing shaft column is in this row
+                    // Check if an existing void_space or shaft column is in this row
+                    const voidCol = columns.find((c, idx) => idx !== targetColIndex && c.rooms.some(r => r.key === 'void_space' || r.isVoid));
                     const shaftCol = columns.find((c, idx) => idx !== targetColIndex && c.rooms.some(r => r.key === 'court_garden'));
 
-                    if (shaftCol) {
-                        // Expand or shrink existing shaft column
-                        if (remDelta < 0) {
-                            const maxShrink = shaftCol.w - minColWPx;
-                            const shrinkAmt = Math.min(maxShrink, Math.abs(remDelta));
-                            shaftCol.w -= shrinkAmt;
-                            remDelta += shrinkAmt;
-                        } else {
+                    if (remDelta > 0) {
+                        // Room was shortened: create or expand a resulting closed void space!
+                        if (voidCol) {
+                            voidCol.w += remDelta;
+                            remDelta = 0;
+                        } else if (shaftCol) {
                             shaftCol.w += remDelta;
                             remDelta = 0;
+                        } else {
+                            const newVoid = {
+                                key: 'void_space',
+                                id: 'void_' + Math.random().toString(36).substr(2, 6),
+                                name_ar: 'فضاء مغلق ناتج (فراغ)',
+                                name_en: 'Resulting Closed Void',
+                                hex: '#e2e8f0',
+                                isVoid: true,
+                                bounds: {
+                                    x: targetCol.x + targetCol.w,
+                                    y: targetRoom.bounds.y,
+                                    w: remDelta,
+                                    h: targetRoom.bounds.h
+                                },
+                                area_m2: parseFloat(((remDelta * targetRoom.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1))
+                            };
+                            rooms.push(newVoid);
+                            columns.push({ x: newVoid.bounds.x, w: remDelta, rooms: [newVoid] });
+                            columns.sort((a, b) => a.x - b.x);
+                            remDelta = 0;
                         }
-                    }
+                    } else if (remDelta < 0) {
+                        // Room was expanded: absorb from void_space if available
+                        if (voidCol) {
+                            const shrinkAmt = Math.min(voidCol.w, Math.abs(remDelta));
+                            voidCol.w -= shrinkAmt;
+                            remDelta += shrinkAmt;
+                            if (voidCol.w < 10) {
+                                state.currentLayout.rooms = rooms.filter(r => !voidCol.rooms.includes(r));
+                                columns = columns.filter(c => c !== voidCol);
+                            }
+                        } else if (shaftCol) {
+                            const shrinkAmt = Math.min(shaftCol.w - minColWPx, Math.abs(remDelta));
+                            shaftCol.w -= shrinkAmt;
+                            remDelta += shrinkAmt;
+                        }
 
-                    // If remaining delta exists, distribute among neighbor columns
-                    if (remDelta !== 0) {
-                        const neighborCols = columns.filter((c, idx) => idx !== targetColIndex && c !== shaftCol);
-                        neighborCols.sort((a, b) => {
-                            const distA = Math.abs(columns.indexOf(a) - targetColIndex);
-                            const distB = Math.abs(columns.indexOf(b) - targetColIndex);
-                            return distA - distB;
-                        });
-
-                        for (let col of neighborCols) {
-                            if (remDelta === 0) break;
-                            if (remDelta < 0) {
-                                const maxShrink = col.w - minColWPx;
-                                const shrinkAmt = Math.min(maxShrink, Math.abs(remDelta));
+                        if (remDelta !== 0) {
+                            const neighborCols = columns.filter((c, idx) => idx !== targetColIndex && c !== shaftCol && c !== voidCol);
+                            for (let col of neighborCols) {
+                                if (remDelta === 0) break;
+                                const shrinkAmt = Math.min(col.w - minColWPx, Math.abs(remDelta));
                                 col.w -= shrinkAmt;
                                 remDelta += shrinkAmt;
-                            } else {
-                                col.w += remDelta;
-                                remDelta = 0;
                             }
                         }
-                    }
-
-                    // INTELLIGENT SHAFT SYNTHESIS:
-                    // If user shrunk space significantly (remDelta > 0 remains unabsorbed), synthesize a new lightwell courtyard (court_garden)!
-                    if (remDelta > 0 && remDelta >= minColWPx) {
-                        const newShaft = {
-                            key: 'court_garden',
-                            name_ar: 'منور / فناء تهوية طبيعية',
-                            name_en: 'Bioclimatic Light Shaft',
-                            hex: '#00ff01',
-                            bounds: {
-                                x: targetCol.x + targetCol.w,
-                                y: targetRoom.bounds.y,
-                                w: remDelta,
-                                h: targetRoom.bounds.h
-                            },
-                            area_m2: parseFloat(((remDelta * targetRoom.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1))
-                        };
-                        rooms.push(newShaft);
-                        columns.push({ x: newShaft.bounds.x, w: remDelta, rooms: [newShaft] });
-                        columns.sort((a, b) => a.x - b.x);
-                        remDelta = 0;
                     }
 
                     // Re-stitch contiguous X positions strictly within [bldgMinX, bldgMaxX]
@@ -1932,6 +2052,16 @@ function setupZoomAndPan() {
                 if (hitRoom) {
                     clickedKey = hitRoom.key;
                     clickedObj = hitRoom;
+                }
+            }
+
+            // Check if clicking in an unallocated closed void inside the building envelope!
+            if (!clickedKey && rooms && rooms.length) {
+                const detectedVoid = detectVoidAtPoint(worldX, worldY);
+                if (detectedVoid) {
+                    rooms.push(detectedVoid);
+                    clickedKey = detectedVoid.key;
+                    clickedObj = detectedVoid;
                 }
             }
 
@@ -2857,6 +2987,16 @@ function setupEventListeners() {
                 if (hitRoom) {
                     hitKey = hitRoom.key;
                     state.selectedRoomObj = hitRoom;
+                }
+            }
+
+            // 3.5 Check if clicking in an unallocated closed void inside the building envelope!
+            if (!hitKey && rooms && rooms.length) {
+                const detectedVoid = detectVoidAtPoint(worldX, worldY);
+                if (detectedVoid) {
+                    rooms.push(detectedVoid);
+                    hitKey = detectedVoid.key;
+                    state.selectedRoomObj = detectedVoid;
                 }
             }
 
@@ -6331,6 +6471,27 @@ function drawArchitecturalRoomFlooring(rooms) {
             for (let py = y + stepY; py < y + h; py += stepY) {
                 ctx.beginPath(); ctx.moveTo(x + 2, py); ctx.lineTo(x + w - 2, py); ctx.stroke();
             }
+        } else if (r.key === 'void_space' || r.type === 'void' || r.isVoid) {
+            // 7. Resulting Void Space (فضاء مغلق ناتج / فراغ غير مخصص)
+            ctx.fillStyle = '#f8fafc';
+            ctx.fillRect(x, y, w, h);
+
+            // Architectural Diagonal Cross (X) indicating void/shaft
+            ctx.strokeStyle = '#94a3b8';
+            ctx.lineWidth = 1.0;
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.moveTo(x + 2, y + 2); ctx.lineTo(x + w - 2, y + h - 2);
+            ctx.moveTo(x + w - 2, y + 2); ctx.lineTo(x + 2, y + h - 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Dashed outline border
+            ctx.strokeStyle = '#cbd5e1';
+            ctx.lineWidth = 1.2;
+            ctx.setLineDash([4, 3]);
+            ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+            ctx.setLineDash([]);
         } else {
             // Fallback: Semantic Base
             ctx.fillStyle = r.hex || '#f8fafc';
@@ -7753,16 +7914,19 @@ function renderOrthogonalMode() {
             ctx.save();
 
             const isCourt = (space.key === 'court_garden' || space.type === 'court');
+            const isVoid = (space.key === 'void_space' || space.type === 'void' || space.data?.isVoid);
             // 1. Room Highlight Envelope with soft glow
-            ctx.strokeStyle = isCourt ? '#10b981' : '#38bdf8';
-            ctx.fillStyle = isCourt ? 'rgba(16, 185, 129, 0.12)' : 'rgba(56, 189, 248, 0.08)';
+            ctx.strokeStyle = isCourt ? '#10b981' : (isVoid ? '#f59e0b' : '#38bdf8');
+            ctx.fillStyle = isCourt ? 'rgba(16, 185, 129, 0.12)' : (isVoid ? 'rgba(245, 158, 11, 0.14)' : 'rgba(56, 189, 248, 0.08)');
             ctx.lineWidth = 2.2;
+            if (isVoid) ctx.setLineDash([4, 4]);
             ctx.fillRect(x, y, w, h);
             ctx.strokeRect(x, y, w, h);
+            if (isVoid) ctx.setLineDash([]);
 
             // 2. Corner CAD Box Grips
             ctx.fillStyle = '#ffffff';
-            ctx.strokeStyle = isCourt ? '#059669' : '#0284c7';
+            ctx.strokeStyle = isCourt ? '#059669' : (isVoid ? '#d97706' : '#0284c7');
             ctx.lineWidth = 1.2;
             const gripSize = 5.5;
             [
@@ -7783,14 +7947,14 @@ function renderOrthogonalMode() {
 
                 // Outer Halo
                 if (isHovered || isDragging) {
-                    ctx.fillStyle = isDragging ? 'rgba(16, 185, 129, 0.40)' : 'rgba(56, 189, 248, 0.40)';
+                    ctx.fillStyle = isDragging ? 'rgba(16, 185, 129, 0.40)' : (isVoid ? 'rgba(245, 158, 11, 0.40)' : 'rgba(56, 189, 248, 0.40)');
                     ctx.beginPath();
                     ctx.arc(g.x, g.y, 13, 0, Math.PI * 2);
                     ctx.fill();
                 }
 
                 // Core Circular Grip Node
-                ctx.fillStyle = (isDragging ? '#10b981' : (isHovered ? '#38bdf8' : (isCourt ? '#059669' : '#0284c7')));
+                ctx.fillStyle = (isDragging ? '#10b981' : (isHovered ? (isVoid ? '#fbbf24' : '#38bdf8') : (isCourt ? '#059669' : (isVoid ? '#d97706' : '#0284c7'))));
                 ctx.strokeStyle = '#ffffff';
                 ctx.lineWidth = 2.0;
                 ctx.beginPath();
@@ -7807,7 +7971,7 @@ function renderOrthogonalMode() {
                 // Live Floating TestFit Measurement Pill when Hovered or Dragging
                 if (isHovered || isDragging) {
                     const currentDimM = (g.type === 'width' ? (w / pxPerMeter) : (h / pxPerMeter)).toFixed(2);
-                    const pillPrefix = isCourt ? (isAr ? '🌿 منور: ' : '🌿 Shaft: ') : '';
+                    const pillPrefix = isCourt ? (isAr ? '🌿 منور: ' : '🌿 Shaft: ') : (isVoid ? (isAr ? '📦 فراغ: ' : '📦 Void: ') : '');
                     const pillText = `${pillPrefix}${g.type === 'width' ? '↔' : '↕'} ${currentDimM} ${isAr ? 'م' : 'm'}`;
                     
                     ctx.font = 'bold 9.5px Cairo, JetBrains Mono, sans-serif';
@@ -7818,10 +7982,10 @@ function renderOrthogonalMode() {
                     const pillY = (g.edge === 'top' || g.edge === 'bottom') ? g.y - pillH - 8 : g.y - pillH / 2;
 
                     ctx.save();
-                    ctx.shadowColor = isCourt ? 'rgba(16, 185, 129, 0.6)' : 'rgba(56, 189, 248, 0.6)';
+                    ctx.shadowColor = isCourt ? 'rgba(16, 185, 129, 0.6)' : (isVoid ? 'rgba(245, 158, 11, 0.6)' : 'rgba(56, 189, 248, 0.6)');
                     ctx.shadowBlur = 8;
                     ctx.fillStyle = 'rgba(15, 23, 42, 0.95)';
-                    ctx.strokeStyle = isDragging ? '#10b981' : (isCourt ? '#10b981' : '#38bdf8');
+                    ctx.strokeStyle = isDragging ? '#10b981' : (isCourt ? '#10b981' : (isVoid ? '#f59e0b' : '#38bdf8'));
                     ctx.lineWidth = 1.2;
                     ctx.beginPath();
                     if (ctx.roundRect) ctx.roundRect(pillX, pillY, pillW, pillH, 4);
@@ -7830,7 +7994,7 @@ function renderOrthogonalMode() {
                     ctx.stroke();
 
                     ctx.shadowBlur = 0;
-                    ctx.fillStyle = isDragging ? '#10b981' : (isCourt ? '#34d399' : '#38bdf8');
+                    ctx.fillStyle = isDragging ? '#10b981' : (isCourt ? '#34d399' : (isVoid ? '#fbbf24' : '#38bdf8'));
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
                     ctx.fillText(pillText, pillX + pillW / 2, pillY + pillH / 2);
@@ -7839,24 +8003,24 @@ function renderOrthogonalMode() {
             });
 
             // 4. Selected Room Badge in top-right corner
-            const badgeW = isCourt ? (isAr ? 86 : 94) : (isAr ? 76 : 82);
+            const badgeW = isCourt ? (isAr ? 86 : 94) : (isVoid ? (isAr ? 95 : 100) : (isAr ? 76 : 82));
             const badgeH = 16;
             const badgeX = x + w - badgeW - 4;
             const badgeY = y + 4;
             if (w > badgeW + 8 && h > 22) {
                 ctx.fillStyle = 'rgba(15, 23, 42, 0.90)';
-                ctx.strokeStyle = isCourt ? '#10b981' : '#38bdf8';
+                ctx.strokeStyle = isCourt ? '#10b981' : (isVoid ? '#f59e0b' : '#38bdf8');
                 ctx.lineWidth = 0.8;
                 ctx.beginPath();
                 if (ctx.roundRect) ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 3);
                 else ctx.rect(badgeX, badgeY, badgeW, badgeH);
                 ctx.fill();
                 ctx.stroke();
-                ctx.fillStyle = isCourt ? '#34d399' : '#38bdf8';
+                ctx.fillStyle = isCourt ? '#34d399' : (isVoid ? '#fbbf24' : '#38bdf8');
                 ctx.font = 'bold 7.5px Cairo, sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                const badgeLabel = isCourt ? (isAr ? '🌿 منور محدد للتعديل' : '🌿 Shaft Selected') : (isAr ? '✨ محدد للتعديل المباشر' : '✨ Drag to Resize');
+                const badgeLabel = isCourt ? (isAr ? '🌿 منور محدد للتعديل' : '🌿 Shaft Selected') : (isVoid ? (isAr ? '📦 فضاء مغلق ناتج' : '📦 Closed Void') : (isAr ? '✨ محدد للتعديل المباشر' : '✨ Drag to Resize'));
                 ctx.fillText(badgeLabel, badgeX + badgeW / 2, badgeY + badgeH / 2);
             }
             ctx.restore();
@@ -8349,7 +8513,9 @@ function drawLabels() {
 
         // 1. Structured, standardized room titles and zoning
         let labelName = isAr ? r.name_ar : r.name_en;
-        if (r.key === 'court_garden') {
+        if (r.key === 'void_space' || r.type === 'void' || r.isVoid) {
+            labelName = isAr ? 'فضاء مغلق ناتج' : 'Closed Void';
+        } else if (r.key === 'court_garden') {
             labelName = isAr ? 'منور إنارة وتهوية' : 'Light & Vent Shaft';
         } else if (r.key === 'corridors') {
             labelName = isAr ? 'الموزع المركزي' : 'Central Corridor';
