@@ -546,6 +546,8 @@ const btnShortenWallLength = document.getElementById('btnShortenWallLength');
 
 const btnConvertToLightwell = document.getElementById('btnConvertToLightwell');
 const btnMergeVoidToRoom = document.getElementById('btnMergeVoidToRoom');
+const btnAddCorridor = document.getElementById('btnAddCorridor');
+const btnDeleteCorridor = document.getElementById('btnDeleteCorridor');
 
 const btnResetRoomDefaults = document.getElementById('btnResetRoomDefaults');
 
@@ -838,7 +840,12 @@ function adjustSpaceWallDimension(roomKey, dimType, deltaM) {
     saveHistoryState();
     const pxPerMeter = 23.0;
     const currentM = (dimType === 'width') ? (space.bounds.w / pxPerMeter) : (space.bounds.h / pxPerMeter);
-    const newM = Math.max(1.0, parseFloat((currentM + deltaM).toFixed(2)));
+    let newM = parseFloat((currentM + deltaM).toFixed(2));
+    if (space.key === 'corridors' && dimType === 'length') {
+        newM = Math.max(1.60, newM); // Strictly enforce ADA >= 1.60m clear passage width
+    } else {
+        newM = Math.max(1.0, newM);
+    }
     updateParametricRoomDimension(space.key, dimType, newM);
     syncSpaceInspectorUI();
     requestRender();
@@ -1110,6 +1117,117 @@ function mergeVoidToRoom(roomKey) {
     renderCanvas();
 }
 
+/**
+ * Add or restore ADA compliant Central Corridor (Passage width >= 1.60m)
+ */
+function addCentralCorridor() {
+    if (!state.currentLayout || !state.currentLayout.rooms) return;
+    saveHistoryState();
+    const rooms = state.currentLayout.rooms;
+    let corridor = rooms.find(r => r.key === 'corridors');
+    if (corridor) {
+        state.selectedRoomKey = 'corridors';
+        state.selectedRoomObj = corridor;
+        syncSpaceInspectorUI();
+        requestRender();
+        return;
+    }
+
+    const pxPerMeter = 23.0;
+    const bb = state.currentLayout.buildingBounds || {};
+    const pb = state.currentLayout.plotBounds || {};
+    const bldgMinX = (state.currentLayout.bldgMinX !== undefined) ? state.currentLayout.bldgMinX : (bb.bldgMinX !== undefined ? bb.bldgMinX : Math.min(...rooms.map(r => r.bounds.x)));
+    const bldgMaxX = (state.currentLayout.bldgMaxX !== undefined) ? state.currentLayout.bldgMaxX : (bb.bldgMaxX !== undefined ? bb.bldgMaxX : Math.max(...rooms.map(r => r.bounds.x + r.bounds.w)));
+    const bldgMinY = (state.currentLayout.bldgMinY !== undefined) ? state.currentLayout.bldgMinY : (bb.bldgMinY !== undefined ? bb.bldgMinY : Math.min(...rooms.map(r => r.bounds.y)));
+    const bldgMaxY = (state.currentLayout.bldgMaxY !== undefined) ? state.currentLayout.bldgMaxY : (bb.bldgMaxY !== undefined ? bb.bldgMaxY : Math.max(...rooms.map(r => r.bounds.y + r.bounds.h)));
+    const totalBldgW = bldgMaxX - bldgMinX;
+    const totalBldgH = bldgMaxY - bldgMinY;
+
+    // Minimum passage width for corridor is strictly 1.60m per ADA accessibility standards
+    const corrH = Math.round(1.60 * pxPerMeter);
+
+    // Find the split line between upper living/front rooms and rear bedrooms
+    const rearBedrooms = rooms.filter(r => r.key === 'disabled_bedroom' || r.key === 'bedroom');
+    let splitY;
+    if (rearBedrooms.length > 0) {
+        splitY = Math.min(...rearBedrooms.map(r => r.bounds.y));
+    } else {
+        splitY = bldgMinY + Math.round(totalBldgH * 0.58);
+    }
+
+    const corrY = splitY - corrH;
+
+    // Shrink upper rooms that ended at splitY so that they end cleanly at corrY
+    rooms.forEach(r => {
+        if (r.bounds.y < splitY && Math.abs((r.bounds.y + r.bounds.h) - splitY) < 18) {
+            r.bounds.h = Math.max(Math.round(2.50 * pxPerMeter), corrY - r.bounds.y);
+            r.area_m2 = parseFloat(((r.bounds.w * r.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
+        }
+    });
+
+    // Create new corridor
+    const newCorridor = {
+        key: 'corridors',
+        name_ar: 'الموزع المركزي',
+        name_en: 'Central Corridor',
+        type: 'circulation',
+        bounds: {
+            x: bldgMinX,
+            y: corrY,
+            w: totalBldgW,
+            h: corrH
+        },
+        area_m2: parseFloat(((totalBldgW * corrH) / (pxPerMeter * pxPerMeter)).toFixed(1)),
+        zone: 'circulation',
+        adaCompliant: true,
+        adaWidth: 1.60
+    };
+
+    rooms.push(newCorridor);
+    state.selectedRoomKey = 'corridors';
+    state.selectedRoomObj = newCorridor;
+
+    realignAllDoorsAndWindows();
+    syncSpaceInspectorUI();
+    updateAnalyticsHUD(state.currentLayout);
+    requestRender();
+}
+
+/**
+ * Delete Central Corridor and merge adjacent spaces into an open-plan distribution
+ */
+function deleteCentralCorridor() {
+    if (!state.currentLayout || !state.currentLayout.rooms) return;
+    const rooms = state.currentLayout.rooms;
+    const corridor = rooms.find(r => r.key === 'corridors');
+    if (!corridor) return;
+
+    saveHistoryState();
+    const pxPerMeter = 23.0;
+    const corrY = corridor.bounds.y;
+    const corrH = corridor.bounds.h;
+    const corrBottom = corrY + corrH;
+
+    // Remove corridor from rooms array
+    state.currentLayout.rooms = rooms.filter(r => r.key !== 'corridors');
+
+    // Expand upper rooms that touched corrY downwards to bridge directly with rear bedrooms
+    state.currentLayout.rooms.forEach(r => {
+        if (Math.abs((r.bounds.y + r.bounds.h) - corrY) < 18) {
+            r.bounds.h = corrBottom - r.bounds.y;
+            r.area_m2 = parseFloat(((r.bounds.w * r.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
+        }
+    });
+
+    state.selectedRoomKey = 'living_room';
+    state.selectedRoomObj = state.currentLayout.rooms.find(r => r.key === 'living_room') || null;
+
+    realignAllDoorsAndWindows();
+    syncSpaceInspectorUI();
+    updateAnalyticsHUD(state.currentLayout);
+    requestRender();
+}
+
 function getSelectedSpaceObject(activeKey) {
     if (!state.currentLayout) return null;
     const { rooms, outdoorZones, accessibleParking, garageBounds, ramp } = state.currentLayout;
@@ -1323,12 +1441,51 @@ function syncSpaceInspectorUI() {
     }
     if (valRoomArea) valRoomArea.textContent = `${areaM2} ${isAr ? 'م²' : 'm²'}`;
 
+    // Corridor-specific UI Customization
+    const lblRoomWidth = document.getElementById('lblRoomWidth');
+    const lblRoomLength = document.getElementById('lblRoomLength');
+    if (activeKey === 'corridors') {
+        if (lblRoomWidth) lblRoomWidth.textContent = isAr ? 'طول الموزع (Span):' : 'Corridor Length (Span):';
+        if (lblRoomLength) lblRoomLength.textContent = isAr ? 'عرض الممر (ADA ≥1.60م):' : 'Passage Width (ADA ≥1.60m):';
+        if (rangeRoomLength) {
+            rangeRoomLength.min = "1.6";
+            rangeRoomLength.max = "4.0";
+            rangeRoomLength.value = Math.max(1.6, lM).toFixed(1);
+        }
+        if (rangeRoomWidth) {
+            rangeRoomWidth.min = "2.0";
+            rangeRoomWidth.max = "15.0";
+        }
+    } else {
+        if (lblRoomWidth) lblRoomWidth.textContent = isAr ? 'العرض (Width):' : 'Width:';
+        if (lblRoomLength) lblRoomLength.textContent = isAr ? 'العمق (Length):' : 'Length:';
+        if (rangeRoomLength) {
+            rangeRoomLength.min = "1.0";
+            rangeRoomLength.max = "12.0";
+        }
+        if (rangeRoomWidth) {
+            rangeRoomWidth.min = "1.0";
+            rangeRoomWidth.max = "12.0";
+        }
+    }
+
+    const corridorExists = !!state.currentLayout.rooms?.some(r => r.key === 'corridors');
+    if (btnDeleteCorridor) {
+        btnDeleteCorridor.disabled = !corridorExists;
+        btnDeleteCorridor.style.opacity = corridorExists ? '1' : '0.5';
+    }
+
     // 2. ADA Status Badge
     if (inspectorAdaBadge) {
         let isAdaPass = true;
         let badgeText = isAr ? 'ADA مطابق ✅' : 'ADA PASS ✅';
 
-        if (space.key === 'disabled_bedroom') {
+        if (space.key === 'corridors') {
+            isAdaPass = (lM >= 1.599);
+            badgeText = isAdaPass 
+                ? (isAr ? 'ADA موزع مهيأ للكراسي (≥1.60م) ✅' : 'ADA Accessible Corridor (≥1.60m) ✅') 
+                : (isAr ? 'تنبيه: ممر ضيق (أقل من 1.60م) ⚠️' : 'Corridor Narrow (<1.60m) ⚠️');
+        } else if (space.key === 'disabled_bedroom') {
             isAdaPass = (wM >= 4.4 && lM >= 3.8);
             badgeText = isAdaPass ? (isAr ? 'ADA جناح نوم مطابق ✅' : 'ADA Suite Pass ✅') : (isAr ? 'تنبيه: أبعاد ضيقة ⚠️' : 'Dimensions Warning ⚠️');
         } else if (space.key === 'disabled_bathroom') {
@@ -1612,14 +1769,89 @@ function updateParametricRoomDimension(roomKey, dimType, valM, dragEdge) {
         const totalBldgH = bldgMaxY - bldgMinY;
 
         const corridor = rooms.find(r => r.key === 'corridors');
-        const corrY = corridor ? corridor.bounds.y : (bldgMinY + Math.round(totalBldgH * 0.55));
-        const corrH = corridor ? corridor.bounds.h : Math.round(1.60 * pxPerMeter);
+        const rearBed = rooms.find(r => r.key === 'disabled_bedroom' || r.key === 'bedroom');
+        const corrY = corridor ? corridor.bounds.y : (rearBed ? rearBed.bounds.y : (bldgMinY + Math.round(totalBldgH * 0.55)));
+        const corrH = corridor ? corridor.bounds.h : 0;
 
-        // Detect if layout has 3 bands (Variant 1: Front Band, Middle Living Band, Rear Band) or 2 bands
-        const is3Band = rooms.some(r => r.bounds.y <= bldgMinY + 15 && r.bounds.y + r.bounds.h < corrY - 20) &&
-                        rooms.some(r => r.bounds.y > bldgMinY + 25 && Math.abs(r.bounds.y + r.bounds.h - corrY) < 20);
+        if (targetRoom.key === 'corridors') {
+            // =========================================================================
+            // CENTRAL CORRIDOR PARAMETRIC RESIZING (ADA CLEAR PASSAGE WIDTH >= 1.60M)
+            // =========================================================================
+            if (dimType === 'length') {
+                // DimType length = clear passage width (vertical dimension h in horizontal layout)
+                // Strict ADA accessibility constraint: Clear width MUST be >= 1.60m
+                const minCorrH = Math.round(1.60 * pxPerMeter);
+                const reqPx = Math.max(minCorrH, newPx);
+                const oldCorrY = targetRoom.bounds.y;
+                const oldCorrH = targetRoom.bounds.h;
+                const oldCorrBottom = oldCorrY + oldCorrH;
 
-        if (is3Band) {
+                if (dragEdge === 'top') {
+                    // Top edge dragged: bottom is fixed at oldCorrBottom
+                    const maxTopCorrH = oldCorrBottom - (bldgMinY + Math.round(3.00 * pxPerMeter));
+                    const clampedH = Math.max(minCorrH, Math.min(maxTopCorrH, reqPx));
+                    const newCorrY = oldCorrBottom - clampedH;
+
+                    targetRoom.bounds.y = newCorrY;
+                    targetRoom.bounds.h = clampedH;
+                    targetRoom.area_m2 = parseFloat(((targetRoom.bounds.w * targetRoom.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
+
+                    // Adjust upper rooms touching top of corridor
+                    rooms.forEach(r => {
+                        if (r !== targetRoom && Math.abs((r.bounds.y + r.bounds.h) - oldCorrY) < 18) {
+                            r.bounds.h = newCorrY - r.bounds.y;
+                            r.area_m2 = parseFloat(((r.bounds.w * r.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
+                        }
+                    });
+                } else {
+                    // Bottom edge dragged (or adjusted from slider): top is fixed at oldCorrY
+                    const maxBottomCorrH = (bldgMaxY - Math.round(3.00 * pxPerMeter)) - oldCorrY;
+                    const clampedH = Math.max(minCorrH, Math.min(maxBottomCorrH, reqPx));
+
+                    targetRoom.bounds.h = clampedH;
+                    targetRoom.area_m2 = parseFloat(((targetRoom.bounds.w * targetRoom.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
+
+                    // Adjust rear rooms below corridor
+                    const newRearY = oldCorrY + clampedH;
+                    const newRearH = bldgMaxY - newRearY;
+                    rooms.forEach(r => {
+                        if (r !== targetRoom && Math.abs(r.bounds.y - oldCorrBottom) < 18) {
+                            const isUB = (r.key === 'disabled_bathroom' || r.key === 'bathroom');
+                            const isLS = (r.key === 'court_garden');
+                            if (isUB) {
+                                r.bounds.y = newRearY;
+                                r.bounds.h = Math.min(Math.round(2.20 * pxPerMeter), Math.round(newRearH * 0.48));
+                            } else if (isLS) {
+                                const ub = rooms.find(b => (b.key === 'disabled_bathroom' || b.key === 'bathroom') && Math.abs(b.bounds.x - r.bounds.x) < 15);
+                                const ubH = ub ? ub.bounds.h : Math.round(2.20 * pxPerMeter);
+                                r.bounds.y = newRearY + ubH;
+                                r.bounds.h = newRearH - ubH;
+                            } else {
+                                r.bounds.y = newRearY;
+                                r.bounds.h = newRearH;
+                            }
+                            r.area_m2 = parseFloat(((r.bounds.w * r.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
+                        }
+                    });
+                }
+            } else if (dimType === 'width') {
+                // DimType width = corridor horizontal span / length
+                const minCorrW = Math.round(2.00 * pxPerMeter);
+                if (dragEdge === 'right') {
+                    const clampedW = Math.max(minCorrW, Math.min(bldgMaxX - targetRoom.bounds.x, newPx));
+                    targetRoom.bounds.w = clampedW;
+                } else if (dragEdge === 'left') {
+                    const rightEdge = targetRoom.bounds.x + targetRoom.bounds.w;
+                    const clampedW = Math.max(minCorrW, Math.min(rightEdge - bldgMinX, newPx));
+                    targetRoom.bounds.x = rightEdge - clampedW;
+                    targetRoom.bounds.w = clampedW;
+                } else {
+                    const clampedW = Math.max(minCorrW, Math.min(totalBldgW, newPx));
+                    targetRoom.bounds.w = clampedW;
+                }
+                targetRoom.area_m2 = parseFloat(((targetRoom.bounds.w * targetRoom.bounds.h) / (pxPerMeter * pxPerMeter)).toFixed(1));
+            }
+        } else if (is3Band) {
             // =========================================================================
             // 3-BAND TYPOLOGY (Default: Front Band, Middle Living Band, Rear Band)
             // =========================================================================
@@ -1977,6 +2209,52 @@ function getActiveRoomGrips() {
     const bldgMaxY = (state.currentLayout.bldgMaxY !== undefined) ? state.currentLayout.bldgMaxY : (bb.bldgMaxY !== undefined ? bb.bldgMaxY : (pb.maxY || 1000));
 
     const grips = [];
+
+    if (space.key === 'corridors') {
+        // Dedicated 4 CAD edge grips for Central Corridor
+        // 1. Right Edge (Span / Length)
+        grips.push({
+            type: 'width',
+            edge: 'right',
+            roomKey: 'corridors',
+            x: x + w,
+            y: y + h / 2,
+            cursor: 'ew-resize',
+            label: state.lang === 'ar' ? 'سحب لتعديل طول الموزع (Span) ↔' : 'Drag to Resize Span ↔'
+        });
+        // 2. Left Edge (Span / Length)
+        grips.push({
+            type: 'width',
+            edge: 'left',
+            roomKey: 'corridors',
+            x: x,
+            y: y + h / 2,
+            cursor: 'ew-resize',
+            label: state.lang === 'ar' ? 'سحب لتعديل طول الموزع (Span) ↔' : 'Drag to Resize Span ↔'
+        });
+        // 3. Bottom Edge (Passage Width >= 1.60m)
+        grips.push({
+            type: 'length',
+            edge: 'bottom',
+            roomKey: 'corridors',
+            x: x + w / 2,
+            y: y + h,
+            cursor: 'ns-resize',
+            label: state.lang === 'ar' ? 'سحب لتعديل عرض الممر (ADA ≥1.60م) ↕' : 'Drag Passage Width (ADA ≥1.60m) ↕'
+        });
+        // 4. Top Edge (Passage Width >= 1.60m)
+        grips.push({
+            type: 'length',
+            edge: 'top',
+            roomKey: 'corridors',
+            x: x + w / 2,
+            y: y,
+            cursor: 'ns-resize',
+            label: state.lang === 'ar' ? 'سحب لتعديل عرض الممر (ADA ≥1.60م) ↕' : 'Drag Passage Width (ADA ≥1.60m) ↕'
+        });
+        return grips;
+    }
+
     // Right Edge Grip (Adjust Width)
     if (x + w < bldgMaxX - 2) {
         grips.push({
@@ -2593,7 +2871,10 @@ function setupEventListeners() {
     if (rangeRoomLength) {
         rangeRoomLength.addEventListener('input', (e) => {
             const activeKey = state.selectedRoomKey || 'living_room';
-            const valM = parseFloat(e.target.value);
+            let valM = parseFloat(e.target.value);
+            if (activeKey === 'corridors') {
+                valM = Math.max(1.60, valM);
+            }
             if (valRoomLength) valRoomLength.textContent = `${valM.toFixed(2)} ${state.lang === 'ar' ? 'م' : 'm'}`;
             updateParametricRoomDimension(activeKey, 'length', valM);
         });
@@ -2738,6 +3019,18 @@ function setupEventListeners() {
     if (btnMergeVoidToRoom) {
         btnMergeVoidToRoom.addEventListener('click', () => {
             mergeVoidToRoom(state.selectedRoomKey);
+        });
+    }
+
+    if (btnAddCorridor) {
+        btnAddCorridor.addEventListener('click', () => {
+            addCentralCorridor();
+        });
+    }
+
+    if (btnDeleteCorridor) {
+        btnDeleteCorridor.addEventListener('click', () => {
+            deleteCentralCorridor();
         });
     }
 
@@ -8031,9 +8324,11 @@ function renderOrthogonalMode() {
 
             const isCourt = (space.key === 'court_garden' || space.type === 'court');
             const isVoid = (space.key === 'void_space' || space.type === 'void' || space.data?.isVoid);
+            const isCorridor = (space.key === 'corridors');
+
             // 1. Room Highlight Envelope with soft glow
-            ctx.strokeStyle = isCourt ? '#10b981' : (isVoid ? '#f59e0b' : '#38bdf8');
-            ctx.fillStyle = isCourt ? 'rgba(16, 185, 129, 0.12)' : (isVoid ? 'rgba(245, 158, 11, 0.14)' : 'rgba(56, 189, 248, 0.08)');
+            ctx.strokeStyle = isCorridor ? '#eab308' : (isCourt ? '#10b981' : (isVoid ? '#f59e0b' : '#38bdf8'));
+            ctx.fillStyle = isCorridor ? 'rgba(234, 179, 8, 0.15)' : (isCourt ? 'rgba(16, 185, 129, 0.12)' : (isVoid ? 'rgba(245, 158, 11, 0.14)' : 'rgba(56, 189, 248, 0.08)'));
             ctx.lineWidth = 2.2;
             if (isVoid) ctx.setLineDash([4, 4]);
             ctx.fillRect(x, y, w, h);
@@ -8042,7 +8337,7 @@ function renderOrthogonalMode() {
 
             // 2. Corner CAD Box Grips
             ctx.fillStyle = '#ffffff';
-            ctx.strokeStyle = isCourt ? '#059669' : (isVoid ? '#d97706' : '#0284c7');
+            ctx.strokeStyle = isCorridor ? '#ca8a04' : (isCourt ? '#059669' : (isVoid ? '#d97706' : '#0284c7'));
             ctx.lineWidth = 1.2;
             const gripSize = 5.5;
             [
@@ -8063,14 +8358,14 @@ function renderOrthogonalMode() {
 
                 // Outer Halo
                 if (isHovered || isDragging) {
-                    ctx.fillStyle = isDragging ? 'rgba(16, 185, 129, 0.40)' : (isVoid ? 'rgba(245, 158, 11, 0.40)' : 'rgba(56, 189, 248, 0.40)');
+                    ctx.fillStyle = isDragging ? 'rgba(16, 185, 129, 0.40)' : (isCorridor ? 'rgba(234, 179, 8, 0.40)' : (isVoid ? 'rgba(245, 158, 11, 0.40)' : 'rgba(56, 189, 248, 0.40)'));
                     ctx.beginPath();
                     ctx.arc(g.x, g.y, 13, 0, Math.PI * 2);
                     ctx.fill();
                 }
 
                 // Core Circular Grip Node
-                ctx.fillStyle = (isDragging ? '#10b981' : (isHovered ? (isVoid ? '#fbbf24' : '#38bdf8') : (isCourt ? '#059669' : (isVoid ? '#d97706' : '#0284c7'))));
+                ctx.fillStyle = (isDragging ? '#10b981' : (isHovered ? (isCorridor ? '#fde047' : (isVoid ? '#fbbf24' : '#38bdf8')) : (isCorridor ? '#ca8a04' : (isCourt ? '#059669' : (isVoid ? '#d97706' : '#0284c7')))));
                 ctx.strokeStyle = '#ffffff';
                 ctx.lineWidth = 2.0;
                 ctx.beginPath();
@@ -8087,8 +8382,11 @@ function renderOrthogonalMode() {
                 // Live Floating TestFit Measurement Pill when Hovered or Dragging
                 if (isHovered || isDragging) {
                     const currentDimM = (g.type === 'width' ? (w / pxPerMeter) : (h / pxPerMeter)).toFixed(2);
-                    const pillPrefix = isCourt ? (isAr ? '🌿 منور: ' : '🌿 Shaft: ') : (isVoid ? (isAr ? '📦 فراغ: ' : '📦 Void: ') : '');
-                    const pillText = `${pillPrefix}${g.type === 'width' ? '↔' : '↕'} ${currentDimM} ${isAr ? 'م' : 'm'}`;
+                    const pillPrefix = isCorridor ? (isAr ? '🏛️ موزع مركزي: ' : '🏛️ Corridor: ') : (isCourt ? (isAr ? '🌿 منور: ' : '🌿 Shaft: ') : (isVoid ? (isAr ? '📦 فراغ: ' : '📦 Void: ') : ''));
+                    const dimLabel = isCorridor 
+                        ? (g.type === 'width' ? (isAr ? 'طول الموزع: ' : 'Span: ') : (isAr ? 'عرض الممر (ADA ≥1.60م): ' : 'Clear Width: ')) 
+                        : '';
+                    const pillText = `${pillPrefix}${dimLabel}${g.type === 'width' ? '↔' : '↕'} ${currentDimM} ${isAr ? 'م' : 'm'}`;
                     
                     ctx.font = 'bold 9.5px Cairo, JetBrains Mono, sans-serif';
                     const textMetrics = ctx.measureText(pillText);
@@ -8098,10 +8396,10 @@ function renderOrthogonalMode() {
                     const pillY = (g.edge === 'top' || g.edge === 'bottom') ? g.y - pillH - 8 : g.y - pillH / 2;
 
                     ctx.save();
-                    ctx.shadowColor = isCourt ? 'rgba(16, 185, 129, 0.6)' : (isVoid ? 'rgba(245, 158, 11, 0.6)' : 'rgba(56, 189, 248, 0.6)');
+                    ctx.shadowColor = isCorridor ? 'rgba(234, 179, 8, 0.6)' : (isCourt ? 'rgba(16, 185, 129, 0.6)' : (isVoid ? 'rgba(245, 158, 11, 0.6)' : 'rgba(56, 189, 248, 0.6)'));
                     ctx.shadowBlur = 8;
                     ctx.fillStyle = 'rgba(15, 23, 42, 0.95)';
-                    ctx.strokeStyle = isDragging ? '#10b981' : (isCourt ? '#10b981' : (isVoid ? '#f59e0b' : '#38bdf8'));
+                    ctx.strokeStyle = isDragging ? '#10b981' : (isCorridor ? '#eab308' : (isCourt ? '#10b981' : (isVoid ? '#f59e0b' : '#38bdf8')));
                     ctx.lineWidth = 1.2;
                     ctx.beginPath();
                     if (ctx.roundRect) ctx.roundRect(pillX, pillY, pillW, pillH, 4);
@@ -8110,7 +8408,7 @@ function renderOrthogonalMode() {
                     ctx.stroke();
 
                     ctx.shadowBlur = 0;
-                    ctx.fillStyle = isDragging ? '#10b981' : (isCourt ? '#34d399' : (isVoid ? '#fbbf24' : '#38bdf8'));
+                    ctx.fillStyle = isDragging ? '#10b981' : (isCorridor ? '#fde047' : (isCourt ? '#34d399' : (isVoid ? '#fbbf24' : '#38bdf8')));
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
                     ctx.fillText(pillText, pillX + pillW / 2, pillY + pillH / 2);
@@ -8119,24 +8417,26 @@ function renderOrthogonalMode() {
             });
 
             // 4. Selected Room Badge in top-right corner
-            const badgeW = isCourt ? (isAr ? 86 : 94) : (isVoid ? (isAr ? 95 : 100) : (isAr ? 76 : 82));
+            const badgeW = isCorridor ? (isAr ? 122 : 132) : (isCourt ? (isAr ? 86 : 94) : (isVoid ? (isAr ? 95 : 100) : (isAr ? 76 : 82)));
             const badgeH = 16;
             const badgeX = x + w - badgeW - 4;
             const badgeY = y + 4;
             if (w > badgeW + 8 && h > 22) {
                 ctx.fillStyle = 'rgba(15, 23, 42, 0.90)';
-                ctx.strokeStyle = isCourt ? '#10b981' : (isVoid ? '#f59e0b' : '#38bdf8');
+                ctx.strokeStyle = isCorridor ? '#eab308' : (isCourt ? '#10b981' : (isVoid ? '#f59e0b' : '#38bdf8'));
                 ctx.lineWidth = 0.8;
                 ctx.beginPath();
                 if (ctx.roundRect) ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 3);
                 else ctx.rect(badgeX, badgeY, badgeW, badgeH);
                 ctx.fill();
                 ctx.stroke();
-                ctx.fillStyle = isCourt ? '#34d399' : (isVoid ? '#fbbf24' : '#38bdf8');
+                ctx.fillStyle = isCorridor ? '#fde047' : (isCourt ? '#34d399' : (isVoid ? '#fbbf24' : '#38bdf8'));
                 ctx.font = 'bold 7.5px Cairo, sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                const badgeLabel = isCourt ? (isAr ? '🌿 منور محدد للتعديل' : '🌿 Shaft Selected') : (isVoid ? (isAr ? '📦 فضاء مغلق ناتج' : '📦 Closed Void') : (isAr ? '✨ محدد للتعديل المباشر' : '✨ Drag to Resize'));
+                const badgeLabel = isCorridor 
+                    ? (isAr ? '🏛️ الموزع المركزي (ADA ≥1.60م)' : '🏛️ Central Corridor (ADA ≥1.60m)')
+                    : (isCourt ? (isAr ? '🌿 منور محدد للتعديل' : '🌿 Shaft Selected') : (isVoid ? (isAr ? '📦 فضاء مغلق ناتج' : '📦 Closed Void') : (isAr ? '✨ محدد للتعديل المباشر' : '✨ Drag to Resize')));
                 ctx.fillText(badgeLabel, badgeX + badgeW / 2, badgeY + badgeH / 2);
             }
             ctx.restore();
